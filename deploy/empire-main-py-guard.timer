@@ -1,0 +1,10 @@
+[Unit]
+Description=Every 10 min: check main.py integrity on VPS
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

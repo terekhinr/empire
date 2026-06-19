@@ -18,6 +18,14 @@ SYSTEMD_STAGING="${STAGING}/systemd"
 
 log() { echo "[$(date -Iseconds)] $*"; }
 
+if [[ -x "$ROOT/scripts/guard_critical_files.sh" ]]; then
+  log "Проверка целостности перед бэкапом..."
+  "$ROOT/scripts/guard_critical_files.sh" || {
+    log "ERROR: бэкап отменён — guard не прошёл (main.py и др.)"
+    exit 1
+  }
+fi
+
 if ! rclone listremotes 2>/dev/null | grep -q "^${REMOTE}:$"; then
   log "ERROR: нет remote ${REMOTE} — сначала scripts/rclone_setup_yandex_webdav.sh"
   exit 1

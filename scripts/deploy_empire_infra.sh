@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> guard critical files"
+echo "==> guard (критичные файлы)"
 ./scripts/guard_critical_files.sh
 
 echo "==> pytest (empire core)"
@@ -12,10 +12,15 @@ echo "==> pytest (empire core)"
   tests/test_gdepar_content.py tests/test_pension_content.py -q
 
 echo "==> systemd units"
-for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot; do
+for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot \
+  empire-vps-backup-yandex empire-main-py-guard; do
   sudo cp "deploy/${u}.service" "/etc/systemd/system/${u}.service"
 done
+for t in empire-vps-backup-yandex empire-main-py-guard; do
+  sudo cp "deploy/${t}.timer" "/etc/systemd/system/${t}.timer"
+done
 sudo systemctl daemon-reload
+sudo systemctl enable empire-vps-backup-yandex.timer empire-main-py-guard.timer 2>/dev/null || true
 
 echo "==> backup cron snippet (manual merge if duplicate)"
 CRON_LINE="15 3 * * * root $ROOT/scripts/backup_empire_db.sh"

@@ -47,6 +47,7 @@ nohup.out
 # Локальные аварийные копии
 main.py.EMPTY.bak
 *.EMPTY.bak
+main.py.corrupt.*.bak
 
 # Крупные PDF в корне (книги Ленина — на диске, не в git)
 /*.pdf
