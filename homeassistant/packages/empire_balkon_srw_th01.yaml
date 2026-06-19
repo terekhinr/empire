@@ -1,0 +1,31 @@
+# SRW-TH01 — батарейный Tuya Wi‑Fi датчик (балкон).
+# В LAN не виден; опрос через Tuya Open API (credentials: scripts/.tuya_cloud.json на сервере).
+
+command_line:
+  - sensor:
+      name: Balkon temperatura
+      unique_id: balkon_temperatura
+      command: "python3 /config/scripts/tuya_srw_status.py temp"
+      scan_interval: 300
+      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+  - sensor:
+      name: Balkon vlazhnost
+      unique_id: balkon_vlazhnost
+      command: "python3 /config/scripts/tuya_srw_status.py humidity"
+      scan_interval: 300
+      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
+      unit_of_measurement: "%"
+      device_class: humidity
+      state_class: measurement
+  - sensor:
+      name: Balkon batareia
+      unique_id: balkon_batareia
+      command: "python3 /config/scripts/tuya_srw_status.py battery"
+      scan_interval: 3600
+      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
+      unit_of_measurement: "%"
+      device_class: battery
+      state_class: measurement

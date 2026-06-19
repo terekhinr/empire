@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-06-01",
+  "provider": "fal-ai/flux/dev",
+  "reason": "GEMINI_API_KEY returned HTTP 429 (quota); Imagen requires paid plan",
+  "resolution": "1920x1080 PNG",
+  "regenerate_gemini": "./venv/bin/python scripts/generate_yt000_images_gemini.py --provider gemini --force",
+  "files": [
+    "IMG-01_beach_ad.png",
+    "IMG-02_actuary_desk.png",
+    "IMG-03_frozen_piggybank.png",
+    "IMG-04_bismarck_factory.png",
+    "IMG-05_payg_conveyor.png",
+    "IMG-06_empty_safe.png",
+    "IMG-07_pension_tokens.png",
+    "IMG-08_aging_globe.png",
+    "IMG-09_japan_office_window.png",
+    "IMG-10_pension_protest.png",
+    "IMG-11_grocery_coins.png",
+    "IMG-12_yacht_retiree.png",
+    "IMG-13_stairwell_elderly.png",
+    "IMG-14_uk_cold_home.png",
+    "IMG-15_uk_meter.png",
+    "IMG-16_suitcases_airport.png",
+    "IMG-17_four_walls.png",
+    "IMG-18_road_cliff.png",
+    "IMG-19_gym_barbell.png",
+    "IMG-20_desk_laptop.png",
+    "IMG-21_garden_seedlings.png",
+    "IMG-22_passports_map.png",
+    "IMG-23_channel_endcard_bg.png"
+  ]
+}

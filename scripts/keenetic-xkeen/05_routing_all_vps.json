@@ -1,0 +1,19 @@
+// ТЕСТ: весь перехваченный трафик через VPS (диагностика превью YouTube)
+{
+  "routing": {
+    "rules": [
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "network": "udp",
+        "port": "135, 137, 138, 139, 443"
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "vless-reality",
+        "type": "field"
+      }
+    ]
+  }
+}

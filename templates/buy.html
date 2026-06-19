@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Купить книгу — {{ book.title }}{% endblock %}
+{% block meta_description %}Полная версия «{{ book.title }}» в PDF. {{ book.subtitle }}.{% endblock %}
+
+{% block content %}
+<section class="section buy-page">
+    <h2 class="section-header">Книга</h2>
+    <h1 style="font-family: var(--serif); font-weight: 800; font-size: clamp(1.8rem, 4vw, 2.6rem); margin: 8px 0;">
+        {{ book.title }}
+    </h1>
+    <p class="section-lead">{{ book.subtitle }} · {{ book.author }}</p>
+
+    <div class="buy-card">
+        <p><strong>Полная версия</strong> — все {{ book.chapters | length }} глав в PDF для чтения офлайн.</p>
+        <p class="buy-price">{{ book_price_rub }} ₽</p>
+        <p class="muted" style="font-size: 0.9rem;">Не является индивидуальной инвестиционной рекомендацией.</p>
+
+        {% if payments_live %}
+        <button type="button" class="btn btn-primary" disabled title="Подключите pay.neverretire.ru">
+            Оплатить (скоро)
+        </button>
+        {% else %}
+        <p class="buy-soon">Оплата подключается. Пока — <a href="/book/introduction">читайте введение бесплатно</a> или оставьте email на главной.</p>
+        <a class="btn btn-primary" href="/" data-pension-goal="pension_payment_start">На главную →</a>
+        {% endif %}
+    </div>
+
+    <p style="margin-top: 32px;">
+        <a href="/book" data-pension-goal="pension_book_toc_open">Оглавление и бесплатные фрагменты →</a>
+    </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof window.pensionMetrikaReach === "function") {
+        window.pensionMetrikaReach("pension_buy_page_open", {});
+    }
+});
+</script>
+{% endblock %}

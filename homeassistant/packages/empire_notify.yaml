@@ -1,0 +1,5 @@
+# Устарело: telegram_bot в HA давал ошибки (конфликт с ботом empire на том же токене).
+# Отправка в Telegram — через rest_command в empire_automations.yaml
+# В secrets.yaml нужен только:
+#   telegram_send_url: "https://api.telegram.org/bot<ТОКЕН>/sendMessage"
+#   telegram_chat_id: 497498662  (опционально, chat_id зашит в payload)

@@ -1,0 +1,38 @@
+{
+  "source_video": "pension_demo_final.mp4",
+  "style_image": "iosif_boroda_ref.png",
+  "monitor_text": "НА ПЕНСИЮ НИКОГДА!",
+  "scenes": [
+    {
+      "id": "01_laptop",
+      "start_sec": 0,
+      "duration_sec": 6,
+      "prompt": "A 2D minimalist cartoon animation, simple black line art on a solid white background. A bearded man sits at a desk on the right side of a small room, furiously typing on his laptop. On the left, there is a window with a potted ficus on the windowsill. Simple outlines of trees and clouds are visible outside."
+    },
+    {
+      "id": "02_noise",
+      "start_sec": 6,
+      "duration_sec": 4,
+      "prompt": "A 2D minimalist cartoon animation, simple black line art on a solid white background. The bearded man stops typing, stands up from his desk, walks over to the window, and looks outside downwards."
+    },
+    {
+      "id": "03_pov_crowd",
+      "start_sec": 10,
+      "duration_sec": 6,
+      "prompt": "A 2D minimalist cartoon animation, simple black line art on a solid white background. First-person POV looking down from a third-story window at a street demonstration. A crowd of diverse protesters is marching, including an old man, a middle-aged man, a student, and a baby in a stroller. They are all holding blank protest signs.",
+      "sign_overlays": [
+        [1.0, 2.2, "На пенсию в 60!"],
+        [2.2, 3.4, "На пенсию в 50 лет!"],
+        [3.4, 4.6, "На пенсию в 30!"],
+        [4.6, 5.8, "На пенсию в 0!"]
+      ]
+    },
+    {
+      "id": "04_monitor",
+      "start_sec": 16,
+      "duration_sec": 8,
+      "prompt": "A 2D minimalist cartoon animation, simple black line art on a solid white background. Over-the-shoulder shot of the bearded man sitting back at his desk, looking at his laptop screen. The screen takes up a large portion of the frame. The scene then fades to black.",
+      "monitor_text_at_sec": 3.0
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "dispatched_ids": [
+    "2026-05-20-{{title_slug}}",
+    "2026-05-22-{{title_slug}}",
+    "2026-05-25-{{title_slug}}",
+    "2026-05-26-{{title_slug}}",
+    "2026-05-27-{{title_slug}}",
+    "2026-05-28-{{title_slug}}",
+    "2026-05-29-{{title_slug}}",
+    "pension-na-palcah-1-2026-05-28",
+    "pension-norvegiya-tualet-2026-05-26",
+    "pension-pokupka-na-novostyah-2026-05-22",
+    "pension-fondy-i-strojka-2026-05-25",
+    "pension-2026-06-01-slug",
+    "pension-kem-byt-2026-06-01",
+    "pension-hotyat-li-russkie-vojny-2026-06-03",
+    "pension-kem-byt-2026-06-08",
+    "pension-2026-06-10-slug",
+    "pension-2026-06-11-slug"
+  ],
+  "reminded_ids": [
+    "pension-2026-06-11-slug"
+  ],
+  "last_import_at": "2026-06-19T20:17:00.073079+03:00",
+  "dispatched": {
+    "2026-05-20-{{title_slug}}": "",
+    "2026-05-22-{{title_slug}}": "",
+    "2026-05-25-{{title_slug}}": "",
+    "2026-05-26-{{title_slug}}": "",
+    "2026-05-27-{{title_slug}}": "",
+    "2026-05-28-{{title_slug}}": "",
+    "2026-05-29-{{title_slug}}": "",
+    "pension-na-palcah-1-2026-05-28": "2026-05-28 15:00",
+    "pension-norvegiya-tualet-2026-05-26": "2026-05-26 10:00",
+    "pension-pokupka-na-novostyah-2026-05-22": "2026-05-22 12:00",
+    "pension-fondy-i-strojka-2026-05-25": "2026-05-25 10:00",
+    "pension-2026-06-01-slug": "2026-06-01 11:00",
+    "pension-kem-byt-2026-06-01": "",
+    "pension-hotyat-li-russkie-vojny-2026-06-03": "2026-06-06 15:00",
+    "pension-kem-byt-2026-06-08": "2026-06-08 15:00",
+    "pension-2026-06-10-slug": "2026-06-10 12:00",
+    "pension-2026-06-11-slug": "2026-06-11 11:00"
+  },
+  "reminded": {
+    "pension-2026-06-11-slug": "2026-06-11 11:00"
+  }
+}

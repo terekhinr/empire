@@ -1,0 +1,19 @@
+[Unit]
+Description=Lenin channel donation bot (Telegram Stars only)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python empire_donate_bot.py
+Restart=always
+RestartSec=10
+MemoryMax=256M
+CPUQuota=30%
+
+[Install]
+WantedBy=multi-user.target

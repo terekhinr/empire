@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+    <path d="M6 6 L34 6"/>
+    <path d="M6 6 L6 34"/>
+    <path d="M34 6 q 6 0 6 6"/>
+    <path d="M6 34 q 0 6 6 6"/>
+    <circle cx="6" cy="6" r="3"/>
+    <path d="M14 14 q4 -4 8 0" />
+  </g>
+</svg>

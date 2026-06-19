@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}{{ site_tagline }}. Манифест против пенсионной капитуляции. Кэшфлоу, антихрупкость, ОФЗ, ЗПИФы, гиря и грядка.{% endblock %}">
+    <title>{% block title %}{{ site_title }} — {{ site_tagline }}{% endblock %}</title>
+
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css">
+    <link rel="icon" type="image/png" href="/static/logo-neverretire.png">
+    {% include "pension_metrika.inc.html" %}
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#main">К содержимому</a>
+
+<header class="navbar">
+    <a class="nav-brand" href="/">
+        <span class="nav-brand-icon">𝓘</span>
+        НА ПЕНСИЮ <span class="nav-brand-accent">НИКОГДА</span>
+    </a>
+        <nav class="nav-links">
+        <a href="/book">Книга</a>
+        <a href="/buy" data-pension-goal="pension_book_cta_buy">Купить</a>
+        <a href="/articles">Статьи</a>
+        <a href="/videos">Видео</a>
+        <a href="/about">О проекте</a>
+    </nav>
+    <div class="nav-controls">
+        <button class="btn-icon" onclick="toggleTheme()" title="Переключить тему" aria-label="Тема">🌗</button>
+    </div>
+</header>
+
+<main id="main">
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">НА ПЕНСИЮ <span>НИКОГДА</span></div>
+            <p class="footer-tagline">{{ site_tagline }}</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/book">Книга</a>
+            <a href="/buy" data-pension-goal="pension_book_cta_buy">Купить PDF</a>
+            <a href="/articles">Статьи</a>
+            <a href="/videos">Видео</a>
+            <a href="/about">О проекте</a>
+            {% if pension_tg_url %}
+            <a href="{{ pension_tg_url }}" target="_blank" rel="noopener" data-pension-goal="pension_tg_click">Канал TG</a>
+            {% endif %}
+            {% if pension_tg_personal_url %}
+            <a href="{{ pension_tg_personal_url }}" target="_blank" rel="noopener" data-pension-goal="pension_tg_personal_click">@iosif_boroda</a>
+            {% endif %}
+            {% if pension_vk_url %}
+            <a href="{{ pension_vk_url }}" target="_blank" rel="noopener" data-pension-goal="pension_vk_click">ВКонтакте</a>
+            {% endif %}
+            {% if pension_youtube_url %}
+            <a href="{{ pension_youtube_url }}" target="_blank" rel="noopener" data-pension-goal="pension_youtube_click">YouTube</a>
+            {% endif %}
+            {% if pension_dzen_url %}
+            <a href="{{ pension_dzen_url }}" target="_blank" rel="noopener" data-pension-goal="pension_dzen_click">Дзен</a>
+            {% endif %}
+        </nav>
+        <div class="footer-legal">
+            <p>&copy; {{ year }} {{ site_title }}.</p>
+            <p class="muted">Не является индивидуальной инвестиционной рекомендацией.</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+    (function () {
+        var saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

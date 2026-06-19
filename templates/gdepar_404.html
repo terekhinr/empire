@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Страница не найдена — Где Пар</title>
+    {% if metrika_id %}
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    {% endif %}
+    <meta property="og:locale" content="ru_RU">
+    <link rel="canonical" href="{{ canonical_base_url }}/">
+    <link rel="icon" type="image/svg+xml" href="/static/gdepar/logos/03-drop.svg">
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
+</head>
+<body>
+{% include "gdepar_metrika.inc.html" %}
+{% include "gdepar_seen.inc.html" %}
+
+{% set nav_active = 'home' %}
+{% include "gdepar_nav.inc.html" %}
+
+<section class="section" style="padding-top: 2rem;">
+    <div class="section-ornament" aria-hidden="true">
+        <object data="/static/gdepar/ornaments/divider.svg" type="image/svg+xml" aria-hidden="true"></object>
+    </div>
+    <h1 class="section-header">404 — такой страницы нет</h1>
+    <p class="section-lead">Проверьте адрес или вернитесь на главную и на карту бань.</p>
+    <p style="margin-top: 1.5rem;">
+        <a href="/" data-gdepar-nav="brand">На главную</a>
+        ·
+        <a href="/map" data-gdepar-nav="map">Карта бань</a>
+    </p>
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">ГДЕ <span>ПАР</span></div>
+            <p class="footer-tagline">Дровяные бани, парение, тёплое братство</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/map" data-gdepar-nav="map">Карта</a>
+            <a href="/#bayki" data-gdepar-nav="bayki">Байки</a>
+            <a href="/#manifesto" data-gdepar-nav="manifesto">Манифест</a>
+            <a href="/#merch" data-gdepar-nav="merch">Мерч</a>
+            <a href="/#contacts" data-gdepar-nav="contacts">Контакты</a>
+        </nav>
+        <div class="footer-legal">
+            <p>&copy; 2026 Где Пар.</p>
+            <p class="muted">{{ canonical_host }} · зеркало гдепар.рф</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+    (function () {
+        var saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+</script>
+{% include "gdepar_assistant.inc.html" %}
+</body>
+</html>

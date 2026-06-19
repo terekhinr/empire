@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+
+  <style>
+    text { font-family: 'DejaVu Sans', Arial, sans-serif; fill: #1a1a2e; }
+    .title { font-size: 22px; font-weight: bold; }
+    .sub { font-size: 13px; fill: #555; }
+    .axis { stroke: #ccc; stroke-width: 1; }
+    .grid { stroke: #eee; stroke-width: 1; }
+    .accent { fill: #e85d04; }
+    .blue { fill: #2563eb; }
+    .green { fill: #16a34a; }
+    .red { fill: #dc2626; }
+    .line-kids { stroke: #2563eb; stroke-width: 3; fill: none; }
+    .line-workers { stroke: #16a34a; stroke-width: 3; fill: none; }
+    .line-old { stroke: #e85d04; stroke-width: 3; fill: none; }
+    .bar { fill: #2563eb; }
+    .bar-hi { fill: #e85d04; }
+    .ref { stroke: #dc2626; stroke-width: 2; stroke-dasharray: 6 4; }
+  </style>
+
+
+  <text x="40" y="36" class="title">Африка: рождаемость падает быстрее мифа</text>
+  <text x="40" y="58" class="sub">СКР: ~6,8 (1970-е) → ~4,0 сегодня (−40% за полвека)</text>
+  <line x1="100" y1="380" x2="860" y2="380" class="axis"/>
+  <line x1="100" y1="100" x2="100" y2="380" class="axis"/>
+  <polyline class="line-old" points="100,120 250,160 400,210 550,270 700,310 860,340"/>
+  <circle cx="100" cy="120" r="6" class="accent"/>
+  <text x="110" y="115" class="sub">6,8</text>
+  <circle cx="860" cy="340" r="6" class="accent"/>
+  <text x="800" y="335" class="sub">4,0</text>
+  <text x="120" y="400" class="sub">1970</text>
+  <text x="820" y="400" class="sub">2025</text>
+
+</svg>

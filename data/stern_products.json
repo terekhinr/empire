@@ -1,0 +1,20 @@
+{
+  "products": [
+    {
+      "code": "tripwire_office",
+      "name": "Офисный спецназ — 3 урока",
+      "price_rub": 390,
+      "duration_days": 14,
+      "payments_enabled": false,
+      "description": "3 коротких видео (до 90 сек): шея, грудной отдел, поясница у стола. McGill-логика, без оборудования. Не замена врачу."
+    },
+    {
+      "code": "course_iron_spine_21",
+      "name": "Железная спина — 21 день",
+      "price_rub": 4900,
+      "duration_days": 21,
+      "payments_enabled": false,
+      "description": "21 день в TG-боте: Big-3, мобилизация, офисная эргономика. Прогрессия без «исцеления». Дисклеймер на входе."
+    }
+  ]
+}

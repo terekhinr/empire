@@ -1,0 +1,54 @@
+// Заводской Corvus + блок QUIC (UDP/443). Без IPIfNonMatch, без all-vps.
+{
+  "routing": {
+    "rules": [
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "network": "udp",
+        "port": "135, 137, 138, 139"
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "network": "udp",
+        "port": "443"
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "domain": ["appcenter.ms"]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "vless-reality",
+        "type": "field",
+        "domain": [
+          "ext:geosite_v2fly.dat:speedtest",
+          "ext:geosite_zkeen.dat:domains",
+          "ext:geosite_zkeen.dat:other",
+          "ext:geosite_zkeen.dat:youtube",
+          "2ip.ru",
+          "2ip.io"
+        ]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "vless-reality",
+        "type": "field",
+        "ip": [
+          "ext:geoip_v2fly.dat:twitter",
+          "ext:geoip_zkeenip.dat:youtube"
+        ]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "direct",
+        "type": "field"
+      }
+    ]
+  }
+}

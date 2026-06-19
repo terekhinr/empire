@@ -1,0 +1,13 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "type": "udp",
+        "tag": "dns-udp",
+        "server": "77.88.8.8"
+      }
+    ],
+    "final": "dns-udp",
+    "strategy": "ipv4_only"
+  }
+}

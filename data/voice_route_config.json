@@ -1,0 +1,124 @@
+{
+  "audio_vault_path": "Life/voice/transcribed",
+  "push_paths": [
+    "Life/inbox",
+    "Life/voice/transcribed",
+    "Empire/pension/inbox",
+    "База знаний/Книги/На-пенсию-никогда/заметки",
+    "База знаний/Книги/Трупик-майора/заметки",
+    "Контент/Статьи/заметки-voice",
+    "Входящие"
+  ],
+  "routes": [
+    {
+      "id": "book-neverretire",
+      "label": "Книга «На пенсию никогда»",
+      "patterns": [
+        "книга один",
+        "книга 1",
+        "на пенсию никогда",
+        "пенсия книга",
+        "neverretire"
+      ],
+      "filename_patterns": ["^book1-", "^neverretire-", "^kniga1-"],
+      "vault_path": "База знаний/Книги/На-пенсию-никогда/заметки",
+      "book": "neverretire",
+      "project": "book-neverretire",
+      "kind": "book-note",
+      "tags": ["voice", "book/neverretire"]
+    },
+    {
+      "id": "book-trupik",
+      "label": "Книга «Трупик майора»",
+      "patterns": [
+        "трупик майора",
+        "трупик",
+        "книга два",
+        "книга 2",
+        "повесть"
+      ],
+      "filename_patterns": ["^book2-", "^trupik-", "^kniga2-"],
+      "vault_path": "База знаний/Книги/Трупик-майора/заметки",
+      "book": "trupik-maiora",
+      "project": "book-trupik",
+      "kind": "book-note",
+      "tags": ["voice", "book/trupik-maiora"]
+    },
+    {
+      "id": "pension-post",
+      "label": "Пост канала «На пенсию никогда»",
+      "patterns": [
+        "пенсия пост",
+        "пост пенсия",
+        "канал пенсия",
+        "пост в канал"
+      ],
+      "filename_patterns": ["^pension-post-", "^post-pension-"],
+      "vault_path": "Empire/pension/inbox",
+      "book": null,
+      "project": "pension-channel",
+      "kind": "post-draft",
+      "tags": ["voice", "empire/pension"]
+    },
+    {
+      "id": "pension-idea",
+      "label": "Идея поста / рубрика",
+      "patterns": [
+        "пенсия идея",
+        "идея пенсия",
+        "рубрика пенсия"
+      ],
+      "filename_patterns": ["^pension-idea-"],
+      "vault_path": "Empire/pension/inbox",
+      "book": null,
+      "project": "pension-channel",
+      "kind": "idea",
+      "tags": ["voice", "empire/pension", "idea"]
+    },
+    {
+      "id": "pension-article",
+      "label": "Заметка к статье / лонгриду",
+      "patterns": [
+        "статья пенсия",
+        "статья ноль",
+        "статья один",
+        "статья два",
+        "статья три",
+        "статья четыре",
+        "статья 0",
+        "статья 1",
+        "статья 2",
+        "статья 3",
+        "статья 4",
+        "дзен",
+        "лонгрид"
+      ],
+      "filename_patterns": ["^article-", "^dzen-", "^statya-"],
+      "vault_path": "Контент/Статьи/заметки-voice",
+      "book": "neverretire",
+      "project": "pension-article",
+      "kind": "article-note",
+      "tags": ["voice", "article"]
+    },
+    {
+      "id": "personal",
+      "label": "Личное",
+      "patterns": ["^личное", "личная заметка"],
+      "filename_patterns": ["^life-", "^lichnoe-"],
+      "vault_path": "Life/inbox",
+      "book": null,
+      "project": "life",
+      "kind": "personal",
+      "tags": ["voice", "life"]
+    }
+  ],
+  "default": {
+    "id": "inbox",
+    "label": "Разобрать",
+    "vault_path": "Входящие",
+    "book": null,
+    "project": null,
+    "kind": "inbox",
+    "tags": ["voice", "needs-routing"]
+  }
+}

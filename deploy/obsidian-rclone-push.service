@@ -1,0 +1,14 @@
+[Unit]
+Description=Push Obsidian Empire to Yandex Disk (rclone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/empire/rclone.env
+EnvironmentFile=-/etc/empire/empire.env
+ExecStart=/root/projects/empire/scripts/obsidian_rclone_push.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target

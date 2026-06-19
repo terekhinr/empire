@@ -1,0 +1,83 @@
+# Туалет: mmWave _TZE204_qasjif9e (снят). Включить снова: переименовать в empire_motion_light_tualet.yaml
+# Свет туалета — только вручную: light.empire_tualet_svet, Алиса, «везде».
+
+automation:
+  - id: empire_tualet_sensor_init
+    alias: "Туалет — настройка mmWave при старте"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ states('number.tualet_tze204_qasjif9e_ts0601_chuvstvitelnost_radara') not in ['unknown','unavailable','none'] }}"
+            sequence:
+              - action: number.set_value
+                target:
+                  entity_id: number.tualet_tze204_qasjif9e_ts0601_chuvstvitelnost_radara
+                data:
+                  value: 9
+          - conditions:
+              - condition: template
+                value_template: "{{ states('number.tze204_qasjif9e_ts0601_chuvstvitelnost_k_dvizheniiu') not in ['unknown','unavailable','none'] }}"
+            sequence:
+              - action: number.set_value
+                target:
+                  entity_id: number.tze204_qasjif9e_ts0601_chuvstvitelnost_k_dvizheniiu
+                data:
+                  value: 10
+      - action: number.set_value
+        target:
+          entity_id: number.tze204_qasjif9e_ts0601_maksimalnyi_diapazon
+        data:
+          value: 3.75
+      - action: number.set_value
+        target:
+          entity_id: number.tze204_qasjif9e_ts0601_minimalnyi_diapazon
+        data:
+          value: 0
+      - action: number.set_value
+        target:
+          entity_id: number.tze204_qasjif9e_ts0601_vremia_zatukhaniia
+        data:
+          value: 5
+      - action: number.set_value
+        target:
+          entity_id: number.tze204_qasjif9e_ts0601_zaderzhka_obnaruzheniia
+        data:
+          value: 1
+
+  - id: empire_tualet_motion_light_on
+    alias: "Туалет — присутствие, свет вкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.tze204_qasjif9e_ts0601
+        to: "on"
+      - trigger: numeric_state
+        entity_id: sensor.tze204_qasjif9e_ts0601_rasstoianie_do_tseli
+        above: 0.01
+    actions:
+      - action: light.turn_on
+        target:
+          entity_id: light.empire_tualet_svet
+
+  - id: empire_tualet_motion_light_off
+    alias: "Туалет — нет присутствия, свет выкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.tze204_qasjif9e_ts0601
+        to: "off"
+        for:
+          seconds: 5
+      - trigger: numeric_state
+        entity_id: sensor.tze204_qasjif9e_ts0601_rasstoianie_do_tseli
+        below: 0.01
+        for:
+          seconds: 5
+    actions:
+      - action: light.turn_off
+        target:
+          entity_id: light.empire_tualet_svet

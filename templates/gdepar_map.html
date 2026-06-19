@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Карта общественных и дровяных бань — Где Пар. Фильтры по городу, типу нагрева, личным визитам.">
+    <title>Карта бань — Где Пар</title>
+
+    {% if metrika_id %}
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    {% endif %}
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="canonical" href="{{ canonical_page_url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Где Пар">
+    <meta property="og:url" content="{{ canonical_page_url }}">
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:image" content="{{ og_image_url }}">
+    <meta property="og:image:alt" content="{{ og_image_alt }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ og_title }}">
+    <meta name="twitter:description" content="{{ og_description }}">
+    <meta name="twitter:image" content="{{ og_image_url }}">
+    <meta name="twitter:image:alt" content="{{ og_image_alt }}">
+    <meta property="og:locale" content="ru_RU">
+
+    <script type="application/ld+json">{{ map_schema_org_json }}</script>
+
+    <link rel="icon" type="image/svg+xml" href="/static/gdepar/logos/03-drop.svg">
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/map.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+</head>
+<body>
+{% include "gdepar_metrika.inc.html" %}
+{% include "gdepar_seen.inc.html" %}
+
+{% set nav_active = 'map' %}
+{% include "gdepar_nav.inc.html" %}
+
+<section class="section" style="padding-bottom: 12px;">
+    <div class="section-ornament" aria-hidden="true">
+        <object data="/static/gdepar/ornaments/divider.svg" type="image/svg+xml" aria-hidden="true"></object>
+    </div>
+    <h2 class="section-header">Карта бань</h2>
+    <p class="section-lead">Точки с координатами и статусом «опубликовано». Фильтры меняют и карту, и список — ссылку можно копировать.</p>
+</section>
+
+<section class="map-layout">
+    <aside class="map-sidebar">
+        <form class="banya-filters" method="get" action="/map" id="banya-filter-form">
+            <div>
+                <label for="f-city">Город</label>
+                <select id="f-city" name="city">
+                    <option value="">Все города</option>
+                    {% for value, label in city_options %}
+                    <option value="{{ value }}" {% if filter_city == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="f-heating">Нагрев</label>
+                <select id="f-heating" name="heating">
+                    <option value="all" {% if filter_heating == 'all' %}selected{% endif %}>Любой</option>
+                    <option value="wood" {% if filter_heating == 'wood' %}selected{% endif %}>Дровяная</option>
+                    <option value="electric" {% if filter_heating == 'electric' %}selected{% endif %}>Электро</option>
+                    <option value="mixed" {% if filter_heating == 'mixed' %}selected{% endif %}>Смешанный</option>
+                    <option value="unknown" {% if filter_heating == 'unknown' %}selected{% endif %}>Не указано</option>
+                </select>
+            </div>
+            <label>
+                <input type="checkbox" name="visited" value="1" {% if filter_visited %}checked{% endif %}>
+                Только «ходили лично»
+            </label>
+            {% if filter_spot_id is not none %}
+            <input type="hidden" name="spot" value="{{ filter_spot_id }}">
+            {% endif %}
+            <button type="submit">Показать</button>
+        </form>
+
+        {% if spots_data %}
+        <ul class="map-spots-list" id="banya-spot-list" aria-label="Список бань"></ul>
+        {% else %}
+        <div class="map-empty">
+            <p><strong>Пока нет точек на карте.</strong></p>
+            <p>Опубликуйте бани командой <code>/banya pub &lt;slug&gt;</code> в админ-боте (статус «опубликовано» и координаты в базе).</p>
+        </div>
+        {% endif %}
+    </aside>
+
+    <div class="map-wrap">
+        {% if spots_data %}
+        <div id="banya-map" role="application" aria-label="Карта бань"></div>
+        {% else %}
+        <div id="banya-map" class="map-empty" style="display:flex;align-items:center;justify-content:center;min-height:420px;">
+            <p>Карта появится после первых опубликованных точек.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">ГДЕ <span>ПАР</span></div>
+            <p class="footer-tagline">{{ site_tagline }}</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/map" data-gdepar-nav="map">Карта</a>
+            <a href="/#bayki" data-gdepar-nav="bayki">Байки</a>
+            <a href="/#manifesto" data-gdepar-nav="manifesto">Манифест</a>
+            <a href="/#merch" data-gdepar-nav="merch">Мерч</a>
+            <a href="/#contacts" data-gdepar-nav="contacts">Контакты</a>
+        </nav>
+        <div class="footer-legal">
+            <p>&copy; 2026 Где Пар.</p>
+            <p class="muted">{{ canonical_host }} · зеркало гдепар.рф</p>
+        </div>
+    </div>
+</footer>
+
+{% if spots_data %}
+<script type="application/json" id="spots-data">{{ spots_data|tojson }}</script>
+<script src="/static/gdepar/summary_render.js?v={{ asset_version }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+    var el = document.getElementById('spots-data');
+    if (!el || !window.L) return;
+    var spots;
+    try { spots = JSON.parse(el.textContent); } catch (e) { return; }
+    if (!spots.length) return;
+
+    var HEAT_COLORS = { wood: '#b35a00', electric: '#6366f1', mixed: '#a855f7', unknown: '#71717a' };
+
+    function heatColor(h) {
+        return HEAT_COLORS[h] || HEAT_COLORS.unknown;
+    }
+
+    function popupHtml(s) {
+        var esc = function (t) {
+            if (!t) return '';
+            var d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        };
+        var sid = (s.id != null && s.id !== '') ? String(s.id) : '';
+        var links = '';
+        if (s.yandex_url) {
+            links += '<a class="banya-popup-external" data-external-kind="yandex" data-spot-id="' + sid + '" href="' +
+                esc(s.yandex_url) + '" target="_blank" rel="noopener">Яндекс&nbsp;Карты</a>';
+        }
+        if (s.twogis_url) {
+            links += (links ? ' · ' : '') + '<a class="banya-popup-external" data-external-kind="twogis" data-spot-id="' + sid + '" href="' +
+                esc(s.twogis_url) + '" target="_blank" rel="noopener">2ГИС</a>';
+        }
+        if (s.site_url) {
+            links += (links ? ' · ' : '') + '<a class="banya-popup-external" data-external-kind="site" data-spot-id="' + sid + '" href="' +
+                esc(s.site_url) + '" target="_blank" rel="noopener">Сайт</a>';
+        }
+        var phoneBlock = '';
+        if (s.phone && String(s.phone).trim()) {
+            var disp = String(s.phone).trim();
+            var digits = disp.replace(/[^\d+]/g, '');
+            if (digits) {
+                phoneBlock = '<p class="banya-popup-phone"><a class="banya-popup-external" data-external-kind="phone" data-spot-id="' + sid +
+                    '" href="tel:' + digits + '">' + esc(disp) + '</a></p>';
+            }
+        }
+        var clip = (s.clips && s.clips[0]) ? s.clips[0] : null;
+        var embed = '';
+        if (clip && clip.embed_url && clip.provider !== 'file') {
+            embed = '<div class="banya-popup-embed"><iframe src="' + esc(clip.embed_url) + '" title="Видео" loading="lazy" allowfullscreen></iframe></div>';
+        } else if (clip && clip.provider === 'file' && clip.embed_url) {
+            embed = '<div class="banya-popup-embed"><video controls preload="metadata" style="width:100%;height:100%"><source src="' + esc(clip.embed_url) + '"></video></div>';
+        }
+        var badge = s.visited ? '<p style="margin:0 0 8px;font-size:0.8rem;color:var(--accent)">✓ Ходили лично</p>' : '';
+        var canLoadReviews = s.id != null && s.id !== '';
+        var rating = '';
+        if (s.rating_avg) {
+            rating = '<p class="banya-popup-rating">★ ' + esc(String(s.rating_avg)) +
+                     (s.reviews_total ? ' <span class="muted">(' + s.reviews_total + ' отзывов)</span>' : '') +
+                     '</p>';
+        } else if (canLoadReviews) {
+            rating = '<p class="banya-popup-rating"><span class="muted">Отзывы' +
+                (s.reviews_total ? ' · ' + esc(String(s.reviews_total)) : '') +
+                '</span></p>';
+        }
+        var yxAttr = (s.yandex_url && String(s.yandex_url).trim())
+            ? (' data-yandex-url="' + esc(String(s.yandex_url).trim()) + '"')
+            : '';
+        var slugRaw = (s.slug && String(s.slug).trim()) ? String(s.slug).trim() : '';
+        var spotPage = '';
+        if (slugRaw) {
+            spotPage = '<p class="banya-popup-spot-page"><a class="banya-popup-spot-page-link" data-spot-id="' + sid +
+                '" href="/banya/' + encodeURIComponent(slugRaw).replace(/%2F/g, '') + '">Страница бани →</a></p>';
+        }
+        var reviewsHolder = canLoadReviews
+            ? '<div class="banya-popup-reviews" data-spot-id="' + String(s.id) + '"' + yxAttr + '>' +
+              '<div class="banya-popup-reviews-actions">' +
+              '<button type="button" class="banya-popup-reviews-toggle" aria-expanded="false" aria-controls="gdepar-popup-reviews-body-' + sid + '">Показать отзывы</button>' +
+              '<button type="button" class="banya-popup-summary-btn" aria-expanded="false" aria-controls="gdepar-popup-reviews-summary-' + sid + '">Дай саммари</button>' +
+              '</div>' +
+              '<div class="banya-popup-reviews-body" id="gdepar-popup-reviews-body-' + sid + '" hidden>' +
+              '<div id="gdepar-popup-reviews-summary-' + sid + '" class="banya-popup-reviews-summary-slot gdepar-assistant-out" hidden aria-live="polite"></div>' +
+              '<div id="gdepar-popup-reviews-list-' + sid + '" class="banya-popup-reviews-list-slot gdepar-assistant-out" aria-live="polite"></div>' +
+              '<div class="banya-popup-reviews-attribution" aria-label="Источник текстов отзывов"></div>' +
+              '</div></div>'
+            : '';
+        return (
+            '<p class="banya-popup-title">' + esc(s.title) + '</p>' +
+            '<p class="banya-popup-addr">' + esc(s.address || '') + '</p>' +
+            phoneBlock +
+            rating +
+            badge +
+            (links ? '<div class="banya-popup-links">' + links + '</div>' : '') +
+            embed +
+            spotPage +
+            reviewsHolder
+        );
+    }
+
+    function bindReviewsToggle(popup) {
+        /* Иначе клик уходит на карту и кнопка в попапе не срабатывает (Leaflet). */
+        if (window.L && L.DomEvent) {
+            var px = popup.getElement && popup.getElement();
+            if (px) {
+                try {
+                    L.DomEvent.disableClickPropagation(px);
+                    L.DomEvent.disableScrollPropagation(px);
+                } catch (e0) {}
+            }
+            if (popup._contentNode) {
+                try {
+                    L.DomEvent.disableClickPropagation(popup._contentNode);
+                    L.DomEvent.disableScrollPropagation(popup._contentNode);
+                } catch (e1) {}
+            }
+        }
+        var root = null;
+        if (popup.getElement) root = popup.getElement();
+        if (!root && popup._contentNode) {
+            var cn = popup._contentNode;
+            root = (cn.closest && cn.closest('.leaflet-popup')) || cn.parentElement;
+        }
+        if (!root) return;
+        var holder = root.querySelector('.banya-popup-reviews');
+        if (!holder || holder.dataset.bound) return;
+        holder.dataset.bound = '1';
+        var btn = holder.querySelector('.banya-popup-reviews-toggle');
+        var btnSummary = holder.querySelector('.banya-popup-summary-btn');
+        var body = holder.querySelector('.banya-popup-reviews-body');
+        if (!btn || !body) return;
+        var summarySlot = body.querySelector('.banya-popup-reviews-summary-slot');
+        var listSlot = body.querySelector('.banya-popup-reviews-list-slot');
+        if (!summarySlot || !listSlot) return;
+
+        function syncPopupReviewsAria() {
+            btn.setAttribute('aria-expanded', body.hidden ? 'false' : 'true');
+            if (btnSummary) {
+                var sumVis = !body.hidden && !summarySlot.hidden;
+                btnSummary.setAttribute('aria-expanded', sumVis ? 'true' : 'false');
+            }
+        }
+
+        function esc(t) {
+            var d = document.createElement('div');
+            d.textContent = t || '';
+            return d.innerHTML;
+        }
+
+        function setReviewsAttribution(h) {
+            var slot = h.querySelector('.banya-popup-reviews-attribution');
+            if (!slot) return;
+            var yuRaw = h.getAttribute('data-yandex-url');
+            var yu = yuRaw ? String(yuRaw).trim() : '';
+            if (yu) {
+                slot.innerHTML = '<p class="banya-popup-reviews-source">Тексты отзывов — мнение авторов на площадках. Оригинал: <a href="' +
+                    esc(yu) + '" target="_blank" rel="noopener">Яндекс.Карты</a>. «Где Пар» публикует отзывы после модерации, смысл авторов не искажается.</p>';
+            } else {
+                slot.innerHTML = '<p class="banya-popup-reviews-source muted">Тексты отзывов собираются с внешних площадок; при наличии блока ссылок выше можно открыть карточку организации на картах.</p>';
+            }
+        }
+
+        function metaHtml(lastAt) {
+            if (!lastAt) return '';
+            try {
+                var d = new Date(lastAt);
+                if (isNaN(d.getTime())) return '';
+                return '<p class="banya-popup-reviews-asof">По данным сайта новых одобренных отзывов после <strong>' +
+                    d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+                    '</strong> не было — ориентируйтесь на эту дату; перед визитом перепроверьте часы по телефону бани или на картах.</p>';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function popupReflow(popup) {
+            /* Нельзя popup.update(): при bindPopup(строка) Leaflet снова пишет innerHTML и стирает отзывы. */
+            if (popup._map && typeof popup._updateLayout === 'function') {
+                try {
+                    popup._updateLayout();
+                    popup._updatePosition();
+                } catch (eR) {}
+            }
+        }
+
+        function onReviewsClick() {
+            if (!body.hidden && holder.dataset.reviewsLoaded === '1') {
+                body.hidden = true;
+                btn.textContent = 'Показать отзывы';
+                syncPopupReviewsAria();
+                return;
+            }
+            if (!holder.dataset.reviewsLoaded) {
+                btn.textContent = 'Загрузка…';
+                btn.disabled = true;
+                btn.setAttribute('aria-busy', 'true');
+                body.hidden = false;
+                listSlot.innerHTML = '';
+                listSlot.setAttribute('aria-busy', 'true');
+                listSlot.setAttribute('aria-label', 'Загрузка отзывов');
+                listSlot.classList.add('is-loading');
+                syncPopupReviewsAria();
+                fetch('/api/banya/reviews-block/' + holder.dataset.spotId + '?limit=5&include_summary=0')
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        listSlot.removeAttribute('aria-busy');
+                        listSlot.removeAttribute('aria-label');
+                        listSlot.classList.remove('is-loading');
+                        var list = (data && data.reviews) ? data.reviews : [];
+                        var lastAt = data && data.last_review_at;
+                        var meta = metaHtml(lastAt);
+                        if (!list || !list.length) {
+                            listSlot.innerHTML = meta + '<p class="muted">Одобренных отзывов нет или они на модерации.</p>';
+                        } else {
+                            listSlot.innerHTML = meta + list.map(function (rv) {
+                                var n = Math.max(0, Math.min(5, parseInt(rv.rating, 10) || 0));
+                                var stars = n ? '★'.repeat(n) + '☆'.repeat(5 - n) : '';
+                                return '<div class="banya-popup-review">' +
+                                       '<p class="banya-popup-review-head"><b>' + esc(rv.author) + '</b> ' +
+                                       '<span class="banya-popup-stars">' + stars + '</span></p>' +
+                                       '<p>' + esc(rv.text) + '</p></div>';
+                            }).join('');
+                        }
+                        holder.dataset.reviewsLoaded = '1';
+                        body.hidden = false;
+                        btn.textContent = 'Скрыть отзывы';
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        setReviewsAttribution(holder);
+                        if (typeof window.gdeparMetrikaReach === 'function') {
+                            window.gdeparMetrikaReach('gdepar_reviews_open', { spot_id: String(holder.dataset.spotId || '') });
+                        }
+                        syncPopupReviewsAria();
+                        popupReflow(popup);
+                    })
+                    .catch(function () {
+                        listSlot.removeAttribute('aria-busy');
+                        listSlot.removeAttribute('aria-label');
+                        listSlot.classList.remove('is-loading');
+                        listSlot.innerHTML = '<p class="muted">Не удалось загрузить отзывы. Попробуйте ещё раз.</p>';
+                        body.hidden = false;
+                        btn.textContent = 'Не загрузилось';
+                        btn.disabled = false;
+                        btn.removeAttribute('aria-busy');
+                        syncPopupReviewsAria();
+                        popupReflow(popup);
+                    });
+            } else {
+                body.hidden = false;
+                btn.textContent = 'Скрыть отзывы';
+                setReviewsAttribution(holder);
+                if (typeof window.gdeparMetrikaReach === 'function') {
+                    window.gdeparMetrikaReach('gdepar_reviews_open', { spot_id: String(holder.dataset.spotId || '') });
+                }
+                syncPopupReviewsAria();
+            }
+        }
+
+        function onSummaryClick() {
+            if (holder.dataset.summaryLoaded === '1') {
+                summarySlot.hidden = !summarySlot.hidden;
+                if (btnSummary) btnSummary.textContent = summarySlot.hidden ? 'Дай саммари' : 'Скрыть саммари';
+                syncPopupReviewsAria();
+                popupReflow(popup);
+                return;
+            }
+            if (btnSummary) {
+                btnSummary.textContent = 'Загрузка…';
+                btnSummary.disabled = true;
+                btnSummary.setAttribute('aria-busy', 'true');
+            }
+            body.hidden = false;
+            summarySlot.hidden = false;
+            summarySlot.innerHTML = '';
+            summarySlot.setAttribute('aria-busy', 'true');
+            summarySlot.setAttribute('aria-label', 'Загрузка саммари');
+            summarySlot.classList.add('is-loading');
+            syncPopupReviewsAria();
+            fetch('/api/banya/reviews-block/' + holder.dataset.spotId + '?limit=5&include_summary=1')
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function (data) {
+                    summarySlot.removeAttribute('aria-busy');
+                    summarySlot.removeAttribute('aria-label');
+                    summarySlot.classList.remove('is-loading');
+                    var block = (typeof window.gdeparRenderReviewsSummary === 'function')
+                        ? window.gdeparRenderReviewsSummary(data, { variant: 'popup', includeAttribution: false })
+                        : '<p class="muted">Сводки нет — нечего обобщать по одобренным отзывам.</p>';
+                    summarySlot.innerHTML = block;
+                    summarySlot.hidden = false;
+                    holder.dataset.summaryLoaded = '1';
+                    if (btnSummary) {
+                        btnSummary.textContent = 'Скрыть саммари';
+                        btnSummary.disabled = false;
+                        btnSummary.removeAttribute('aria-busy');
+                    }
+                    body.hidden = false;
+                    setReviewsAttribution(holder);
+                    if (typeof window.gdeparMetrikaReach === 'function') {
+                        var src = (data && data.summary_source) ? String(data.summary_source) : 'heuristic';
+                        window.gdeparMetrikaReach('gdepar_summary_request', {
+                            spot_id: String(holder.dataset.spotId || ''),
+                            summary_source: src
+                        });
+                    }
+                    syncPopupReviewsAria();
+                    popupReflow(popup);
+                })
+                .catch(function () {
+                    summarySlot.removeAttribute('aria-busy');
+                    summarySlot.removeAttribute('aria-label');
+                    summarySlot.classList.remove('is-loading');
+                    summarySlot.innerHTML = '<p class="muted">Не удалось загрузить саммари. Попробуйте ещё раз.</p>';
+                    summarySlot.hidden = false;
+                    if (btnSummary) {
+                        btnSummary.textContent = 'Не загрузилось';
+                        btnSummary.disabled = false;
+                        btnSummary.removeAttribute('aria-busy');
+                    }
+                    syncPopupReviewsAria();
+                    popupReflow(popup);
+                });
+        }
+
+        btn.addEventListener('click', function (ev) {
+            if (ev.stopPropagation) ev.stopPropagation();
+            onReviewsClick();
+        }, true);
+        /* Только stopPropagation: L.DomEvent.stop = preventDefault на mousedown — тогда click у <button> не срабатывает. */
+        btn.addEventListener('mousedown', function (ev) {
+            if (ev.stopPropagation) ev.stopPropagation();
+        }, true);
+
+        if (btnSummary) {
+            btnSummary.addEventListener('click', function (ev) {
+                if (ev.stopPropagation) ev.stopPropagation();
+                onSummaryClick();
+            }, true);
+            btnSummary.addEventListener('mousedown', function (ev) {
+                if (ev.stopPropagation) ev.stopPropagation();
+            }, true);
+        }
+
+        var ratingEl = root.querySelector('.banya-popup-rating');
+        if (ratingEl && !ratingEl.dataset.reviewsTap) {
+            ratingEl.dataset.reviewsTap = '1';
+            ratingEl.style.cursor = 'pointer';
+            ratingEl.title = 'Показать отзывы';
+            ratingEl.setAttribute('role', 'button');
+            ratingEl.setAttribute('tabindex', '0');
+            ratingEl.setAttribute('aria-label', 'Показать отзывы');
+            function ratingOpenReviews(e) {
+                if (e && e.preventDefault) e.preventDefault();
+                if (e && e.stopPropagation) e.stopPropagation();
+                onReviewsClick();
+            }
+            ratingEl.addEventListener('click', ratingOpenReviews);
+            ratingEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') ratingOpenReviews(e);
+            });
+        }
+    }
+
+    var map = L.map('banya-map', { scrollWheelZoom: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    (function bindPopupOutboundClicks() {
+        var pp = map.getPane('popupPane');
+        if (!pp) return;
+        pp.addEventListener('click', function (ev) {
+            var a = ev.target.closest && ev.target.closest('a.banya-popup-external');
+            if (a) {
+                var kind = a.getAttribute('data-external-kind');
+                if (!kind) return;
+                var spotId = a.getAttribute('data-spot-id') || '';
+                if (typeof window.gdeparMetrikaReach !== 'function') return;
+                if (kind === 'phone') {
+                    window.gdeparMetrikaReach('gdepar_phone_click', { spot_id: spotId });
+                } else {
+                    window.gdeparMetrikaReach('gdepar_spot_click_out', { spot_id: spotId, kind: kind });
+                }
+                return;
+            }
+            var spotPageA = ev.target.closest && ev.target.closest('a.banya-popup-spot-page-link');
+            if (spotPageA && typeof window.gdeparMetrikaReach === 'function') {
+                window.gdeparMetrikaReach('gdepar_spot_page_from_popup', {
+                    spot_id: spotPageA.getAttribute('data-spot-id') || ''
+                });
+                return;
+            }
+            var mapL = ev.target.closest && ev.target.closest('a.gdepar-popup-full-map');
+            if (mapL && mapL.getAttribute('href') === '/map') {
+                if (typeof window.gdeparMetrikaReach === 'function') {
+                    window.gdeparMetrikaReach('gdepar_popup_full_map_link', {
+                        spot_id: mapL.getAttribute('data-spot-id') || ''
+                    });
+                }
+            }
+        }, true);
+    })();
+
+    map.on('popupopen', function (e) {
+        var p = e.popup;
+        var pPane = map.getPane('popupPane');
+        if (pPane && window.L && L.DomEvent) {
+            try {
+                L.DomEvent.disableClickPropagation(pPane);
+                L.DomEvent.disableScrollPropagation(pPane);
+            } catch (errPane) {}
+        }
+        if (window.L && L.DomEvent) {
+            var el = p.getElement && p.getElement();
+            if (el) {
+                try {
+                    L.DomEvent.disableClickPropagation(el);
+                    L.DomEvent.disableScrollPropagation(el);
+                } catch (err) {}
+            }
+            if (p._contentNode) {
+                try {
+                    L.DomEvent.disableClickPropagation(p._contentNode);
+                    L.DomEvent.disableScrollPropagation(p._contentNode);
+                } catch (err2) {}
+            }
+        }
+        setTimeout(function () {
+            bindReviewsToggle(p);
+            try {
+                var lyr = p._source;
+                if (lyr && lyr.spotId != null && typeof window.gdeparMetrikaReach === 'function') {
+                    window.gdeparMetrikaReach('gdepar_popup_open', { spot_id: String(lyr.spotId) });
+                }
+                if (lyr && lyr.spotId != null && typeof window.gdeparRecordSpotSeen === 'function') {
+                    window.gdeparRecordSpotSeen(lyr.spotId);
+                }
+            } catch (eM) {}
+        }, 50);
+    });
+
+    var bounds = [];
+    var markers = [];
+    spots.forEach(function (s) {
+        if (typeof s.lat !== 'number' || typeof s.lon !== 'number' || isNaN(s.lat) || isNaN(s.lon)) return;
+        var circle = L.circleMarker([s.lat, s.lon], {
+            radius: 10,
+            fillColor: heatColor(s.heating),
+            color: '#1a1a1c',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.88
+        }).addTo(map);
+        circle.bindPopup(popupHtml(s), { maxWidth: 340 });
+        circle.spotId = s.id;
+        markers.push({ m: circle, s: s });
+        bounds.push([s.lat, s.lon]);
+    });
+
+    if (bounds.length) {
+        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 12 });
+    } else {
+        map.setView([55.75, 37.62], 10);
+    }
+
+    try {
+        var pqs = new URLSearchParams(window.location.search);
+        var dps = pqs.get('spot');
+        if (dps) {
+            var sidW = parseInt(dps, 10);
+            if (!isNaN(sidW)) {
+                var found = markers.find(function (x) { return x.s && x.s.id === sidW; });
+                if (found && typeof found.s.lat === 'number' && typeof found.s.lon === 'number') {
+                    map.setView([found.s.lat, found.s.lon], Math.max(map.getZoom(), 14), { animate: false });
+                    found.m.openPopup();
+                    if (typeof window.gdeparRecordSpotSeen === 'function') {
+                        window.gdeparRecordSpotSeen(sidW);
+                    }
+                }
+            }
+        }
+    } catch (eD) {}
+
+    var listEl = document.getElementById('banya-spot-list');
+    if (listEl) {
+        markers.forEach(function (item) {
+            var s = item.s;
+            var li = document.createElement('li');
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.innerHTML = '<span class="spot-list-title">' + (s.title || '') + '</span>' +
+                '<span class="spot-list-meta">' + (s.city || '') + ' · ' +
+                (s.heating === 'wood' ? 'дрова' : s.heating === 'electric' ? 'электро' : s.heating || '') +
+                (s.visited ? ' · были' : '') + '</span>';
+            btn.addEventListener('click', function () {
+                if (typeof window.gdeparMetrikaReach === 'function' && s.id != null) {
+                    window.gdeparMetrikaReach('gdepar_map_list_pick', { spot_id: String(s.id) });
+                }
+                if (typeof window.gdeparRecordSpotSeen === 'function' && s.id != null) {
+                    window.gdeparRecordSpotSeen(s.id);
+                }
+                map.setView([s.lat, s.lon], Math.max(map.getZoom(), 14), { animate: true });
+                item.m.openPopup();
+                btn.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            });
+            li.appendChild(btn);
+            listEl.appendChild(li);
+        });
+    }
+
+    var ff = document.getElementById('banya-filter-form');
+    if (ff) {
+        ff.addEventListener('submit', function () {
+            if (typeof window.gdeparMetrikaReach !== 'function') return;
+            var fd = new FormData(ff);
+            window.gdeparMetrikaReach('gdepar_map_filter_submit', {
+                page: 'map',
+                city: String(fd.get('city') || ''),
+                heating: String(fd.get('heating') || ''),
+                visited: fd.get('visited') ? '1' : '0'
+            });
+        });
+    }
+
+    function relayout() {
+        try { map.invalidateSize(true); } catch (e) {}
+    }
+    window.gdeparPageMapRelayout = relayout;
+    requestAnimationFrame(relayout);
+    setTimeout(relayout, 250);
+    window.addEventListener('resize', relayout);
+})();
+</script>
+{% endif %}
+
+<script>
+    (function () {
+        var saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+</script>
+<script>
+(function () {
+    window.gdeparPage = "map";
+    var fc = document.getElementById("f-city");
+    var fh = document.getElementById("f-heating");
+    function sync() {
+        window.gdeparFilterCity = fc && fc.value ? fc.value : "";
+        window.gdeparFilterHeat = fh && fh.value ? fh.value : "";
+    }
+    sync();
+    if (fc) fc.addEventListener("change", sync);
+    if (fh) fh.addEventListener("change", sync);
+})();
+</script>
+{% include "gdepar_assistant.inc.html" %}
+</body>
+</html>

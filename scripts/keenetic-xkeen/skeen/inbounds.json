@@ -1,0 +1,11 @@
+{
+  "inbounds": [
+    {
+      "type": "redirect",
+      "tag": "redirect-in",
+      "listen": "::",
+      "listen_port": 65081,
+      "tcp_fast_open": false
+    }
+  ]
+}

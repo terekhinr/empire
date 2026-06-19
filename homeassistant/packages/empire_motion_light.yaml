@@ -1,0 +1,103 @@
+# Ванная: SONOFF SNZB-06P + light.empire_vannaya_svet
+
+template:
+  - binary_sensor:
+      - name: "Ванная — ночь (расписание)"
+        unique_id: empire_vannaya_dim_night
+        default_entity_id: binary_sensor.empire_vannaya_dim_night
+        icon: mdi:brightness-4
+        state: >
+          {% set ts = as_timestamp(now()) %}
+          {% set h = ts | timestamp_custom('%H', true, 'Europe/Moscow') | int(0) %}
+          {% set min = ts | timestamp_custom('%M', true, 'Europe/Moscow') | int(0) %}
+          {% set mins = h * 60 + min %}
+          {{ mins >= 60 and mins < 351 }}
+
+automation:
+  - id: empire_vannaya_sensor_init
+    alias: "Ванная — max чувствительность Sonoff при старте"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - action: select.select_option
+        target:
+          entity_id: select.sonoff_snzb_06p_chuvstvitelnost_obnaruzheniia
+        data:
+          option: "High"
+
+  - id: empire_vannaya_motion_light_on
+    alias: "Ванная — присутствие, свет вкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p
+        to: "on"
+      - trigger: state
+        entity_id: sensor.sonoff_snzb_06p_poslednee_sostoianie_osveshchennosti
+        to: "Bright"
+    actions:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.empire_vannaya_dim_night
+                state: "on"
+            sequence:
+              - action: light.turn_on
+                target:
+                  entity_id: light.empire_vannaya_svet
+                data:
+                  brightness_pct: 20
+        default:
+          - action: light.turn_on
+            target:
+              entity_id: light.empire_vannaya_svet
+            data:
+              brightness_pct: 100
+
+  - id: empire_vannaya_motion_light_off
+    alias: "Ванная — нет присутствия, свет выкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p
+        to: "off"
+        for:
+          seconds: 30
+    actions:
+      - action: light.turn_off
+        target:
+          entity_id: light.empire_vannaya_svet
+
+  - id: empire_vannaya_dim_night_brightness
+    alias: "Ванная — смена день/ночь, яркость"
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.empire_vannaya_dim_night
+    conditions:
+      - condition: state
+        entity_id: light.empire_vannaya_svet
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.sonoff_snzb_06p
+        state: "on"
+    actions:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.empire_vannaya_dim_night
+                state: "on"
+            sequence:
+              - action: light.turn_on
+                target:
+                  entity_id: light.empire_vannaya_svet
+                data:
+                  brightness_pct: 20
+                  transition: 1
+        default:
+          - action: light.turn_on
+            target:
+              entity_id: light.empire_vannaya_svet
+            data:
+              brightness_pct: 100
+              transition: 1

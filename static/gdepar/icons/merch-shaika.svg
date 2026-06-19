@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="(09:0">
+  <defs>
+    <linearGradient id="lipa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#e9c98e"/>
+      <stop offset="55%" stop-color="#c98a4a"/>
+      <stop offset="100%" stop-color="#6d3f12"/>
+    </linearGradient>
+  </defs>
+  <path d="M18 38 q 42 -14 84 0 l -10 64 q -32 8 -64 0 z" fill="url(#lipa)" stroke="#3d2f23" stroke-width="2"/>
+  <ellipse cx="60" cy="38" rx="42" ry="8" fill="#d3a76b" stroke="#3d2f23" stroke-width="2"/>
+  <g stroke="#3d2f23" stroke-width="1.2" opacity="0.4">
+    <line x1="32" y1="42" x2="30" y2="98"/>
+    <line x1="48" y1="44" x2="46" y2="100"/>
+    <line x1="60" y1="44" x2="60" y2="100"/>
+    <line x1="72" y1="44" x2="74" y2="100"/>
+    <line x1="88" y1="42" x2="90" y2="98"/>
+  </g>
+  <path d="M22 54 q 38 10 76 0" fill="none" stroke="#7a3a00" stroke-width="3"/>
+  <path d="M24 90 q 36 8 72 0" fill="none" stroke="#7a3a00" stroke-width="2"/>
+</svg>

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Статьи — {{ site_title }}{% endblock %}
+{% block meta_description %}Архив лонгридов: разборы рынка, ОФЗ-ин, ЗПИФы, дивидендные истории, инфляция и антихрупкость портфеля.{% endblock %}
+
+{% block content %}
+<section class="section">
+    <h2 class="section-header">Статьи</h2>
+    <p class="section-lead">Свежие разборы. Без воды, без советов «откладывай 10%». Только инструменты и инструкции.</p>
+
+    {% if articles %}
+    <div class="articles-list">
+        {% for a in articles %}
+        <a class="article-card" href="/articles/{{ a.id }}">
+            <span class="article-meta">{{ a.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            <h3>{{ (a.text_content | striptags)[:120] }}{% if (a.text_content | striptags) | length > 120 %}…{% endif %}</h3>
+            <p>{{ (a.text_content | striptags)[120:320] }}…</p>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Архив наполняется. Скоро здесь появятся разборы.</p>
+    {% endif %}
+</section>
+{% endblock %}

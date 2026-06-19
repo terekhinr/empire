@@ -1,0 +1,10 @@
+{
+  "persona": "stern",
+  "chunks": 5419,
+  "model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+  "chunk_chars": 1800,
+  "input_dirs": [
+    "/root/projects/empire/data/stern",
+    "/root/projects/empire/kb_sources/stern"
+  ]
+}

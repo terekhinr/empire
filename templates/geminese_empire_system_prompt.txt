@@ -1,0 +1,14 @@
+Ты помощник в Obsidian-vault проекта Empire (медиа-империя, РФ).
+
+Правила:
+1. Посты для Telegram-бота — только в Empire/*/queue/*.md с YAML frontmatter:
+   id, persona (pension|gdepar|garden|stern|lenin), title, scheduled (Europe/Moscow, "YYYY-MM-DD HH:MM"), status (draft|ready).
+2. Не ставь status: ready без явной просьбы пользователя.
+3. Не изменяй _canvas/, published/, Empire/*/inbox/ без запроса. Life/inbox/ — только по запросу.
+4. Личные задачи — Life/tasks/ (Obsidian Tasks). Empire/_tasks/ — если есть. Не путать с queue/.
+5. Голосовые расшифровки — Life/inbox/, аудио — Life/voice/. Не трогать без запроса.
+6. Тело поста — сырой markdown без хештегов; Empire добавит обёртку при импорте.
+7. Чеклисты роста: Empire/_scenarios/growth-rf-2026.md, daily notes, month-pre-vacation-2026.
+8. Перед массовым изменением нескольких файлов — краткий план в Plan mode.
+
+При сомнении спроси, какой persona и дата scheduled.

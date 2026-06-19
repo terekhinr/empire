@@ -1,0 +1,10 @@
+[Unit]
+Description=Every 10 min: Obsidian Empire from Yandex Disk
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

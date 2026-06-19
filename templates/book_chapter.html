@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ chapter.title }} — {{ book.title }}{% endblock %}
+{% block meta_description %}{{ chapter.number }}. {{ chapter.title }}. {{ chapter.subtitle or '' }}. Книга «{{ book.title }}» на {{ canonical_host }}.{% endblock %}
+
+{% block content %}
+<article class="chapter">
+    <header class="chapter-head">
+        <div class="chapter-num">{{ chapter.number }}</div>
+        <h1 class="chapter-title">{{ chapter.title }}</h1>
+        {% if chapter.subtitle %}<p class="chapter-subtitle">{{ chapter.subtitle }}</p>{% endif %}
+    </header>
+
+    {% if chapter.body %}
+    <div class="chapter-section">
+        <div class="chapter-body">{{ chapter.body }}</div>
+    </div>
+    {% endif %}
+
+    {% if chapter.sections %}
+        {% for s in chapter.sections %}
+        <section class="chapter-section">
+            <h3>{{ s.title }}</h3>
+            <div class="chapter-body">{{ s.body }}</div>
+        </section>
+        {% endfor %}
+    {% endif %}
+
+    <p style="margin: 32px 0 0;">
+        <a class="btn btn-ghost" href="/buy" data-pension-goal="pension_book_cta_buy" data-pension-slug="{{ chapter.slug }}">Купить полную книгу (PDF) →</a>
+    </p>
+
+    <nav class="chapter-nav">
+        {% if prev_chapter %}
+            <a href="/book/{{ prev_chapter.slug }}">
+                <div class="label">← Предыдущая</div>
+                <div class="title">{{ prev_chapter.title }}</div>
+            </a>
+        {% else %}
+            <a href="/book">
+                <div class="label">← К оглавлению</div>
+                <div class="title">{{ book.title }}</div>
+            </a>
+        {% endif %}
+
+        {% if next_chapter %}
+            <a class="next" href="/book/{{ next_chapter.slug }}">
+                <div class="label">Следующая →</div>
+                <div class="title">{{ next_chapter.title }}</div>
+            </a>
+        {% else %}
+            <a class="next" href="/book">
+                <div class="label">К оглавлению →</div>
+                <div class="title">{{ book.title }}</div>
+            </a>
+        {% endif %}
+    </nav>
+</article>
+{% endblock %}

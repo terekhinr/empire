@@ -1,0 +1,22 @@
+[Unit]
+Description=Gde Par Web App (FastAPI, gdepar.ru)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=EMPIRE_SKIP_EMBEDDINGS=1
+# Секреты и GDEPAR_* — в EnvironmentFile (не коммитить):
+#   sudo install -m 600 deploy/gdepar.production.env.example /etc/empire/gdepar.env
+#   отредактировать YANDEX_METRIKA_ID, GDEPAR_ASSISTANT_LLM и т.д.
+EnvironmentFile=-/etc/empire/gdepar.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/uvicorn gdepar_app:app --host 127.0.0.1 --port 8001 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

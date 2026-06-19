@@ -1,0 +1,17 @@
+{
+  "_comment": "Только gdepar + stern. Сад/Ленин/Пенсия — пусто до отдельного решения. Live spy: Telethon. docs/spy_setup_gdepar_stern.md",
+  "garden": [],
+      "gdepar": [
+        "@zhivayabanya",
+        "@obrazpar",
+        "@The_Russian_Bath"
+      ],
+  "stern": [
+    "@epifanovnews",
+    "@idkettlebellworld",
+    "@scienceforSC",
+    "@crossstrong24"
+  ],
+  "lenin": [],
+  "pension": []
+}

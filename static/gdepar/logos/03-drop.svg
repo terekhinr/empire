@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Gde Par drop">
+  <defs>
+    <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#d9842c"/>
+      <stop offset="100%" stop-color="#7a3a00"/>
+    </linearGradient>
+    <linearGradient id="steamGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#f6efe3" stop-opacity="0"/>
+      <stop offset="35%"  stop-color="#f6efe3" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#f6efe3" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="100" fill="none" stroke="#3d2f23" stroke-width="3" opacity="0.35"/>
+  <g transform="translate(120,128)">
+    <path d="M0 -64 c -28 28 -46 56 -46 80 c 0 26 20 46 46 46 c 26 0 46 -20 46 -46 c 0 -24 -18 -52 -46 -80 z"
+          fill="url(#dropGrad)" stroke="#3d2f23" stroke-width="3"/>
+    <path d="M-22 8 q -6 22 8 38" fill="none" stroke="#f6c98b" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  </g>
+  <g>
+    <path d="M40 210 q20 -18 40 0 q20 18 40 0 q20 -18 40 0 q20 18 40 0"
+          fill="none" stroke="url(#steamGrad)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

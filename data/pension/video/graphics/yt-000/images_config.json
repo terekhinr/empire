@@ -1,0 +1,151 @@
+{
+  "output_dir": "images",
+  "aspect_ratio": "16:9",
+  "image_size": "2K",
+  "model": "gemini-2.5-flash-image",
+  "fallback_model": "imagen-4.0-generate-001",
+  "style_a": "Cinematic documentary still, 16:9, photorealistic but subdued, desaturated cold color grade, slate blue and charcoal shadows, subtle film grain, no readable text, no logos, no watermarks, no celebrity faces, financial documentary mood.",
+  "style_b": "Editorial financial illustration, flat design, dark navy background #0d1117, gold accent #d4a853 and muted red #f85149, clean geometric shapes, no characters, no text labels, 16:9, minimal detail, vector-like clarity, serious tone.",
+  "negative_a": "Avoid: cartoon, anime, 3d render, bright saturated colors, happy retirement advertising, text, letters, logos, watermark, distorted hands, extra fingers.",
+  "negative_b": "Avoid: photorealistic photograph, cute playful style, 3d pixar, cluttered scene, text, watermark, comic strip.",
+  "images": [
+    {
+      "id": "IMG-01",
+      "file": "IMG-01_beach_ad.png",
+      "mode": "A",
+      "prompt": "Wide shot of a generic silver-haired man in beige linen clothes walking alone on an empty Mediterranean beach at golden hour, calm sea, soft warm light like an insurance TV commercial, peaceful retirement fantasy mood, back or three-quarter view so face is not recognizable."
+    },
+    {
+      "id": "IMG-02",
+      "file": "IMG-02_actuary_desk.png",
+      "mode": "A",
+      "prompt": "Close-up of an anonymous insurance actuary desk: blurred spreadsheet on monitor, mortality life table printout, calculator, cold office light, hands of middle-aged clerk not showing face, mood calculating human lifespan as numbers."
+    },
+    {
+      "id": "IMG-03",
+      "file": "IMG-03_frozen_piggybank.png",
+      "mode": "B",
+      "prompt": "Frozen piggy bank inside clear ice block on dark desk, single crack through ice, gold coin visible but trapped, metaphor for frozen pension savings, minimal composition, dramatic side light."
+    },
+    {
+      "id": "IMG-04",
+      "file": "IMG-04_bismarck_factory.png",
+      "mode": "A",
+      "prompt": "Historical industrial atmosphere evoking 1880s Germany: smoky factory chimneys, worker silhouettes leaving brick factory gate at dusk, sepia-desaturated documentary tone, NOT a portrait of any real historical figure, wide establishing shot, film grain."
+    },
+    {
+      "id": "IMG-05",
+      "file": "IMG-05_payg_conveyor.png",
+      "mode": "B",
+      "prompt": "Abstract conveyor belt made of silhouetted human figures: young workers at bottom feeding coins upward to elderly figures at top, factory metaphor for pay-as-you-go pension system, dark background, gold coins, clean editorial illustration, arrows implied not labeled."
+    },
+    {
+      "id": "IMG-06",
+      "file": "IMG-06_empty_safe.png",
+      "mode": "A",
+      "prompt": "Open empty bank safe deposit box interior, bare metal, single dim bulb, no money inside, lonely composition, metaphor for pension promise without savings, cool blue shadows."
+    },
+    {
+      "id": "IMG-07",
+      "file": "IMG-07_pension_tokens.png",
+      "mode": "B",
+      "prompt": "Glass jar filled with generic poker chips or tokens instead of coins, label area blank, government building silhouette blurred in background, metaphor for pension points not cash, dark moody lighting, editorial still life."
+    },
+    {
+      "id": "IMG-08",
+      "file": "IMG-08_aging_globe.png",
+      "mode": "B",
+      "prompt": "Stylized transparent globe showing disproportionate grey elderly population icons vs few small child icons, demographic imbalance visualization, dark blue space background, minimal flat design, serious infographic aesthetic, no country names, no numbers."
+    },
+    {
+      "id": "IMG-09",
+      "file": "IMG-09_japan_office_window.png",
+      "mode": "A",
+      "prompt": "Japanese corporate office interior: elderly office worker sitting alone by large window, empty desk with no work, staring outside, grey daylight, quiet humiliation mood, wide shot from behind, face not visible."
+    },
+    {
+      "id": "IMG-10",
+      "file": "IMG-10_pension_protest.png",
+      "mode": "A",
+      "prompt": "Street protest in European city, crowd from behind, raised fists and blank placards without text, evening light, pension reform atmosphere, photojournalism style, no flags readable, no identifiable politicians, dynamic but not violent."
+    },
+    {
+      "id": "IMG-11",
+      "file": "IMG-11_grocery_coins.png",
+      "mode": "A",
+      "prompt": "Kitchen table top view: small modest grocery pile bread and medicine box without labels, utilities bill envelope with blank paper, elderly person thin hands counting coins, shallow depth of field, muted colors, documentary not melodrama."
+    },
+    {
+      "id": "IMG-12",
+      "file": "IMG-12_yacht_retiree.png",
+      "mode": "A",
+      "prompt": "Wealthy retired couple on small yacht deck, champagne glasses without brand labels, sunny Mediterranean, luxury travel magazine look but slightly distant cold color grade, faces turned away or out of focus."
+    },
+    {
+      "id": "IMG-13",
+      "file": "IMG-13_stairwell_elderly.png",
+      "mode": "A",
+      "prompt": "Elderly woman in worn coat sitting on wooden bench in dim Soviet-style apartment building stairwell, plastic bag with groceries, cold greenish light from window, lonely realistic documentary photo, face partially obscured, dignified not caricature."
+    },
+    {
+      "id": "IMG-14",
+      "file": "IMG-14_uk_cold_home.png",
+      "mode": "A",
+      "prompt": "Elderly person wearing winter coat and scarf indoors sitting in armchair, breath visible in cold room, unlit radiator, cup of tea on side table, British modest living room, soft grey daylight from window, empathetic documentary tone, face in profile not sharp portrait."
+    },
+    {
+      "id": "IMG-15",
+      "file": "IMG-15_uk_meter.png",
+      "mode": "A",
+      "prompt": "Close-up of UK-style electricity meter or thermostat on cracked paint wall, finger hesitating to turn dial, cold blue ambient light, shallow depth of field, metaphor for heating cost, no readable numbers on display."
+    },
+    {
+      "id": "IMG-16",
+      "file": "IMG-16_suitcases_airport.png",
+      "mode": "A",
+      "prompt": "Airport departure board area blurred in background, foreground two identical cheap suitcases and passport covers without visible country names, mood emigration does not escape math, cool tones, still life composition."
+    },
+    {
+      "id": "IMG-17",
+      "file": "IMG-17_four_walls.png",
+      "mode": "B",
+      "prompt": "Four crumbling walls closing in on a tiny empty chair in center, each wall texture different: crowd silhouettes, inflation arrow shape, parliament dome shape, turkey feather shape abstract, metaphor for pension trap."
+    },
+    {
+      "id": "IMG-18",
+      "file": "IMG-18_road_cliff.png",
+      "mode": "A",
+      "prompt": "Landscape with long gentle cracked asphalt road leading to abrupt cliff edge, fog, desaturated, metaphor for gradual then sudden collapse, cinematic wide shot, no people."
+    },
+    {
+      "id": "IMG-19",
+      "file": "IMG-19_gym_barbell.png",
+      "mode": "A",
+      "prompt": "Small gritty gym interior: barbell on floor, chalk dust, single overhead bulb, no people, metaphor for body as primary asset, masculine documentary aesthetic."
+    },
+    {
+      "id": "IMG-20",
+      "file": "IMG-20_desk_laptop.png",
+      "mode": "A",
+      "prompt": "Home desk at night: laptop showing blurred green-red chart without readable numbers, notebook, pen, coffee, disciplined worker mood, blue screen glow on dark room, not crypto bro aesthetic, realistic still life."
+    },
+    {
+      "id": "IMG-21",
+      "file": "IMG-21_garden_seedlings.png",
+      "mode": "A",
+      "prompt": "Hands planting seedlings in dark soil, suburban small garden bed, early spring grey sky, honest physical work metaphor, close-up, documentary natural light, dirt under fingernails, no face."
+    },
+    {
+      "id": "IMG-22",
+      "file": "IMG-22_passports_map.png",
+      "mode": "A",
+      "prompt": "World map print on old desk covered with multiple rejected visa stamp pages blank, compass, worn passport, metaphor no exit from demographic math, top-down still life, muted sepia-cold grade, no readable country names."
+    },
+    {
+      "id": "IMG-23",
+      "file": "IMG-23_channel_endcard_bg.png",
+      "mode": "B",
+      "prompt": "Abstract dark background for YouTube channel end card: subtle grid, faint gold horizon line, deep navy #0d1117, empty center space for logo overlay, cinematic minimal, no text baked in."
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "route": {
+    "final": "direct",
+    "auto_detect_interface": true,
+    "rules": [
+      { "action": "sniff", "timeout": "300ms" },
+      { "protocol": "dns", "action": "hijack-dns" },
+      { "ip_is_private": true, "outbound": "direct" },
+      { "protocol": "bittorrent", "outbound": "direct" },
+      {
+        "network": "udp",
+        "port": [443],
+        "domain_suffix": [
+          "google.com",
+          "youtube.com",
+          "googlevideo.com",
+          "googleapis.com",
+          "gstatic.com"
+        ],
+        "action": "reject"
+      },
+      {
+        "domain_suffix": [
+          "google.com",
+          "google.ru",
+          "google.co.uk",
+          "gmail.com",
+          "googlemail.com",
+          "googlevideo.com",
+          "youtube.com",
+          "youtu.be",
+          "ytimg.com",
+          "ggpht.com",
+          "gstatic.com",
+          "googleapis.com",
+          "googleusercontent.com",
+          "youtubei.googleapis.com",
+          "gvt1.com",
+          "gvt2.com",
+          "withgoogle.com",
+          "googleadservices.com",
+          "googlesyndication.com",
+          "google-analytics.com",
+          "clients1.google.com",
+          "play.googleapis.com",
+          "android.googleapis.com"
+        ],
+        "outbound": "vless-vps"
+      },
+      {
+        "domain_keyword": ["google", "youtube", "ytimg", "gstatic", "gvt"],
+        "outbound": "vless-vps"
+      },
+      {
+        "domain_suffix": [
+          "telegram.org",
+          "t.me",
+          "telegra.ph",
+          "telesco.pe",
+          "tdesktop.com",
+          "discord.com",
+          "discordapp.com",
+          "discord.gg",
+          "discord.media",
+          "facebook.com",
+          "fbcdn.net",
+          "instagram.com",
+          "cdninstagram.com",
+          "twitter.com",
+          "x.com",
+          "twimg.com",
+          "whatsapp.com",
+          "whatsapp.net",
+          "openai.com",
+          "chatgpt.com",
+          "oaistatic.com"
+        ],
+        "outbound": "vless-vps"
+      }
+    ]
+  }
+}

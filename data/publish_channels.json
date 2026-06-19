@@ -1,0 +1,26 @@
+{
+  "comment": "Pension: persona_profile pension_social (TG+VK+Дзен RSS). Остальные — tg_only до VK_ACCESS_TOKEN, затем use_profile=with_vk.",
+  "use_profile": "tg_only",
+  "persona_profile": {
+    "pension": "pension_social"
+  },
+  "profiles": {
+    "tg_only": {
+      "garden": ["tg"],
+      "lenin": ["tg"],
+      "stern": ["tg"],
+      "gdepar": ["tg"],
+      "pension": ["tg"]
+    },
+    "pension_social": {
+      "pension": ["tg", "vk_wall", "dzen_rss"]
+    },
+    "with_vk": {
+      "garden": ["tg", "vk_wall", "dzen_rss"],
+      "lenin": ["tg", "vk_wall", "dzen_rss"],
+      "stern": ["tg", "vk_wall", "dzen_rss"],
+      "gdepar": ["tg", "vk_wall", "dzen_rss"],
+      "pension": ["tg", "vk_wall", "dzen_rss"]
+    }
+  }
+}

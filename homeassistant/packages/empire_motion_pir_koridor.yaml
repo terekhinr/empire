@@ -1,0 +1,69 @@
+# Коридор: PIR AOYAN MS01 — автоматизаций на свет здесь НЕТ.
+#
+# Zbeacon TS0001 перенесён на КУХНЮ (ручной свет, без PIR).
+#   → light.empire_kuhnya_svet в yandex_smart_home.yaml, комната «Кухня»
+#
+# Если в HA остались автоматизации из UI («Коридор — движение…»):
+#   Настройки → Автоматизации → найти по AOYAN / Zbeacon → выключить или удалить.
+#
+# Явно отключённые автоматизации с прежними id — заменяют «призраков» после переноса
+# Zbeacon на кухню (иначе PIR в коридоре продолжает дёргать light.zbeacon_ts0001).
+automation:
+  - id: empire_koridor_pir_light_on
+    alias: "Коридор — движение, свет вкл (отключено)"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.aoyan_ms01
+        from: "off"
+        to: "on"
+    conditions:
+      - condition: template
+        value_template: "{{ false }}"
+    actions:
+      - stop: "PIR→Zbeacon отключено (кухня, ручной свет)"
+  - id: empire_koridor_pir_light_off
+    alias: "Коридор — нет движения, свет выкл (отключено)"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.aoyan_ms01
+        to: "off"
+        for:
+          seconds: 90
+    conditions:
+      - condition: template
+        value_template: "{{ false }}"
+    actions:
+      - stop: "PIR→Zbeacon отключено (кухня, ручной свет)"
+
+# Когда появится свет в коридоре + PIR — скопируйте шаблон ниже с новым light.* :
+#
+# automation:
+#   - id: empire_koridor_pir_light_on
+#     alias: "Коридор — движение, свет вкл"
+#     enabled: true
+#     mode: restart
+#     triggers:
+#       - trigger: state
+#         entity_id: binary_sensor.aoyan_ms01
+#         from: "off"
+#         to: "on"
+#     actions:
+#       - action: light.turn_on
+#         target:
+#           entity_id: light.<koridor_svet>
+#   - id: empire_koridor_pir_light_off
+#     alias: "Коридор — нет движения, свет выкл"
+#     enabled: true
+#     mode: restart
+#     triggers:
+#       - trigger: state
+#         entity_id: binary_sensor.aoyan_ms01
+#         to: "off"
+#         for:
+#           seconds: 90
+#     actions:
+#       - action: light.turn_off
+#         target:
+#           entity_id: light.<koridor_svet>

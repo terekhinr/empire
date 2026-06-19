@@ -1,0 +1,22 @@
+========== 2026-06-01T08:00:01+00:00 MSK=2026-06-01T11:00:01+03:00 ==========
+
+=== 01_laptop ===
+  veo 01_laptop model=veo-3.1-generate-preview duration=8s ref_img=True
+  FAIL start 01_laptop: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}]}}
+  Квота Veo исчерпана для GEMINI_API_KEY. Проверьте лимиты: https://ai.dev/rate-limit — видео и картинки считаются отдельно.
+
+=== 02_noise ===
+  veo 02_noise model=veo-3.1-generate-preview duration=8s ref_img=True
+  FAIL start 02_noise: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}]}}
+  Квота Veo исчерпана для GEMINI_API_KEY. Проверьте лимиты: https://ai.dev/rate-limit — видео и картинки считаются отдельно.
+
+=== 03_pov_crowd ===
+  veo 03_pov_crowd model=veo-3.1-generate-preview duration=6s ref_img=False
+  FAIL start 03_pov_crowd: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}]}}
+  Квота Veo исчерпана для GEMINI_API_KEY. Проверьте лимиты: https://ai.dev/rate-limit — видео и картинки считаются отдельно.
+
+=== 04_monitor ===
+  veo 04_monitor model=veo-3.1-generate-preview duration=8s ref_img=True
+  FAIL start 04_monitor: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}]}}
+  Квота Veo исчерпана для GEMINI_API_KEY. Проверьте лимиты: https://ai.dev/rate-limit — видео и картинки считаются отдельно.
+Report → /root/projects/empire/data/pension/video/gemini_scheduled_report.txt

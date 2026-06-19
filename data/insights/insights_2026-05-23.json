@@ -1,0 +1,14 @@
+{
+  "events_7d": {
+    "daily_snapshot": 100,
+    "gdepar_topic_family_penalty": 2,
+    "neurocomment_planned": 190,
+    "pension_waitlist_signup": 2,
+    "tg_promo_map_draft": 1
+  },
+  "hypotheses": [
+    "Усилить CTA с deeplink в постах garden — мало bot_started.",
+    "Проверить ER-аномалии gdepar: топ-3 сигнала → черновики.",
+    "Shorts stern: 2 ролика/нед по готовым сценариям из дашборда."
+  ]
+}

@@ -1,0 +1,5 @@
+file '/root/projects/empire/data/pension/video/clips_final/01_room_wide.mp4'
+file '/root/projects/empire/data/pension/video/clips_final/02_to_window.mp4'
+file '/root/projects/empire/data/pension/video/clips_final/03_pov_demo.mp4'
+file '/root/projects/empire/data/pension/video/clips_final/04_close_window.mp4'
+file '/root/projects/empire/data/pension/video/clips_final/05_monitor.mp4'

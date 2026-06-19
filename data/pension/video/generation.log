@@ -1,0 +1,337 @@
+
+=== 01_room_wide ===
+  ok keyframe 01_room_wide (90 KB)
+
+=== 02_to_window ===
+  ok keyframe 02_to_window (70 KB)
+
+=== 03_pov_demo ===
+  ok keyframe 03_pov_demo (177 KB)
+
+=== 04_close_window ===
+  ok keyframe 04_close_window (97 KB)
+
+=== 05_monitor ===
+  ok keyframe 05_monitor (25 KB)
+  uploaded iosif_boroda_ref.png → https://v3b.fal.media/files/b/0a9c6cb9/qP_WQCNOaC2FGkVkfpl5r...
+  uploaded 01_room_wide.jpg → https://v3b.fal.media/files/b/0a9c6cba/05WSfJhJiccOdrNxmS66Y...
+  kling reference-to-video 6s …
+Traceback (most recent call last):
+  File "/root/projects/empire/scripts/generate_pension_demo_video.py", line 517, in <module>
+    raise SystemExit(asyncio.run(main()))
+                     ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/scripts/generate_pension_demo_video.py", line 478, in main
+    _download_video(client, video_url, clip_raw)
+  File "/root/projects/empire/scripts/generate_pension_demo_video.py", line 222, in _download_video
+    r.raise_for_status()
+    ^^^^^^^^^^^^^^^^^^
+AttributeError: 'coroutine' object has no attribute 'raise_for_status'
+sys:1: RuntimeWarning: coroutine 'AsyncClient.get' was never awaited
+
+=== 01_room_wide ===
+  skip keyframe 01_room_wide
+
+=== 02_to_window ===
+  skip keyframe 02_to_window
+
+=== 03_pov_demo ===
+  skip keyframe 03_pov_demo
+
+=== 04_close_window ===
+  skip keyframe 04_close_window
+
+=== 05_monitor ===
+  skip keyframe 05_monitor
+  uploaded iosif_boroda_ref.png → https://v3b.fal.media/files/b/0a9c6ccd/LLodNbIkTXPlAz30pRYKH...
+  uploaded 01_room_wide.jpg → https://v3b.fal.media/files/b/0a9c6cce/PswaDnnfGhE0aV0nAPRr1...
+  kling reference-to-video 6s …
+  saved clip 01_room_wide.mp4 (6008 KB)
+  scene done → /root/projects/empire/data/pension/video/clips_final/01_room_wide.mp4
+  uploaded 02_to_window.jpg → https://v3b.fal.media/files/b/0a9c6cdb/ELq3Ok2AwdNKMM2pTAyd0...
+  kling reference-to-video 4s …
+  saved clip 02_to_window.mp4 (4234 KB)
+  scene done → /root/projects/empire/data/pension/video/clips_final/02_to_window.mp4
+  uploaded 03_pov_demo.jpg → https://v3b.fal.media/files/b/0a9c6ced/ZBb6JqctgECbd0pu3jgbr...
+  kling image-to-video 6s …
+  FAIL kling 03_pov_demo: [{'type': 'missing', 'loc': ['body', 'image_url'], 'msg': 'Field required', 'input': {'prompt': '2D cartoon illustration, bold black outlines on pure white background, minimal flat cel-shading, editorial animation, clean vector comic style. No photorealism, no gradients on background, white void room. First-person POV from third floor window looking down. Camera slowly pans across marching cartoon crowd holding blank protest signs, street demonstration below.', 'start_image_url': 'https://v3b.fal.media/files/b/0a9c6ced/ZBb6JqctgECbd0pu3jgbr_03_pov_demo.jpg', 'duration': '6', 'aspect_ratio': '16:9', 'generate_audio': False}}]
+  uploaded 04_close_window.jpg → https://v3b.fal.media/files/b/0a9c6ced/2igKGKucnfCIo_6-wlcDm...
+  kling reference-to-video 4s …
+  saved clip 04_close_window.mp4 (3935 KB)
+  scene done → /root/projects/empire/data/pension/video/clips_final/04_close_window.mp4
+  uploaded 05_monitor.jpg → https://v3b.fal.media/files/b/0a9c6cfe/DZp-M9NeEkg7iODWi_x22...
+  kling reference-to-video 5s …
+  saved clip 05_monitor.mp4 (2665 KB)
+  $ /root/projects/empire/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2 -y -i /root/projects/empire/data/pension/video/clips/05_monitor.mp4 -i /root/projects/empire/data/pension/video/overlays/monitor_text.png -filter_complex [0:v][1:v]overlay=(W*0.25):(H*0.2):enable='gte(t,2.5)'[vout] ...
+ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers
+  built with gcc 8 (Debian 8.3.0-6)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg
+  libavutil      59.  8.100 / 59.  8.100
+  libavcodec     61.  3.100 / 61.  3.100
+  libavformat    61.  1.100 / 61.  1.100
+  libavdevice    61.  1.100 / 61.  1.100
+  libavfilter    10.  1.100 / 10.  1.100
+  libswscale      8.  1.100 /  8.  1.100
+  libswresample   5.  1.100 /  5.  1.100
+  libpostproc    58.  1.100 / 58.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/root/projects/empire/data/pension/video/clips/05_monitor.mp4':
+  Metadata:
+    minor_version   : 512
+    major_brand     : isom
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf60.16.100
+  Duration: 00:00:05.04, start: 0.000000, bitrate: 4330 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, 4328 kb/s, 24 fps, 24 tbr, 12288 tbn (default)
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc60.31.102 h264_slapi
+Input #1, png_pipe, from '/root/projects/empire/data/pension/video/overlays/monitor_text.png':
+  Duration: N/A, bitrate: N/A
+  Stream #1:0: Video: png, rgba(pc, gbr/unknown/unknown), 960x540, 25 fps, 25 tbr, 25 tbn
+Stream mapping:
+  Stream #0:0 (h264) -> overlay
+  Stream #1:0 (png) -> overlay
+  overlay:default -> Stream #0:0 (libx264)
+Press [q] to stop, [?] for help
+[h264 @ 0x83279c0] Late SEI is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.
+[h264 @ 0x83279c0] If you want to help, upload a sample of this file to https://streams.videolan.org/upload/ and contact the ffmpeg-devel mailing list. (ffmpeg-devel@ffmpeg.org)
+[libx264 @ 0x82902c0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0x82902c0] profile High, level 4.0, 4:2:0, 8-bit
+[libx264 @ 0x82902c0] 264 - core 164 r3191 4613ac3 - H.264/MPEG-4 AVC codec - Copyleft 2003-2024 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=6 lookahead_threads=1 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=24 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=23.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to '/root/projects/empire/data/pension/video/clips_final/05_monitor.mp4':
+  Metadata:
+    minor_version   : 512
+    major_brand     : isom
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.1.100
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, q=2-31, 24 fps, 12288 tbn
+      Metadata:
+        encoder         : Lavc61.3.100 libx264
+      Side data:
+        cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=    0 fps=0.0 q=0.0 size=       0KiB time=N/A bitrate=N/A speed=N/A    frame=    0 fps=0.0 q=0.0 size=       0KiB time=N/A bitrate=N/A speed=N/A    frame=   18 fps= 12 q=28.0 size=       0KiB time=00:00:00.66 bitrate=   0.6kbits/s speed=0.444x    frame=   61 fps= 30 q=28.0 size=       0KiB time=00:00:02.45 bitrate=   0.2kbits/s speed=1.23x    [out#0/mp4 @ 0x825dfc0] video:443KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.507774%
+frame=  121 fps= 50 q=-1.0 Lsize=     445KiB time=00:00:04.95 bitrate= 735.8kbits/s speed=2.06x    
+[libx264 @ 0x82902c0] frame I:1     Avg QP:16.89  size: 11589
+[libx264 @ 0x82902c0] frame P:31    Avg QP:17.23  size:  6544
+[libx264 @ 0x82902c0] frame B:89    Avg QP:20.45  size:  2681
+[libx264 @ 0x82902c0] consecutive B-frames:  1.7%  0.0%  2.5% 95.9%
+[libx264 @ 0x82902c0] mb I  I16..4: 32.0% 66.1%  1.9%
+[libx264 @ 0x82902c0] mb P  I16..4:  8.5% 10.0%  0.5%  P16..4:  8.5%  2.1%  0.8%  0.0%  0.0%    skip:69.7%
+[libx264 @ 0x82902c0] mb B  I16..4:  1.7%  0.6%  0.0%  B16..8: 16.2%  1.4%  0.0%  direct: 0.3%  skip:79.8%  L0:41.6% L1:55.6% BI: 2.8%
+[libx264 @ 0x82902c0] 8x8 transform intra:48.3% inter:88.2%
+[libx264 @ 0x82902c0] coded y,uvDC,uvAC intra: 4.9% 8.6% 3.4% inter: 1.3% 1.1% 0.1%
+[libx264 @ 0x82902c0] i16 v,h,dc,p: 22% 74%  2%  1%
+[libx264 @ 0x82902c0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 21% 27% 51%  0%  0%  0%  0%  0%  0%
+[libx264 @ 0x82902c0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 34% 39% 19%  1%  1%  2%  2%  1%  1%
+[libx264 @ 0x82902c0] i8c dc,h,v,p: 89%  8%  3%  0%
+[libx264 @ 0x82902c0] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 0x82902c0] ref P L0: 55.0% 13.9% 24.0%  7.1%
+[libx264 @ 0x82902c0] ref B L0: 74.2% 23.1%  2.6%
+[libx264 @ 0x82902c0] ref B L1: 96.1%  3.9%
+[libx264 @ 0x82902c0] kb/s:718.90
+  scene done → /root/projects/empire/data/pension/video/clips_final/05_monitor.mp4
+
+=== concat 4 clips ===
+  $ /root/projects/empire/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2 -y -f concat -safe 0 -i /root/projects/empire/data/pension/video/concat_list.txt ...
+ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers
+  built with gcc 8 (Debian 8.3.0-6)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg
+  libavutil      59.  8.100 / 59.  8.100
+  libavcodec     61.  3.100 / 61.  3.100
+  libavformat    61.  1.100 / 61.  1.100
+  libavdevice    61.  1.100 / 61.  1.100
+  libavfilter    10.  1.100 / 10.  1.100
+  libswscale      8.  1.100 /  8.  1.100
+  libswresample   5.  1.100 /  5.  1.100
+  libpostproc    58.  1.100 / 58.  1.100
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x8386300] Auto-inserting h264_mp4toannexb bitstream filter
+Input #0, concat, from '/root/projects/empire/data/pension/video/concat_list.txt':
+  Duration: N/A, start: 0.000000, bitrate: 8144 kb/s
+  Stream #0:0(und): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, 8144 kb/s, 24 fps, 24 tbr, 12288 tbn
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc60.31.102 h264_slapi
+Stream mapping:
+  Stream #0:0 -> #0:0 (copy)
+Output #0, mp4, to '/root/projects/empire/data/pension/video/_concat_tmp.mp4':
+  Metadata:
+    encoder         : Lavf61.1.100
+  Stream #0:0(und): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, q=2-31, 8144 kb/s, 24 fps, 24 tbr, 12288 tbn
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc60.31.102 h264_slapi
+Press [q] to stop, [?] for help
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x763bf001fc80] Auto-inserting h264_mp4toannexb bitstream filter
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x763bf001f280] Auto-inserting h264_mp4toannexb bitstream filter
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x763bf0005400] Auto-inserting h264_mp4toannexb bitstream filter
+[out#0/mp4 @ 0x838cc00] video:14617KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.026110%
+size=   14620KiB time=00:00:19.08 bitrate=6276.2kbits/s speed= 282x    
+  $ /root/projects/empire/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2 -y -i /root/projects/empire/data/pension/video/_concat_tmp.mp4 -vf fade=t=out:st=18.17:d=1.0 -c:v libx264 ...
+ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers
+  built with gcc 8 (Debian 8.3.0-6)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg
+  libavutil      59.  8.100 / 59.  8.100
+  libavcodec     61.  3.100 / 61.  3.100
+  libavformat    61.  1.100 / 61.  1.100
+  libavdevice    61.  1.100 / 61.  1.100
+  libavfilter    10.  1.100 / 10.  1.100
+  libswscale      8.  1.100 /  8.  1.100
+  libswresample   5.  1.100 /  5.  1.100
+  libpostproc    58.  1.100 / 58.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/root/projects/empire/data/pension/video/_concat_tmp.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.1.100
+  Duration: 00:00:19.17, start: 0.000000, bitrate: 6248 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, 6247 kb/s, 23.90 fps, 24 tbr, 12288 tbn (default)
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc60.31.102 h264_slapi
+Stream mapping:
+  Stream #0:0 -> #0:0 (h264 (native) -> h264 (libx264))
+Press [q] to stop, [?] for help
+[h264 @ 0x7099680] Late SEI is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.
+[h264 @ 0x7099680] If you want to help, upload a sample of this file to https://streams.videolan.org/upload/ and contact the ffmpeg-devel mailing list. (ffmpeg-devel@ffmpeg.org)
+[libx264 @ 0x70a6fc0] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0x70a6fc0] profile High, level 4.0, 4:2:0, 8-bit
+[libx264 @ 0x70a6fc0] 264 - core 164 r3191 4613ac3 - H.264/MPEG-4 AVC codec - Copyleft 2003-2024 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=6 lookahead_threads=1 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=24 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=23.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to '/root/projects/empire/data/pension/video/pension_demo_final.mp4':
+  Metadata:
+    major_brand     : isom
+    minor_version   : 512
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.1.100
+  Stream #0:0(und): Video: h264 (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, q=2-31, 24 fps, 12288 tbn (default)
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.3.100 libx264
+      Side data:
+        cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=    0 fps=0.0 q=0.0 size=       0KiB time=N/A bitrate=N/A speed=N/A    frame=   26 fps= 26 q=28.0 size=       0KiB time=00:00:01.00 bitrate=   0.4kbits/s speed=0.997x    frame=   67 fps= 45 q=28.0 size=     512KiB time=00:00:02.70 bitrate=1548.8kbits/s speed= 1.8x    [h264 @ 0x7099680] Late SEI is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.
+[h264 @ 0x7099680] If you want to help, upload a sample of this file to https://streams.videolan.org/upload/ and contact the ffmpeg-devel mailing list. (ffmpeg-devel@ffmpeg.org)
+frame=  100 fps= 50 q=28.0 size=     768KiB time=00:00:04.08 bitrate=1540.9kbits/s speed=2.04x    frame=  142 fps= 57 q=28.0 size=    1280KiB time=00:00:05.83 bitrate=1797.6kbits/s speed=2.33x    [h264 @ 0x70e8bc0] Late SEI is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.
+[h264 @ 0x70e8bc0] If you want to help, upload a sample of this file to https://streams.videolan.org/upload/ and contact the ffmpeg-devel mailing list. (ffmpeg-devel@ffmpeg.org)
+frame=  179 fps= 60 q=28.0 size=    1536KiB time=00:00:07.37 bitrate=1706.2kbits/s speed=2.45x    frame=  214 fps= 61 q=28.0 size=    2048KiB time=00:00:08.83 bitrate=1899.4kbits/s speed=2.52x    frame=  250 fps= 62 q=28.0 size=    2560KiB time=00:00:10.33 bitrate=2029.5kbits/s speed=2.58x    frame=  288 fps= 64 q=28.0 size=    2816KiB time=00:00:11.91 bitrate=1935.9kbits/s speed=2.64x    frame=  325 fps= 65 q=28.0 size=    3072KiB time=00:00:13.45 bitrate=1869.9kbits/s speed=2.69x    frame=  376 fps= 68 q=28.0 size=    3584KiB time=00:00:15.58 bitrate=1884.1kbits/s speed=2.83x    frame=  412 fps= 69 q=28.0 size=    3584KiB time=00:00:17.08 bitrate=1718.7kbits/s speed=2.84x    [out#0/mp4 @ 0x7097bc0] video:3920KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.153076%
+frame=  460 fps= 72 q=-1.0 Lsize=    3926KiB time=00:00:19.08 bitrate=1685.2kbits/s speed=   3x    
+[libx264 @ 0x70a6fc0] frame I:5     Avg QP:15.42  size: 42019
+[libx264 @ 0x70a6fc0] frame P:142   Avg QP:19.10  size: 13434
+[libx264 @ 0x70a6fc0] frame B:313   Avg QP:22.45  size:  6055
+[libx264 @ 0x70a6fc0] consecutive B-frames:  6.1%  4.8% 14.3% 74.8%
+[libx264 @ 0x70a6fc0] mb I  I16..4: 37.2% 53.7%  9.1%
+[libx264 @ 0x70a6fc0] mb P  I16..4:  7.6% 15.5%  1.3%  P16..4: 11.4%  3.9%  1.5%  0.0%  0.0%    skip:58.8%
+[libx264 @ 0x70a6fc0] mb B  I16..4:  1.8%  2.1%  0.2%  B16..8: 19.3%  2.7%  0.3%  direct: 1.1%  skip:72.4%  L0:46.9% L1:48.4% BI: 4.7%
+[libx264 @ 0x70a6fc0] 8x8 transform intra:59.4% inter:79.3%
+[libx264 @ 0x70a6fc0] coded y,uvDC,uvAC intra: 14.4% 21.1% 7.1% inter: 3.6% 3.3% 0.1%
+[libx264 @ 0x70a6fc0] i16 v,h,dc,p: 43% 46%  7%  5%
+[libx264 @ 0x70a6fc0] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 25% 20% 51%  1%  1%  1%  1%  1%  1%
+[libx264 @ 0x70a6fc0] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 39% 22% 16%  2%  5%  6%  4%  4%  2%
+[libx264 @ 0x70a6fc0] i8c dc,h,v,p: 80%  9%  9%  2%
+[libx264 @ 0x70a6fc0] Weighted P-Frames: Y:5.6% UV:5.6%
+[libx264 @ 0x70a6fc0] ref P L0: 60.2% 14.3% 18.7%  6.9%  0.0%
+[libx264 @ 0x70a6fc0] ref B L0: 82.3% 15.0%  2.7%
+[libx264 @ 0x70a6fc0] ref B L1: 96.2%  3.8%
+[libx264 @ 0x70a6fc0] kb/s:1675.00
+FINAL → /root/projects/empire/data/pension/video/pension_demo_final.mp4
+
+=== 03_pov_demo ===
+  skip keyframe 03_pov_demo
+  uploaded iosif_boroda_ref.png → https://v3b.fal.media/files/b/0a9c6d13/ZMnHvSY9LzCgdeoUFTRgr...
+  uploaded 03_pov_demo.jpg → https://v3b.fal.media/files/b/0a9c6d13/CjqudGMwNzu76JbC2-tMU...
+  kling image-to-video 6s …
+  saved clip 03_pov_demo.mp4 (8662 KB)
+  $ /root/projects/empire/venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-linux-x86_64-v7.0.2 -y -i /root/projects/empire/data/pension/video/clips/03_pov_demo.mp4 -i /root/projects/empire/data/pension/video/overlays/sign_0.png -i /root/projects/empire/data/pension/video/overlays/sign_1.png ...
+ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2024 the FFmpeg developers
+  built with gcc 8 (Debian 8.3.0-6)
+  configuration: --enable-gpl --enable-version3 --enable-static --disable-debug --disable-ffplay --disable-indev=sndio --disable-outdev=sndio --cc=gcc --enable-fontconfig --enable-frei0r --enable-gnutls --enable-gmp --enable-libgme --enable-gray --enable-libaom --enable-libfribidi --enable-libass --enable-libvmaf --enable-libfreetype --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-librubberband --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libvorbis --enable-libopus --enable-libtheora --enable-libvidstab --enable-libvo-amrwbenc --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libdav1d --enable-libxvid --enable-libzvbi --enable-libzimg
+  libavutil      59.  8.100 / 59.  8.100
+  libavcodec     61.  3.100 / 61.  3.100
+  libavformat    61.  1.100 / 61.  1.100
+  libavdevice    61.  1.100 / 61.  1.100
+  libavfilter    10.  1.100 / 10.  1.100
+  libswscale      8.  1.100 /  8.  1.100
+  libswresample   5.  1.100 /  5.  1.100
+  libpostproc    58.  1.100 / 58.  1.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/root/projects/empire/data/pension/video/clips/03_pov_demo.mp4':
+  Metadata:
+    minor_version   : 512
+    major_brand     : isom
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf60.16.100
+  Duration: 00:00:06.04, start: 0.000000, bitrate: 11745 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, 11743 kb/s, 24 fps, 24 tbr, 12288 tbn (default)
+      Metadata:
+        handler_name    : VideoHandler
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc60.31.102 h264_slapi
+Input #1, png_pipe, from '/root/projects/empire/data/pension/video/overlays/sign_0.png':
+  Duration: N/A, bitrate: N/A
+  Stream #1:0: Video: png, rgba(pc, gbr/unknown/unknown), 640x320, 25 fps, 25 tbr, 25 tbn
+Input #2, png_pipe, from '/root/projects/empire/data/pension/video/overlays/sign_1.png':
+  Duration: N/A, bitrate: N/A
+  Stream #2:0: Video: png, rgba(pc, gbr/unknown/unknown), 640x320, 25 fps, 25 tbr, 25 tbn
+Input #3, png_pipe, from '/root/projects/empire/data/pension/video/overlays/sign_2.png':
+  Duration: N/A, bitrate: N/A
+  Stream #3:0: Video: png, rgba(pc, gbr/unknown/unknown), 640x320, 25 fps, 25 tbr, 25 tbn
+Input #4, png_pipe, from '/root/projects/empire/data/pension/video/overlays/sign_3.png':
+  Duration: N/A, bitrate: N/A
+  Stream #4:0: Video: png, rgba(pc, gbr/unknown/unknown), 640x320, 25 fps, 25 tbr, 25 tbn
+Stream mapping:
+  Stream #0:0 (h264) -> overlay
+  Stream #1:0 (png) -> overlay
+  Stream #2:0 (png) -> overlay
+  Stream #3:0 (png) -> overlay
+  Stream #4:0 (png) -> overlay
+  overlay:default -> Stream #0:0 (libx264)
+Press [q] to stop, [?] for help
+[h264 @ 0x6f3a840] Late SEI is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.
+[h264 @ 0x6f3a840] If you want to help, upload a sample of this file to https://streams.videolan.org/upload/ and contact the ffmpeg-devel mailing list. (ffmpeg-devel@ffmpeg.org)
+[libx264 @ 0x6e3ca40] using cpu capabilities: MMX2 SSE2Fast SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+[libx264 @ 0x6e3ca40] profile High, level 4.0, 4:2:0, 8-bit
+[libx264 @ 0x6e3ca40] 264 - core 164 r3191 4613ac3 - H.264/MPEG-4 AVC codec - Copyleft 2003-2024 - http://www.videolan.org/x264.html - options: cabac=1 ref=3 deblock=1:0:0 analyse=0x3:0x113 me=hex subme=7 psy=1 psy_rd=1.00:0.00 mixed_ref=1 me_range=16 chroma_me=1 trellis=1 8x8dct=1 cqm=0 deadzone=21,11 fast_pskip=1 chroma_qp_offset=-2 threads=6 lookahead_threads=1 sliced_threads=0 nr=0 decimate=1 interlaced=0 bluray_compat=0 constrained_intra=0 bframes=3 b_pyramid=2 b_adapt=1 b_bias=0 direct=1 weightb=1 open_gop=0 weightp=2 keyint=250 keyint_min=24 scenecut=40 intra_refresh=0 rc_lookahead=40 rc=crf mbtree=1 crf=23.0 qcomp=0.60 qpmin=0 qpmax=69 qpstep=4 ip_ratio=1.40 aq=1:1.00
+Output #0, mp4, to '/root/projects/empire/data/pension/video/clips_final/03_pov_demo.mp4':
+  Metadata:
+    minor_version   : 512
+    major_brand     : isom
+    compatible_brands: isomiso2avc1mp41
+    encoder         : Lavf61.1.100
+  Stream #0:0: Video: h264 (avc1 / 0x31637661), yuv420p(progressive), 1920x1080, q=2-31, 24 fps, 12288 tbn
+      Metadata:
+        encoder         : Lavc61.3.100 libx264
+      Side data:
+        cpb: bitrate max/min/avg: 0/0/0 buffer size: 0 vbv_delay: N/A
+frame=    0 fps=0.0 q=0.0 size=       0KiB time=N/A bitrate=N/A speed=N/A    frame=   29 fps= 29 q=28.0 size=     512KiB time=00:00:01.12 bitrate=3728.6kbits/s speed=1.12x    frame=   60 fps= 40 q=28.0 size=     768KiB time=00:00:02.41 bitrate=2603.5kbits/s speed=1.61x    frame=   95 fps= 47 q=28.0 size=    1536KiB time=00:00:03.87 bitrate=3247.3kbits/s speed=1.93x    frame=  138 fps= 55 q=28.0 size=    2048KiB time=00:00:05.66 bitrate=2960.8kbits/s speed=2.26x    [out#0/mp4 @ 0x6e44ac0] video:2319KiB audio:0KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.109162%
+frame=  145 fps= 57 q=-1.0 Lsize=    2321KiB time=00:00:05.95 bitrate=3191.6kbits/s speed=2.33x    
+[libx264 @ 0x6e3ca40] frame I:1     Avg QP:21.52  size: 93625
+[libx264 @ 0x6e3ca40] frame P:42    Avg QP:21.25  size: 35372
+[libx264 @ 0x6e3ca40] frame B:102   Avg QP:22.98  size:  7789
+[libx264 @ 0x6e3ca40] consecutive B-frames:  4.8%  2.8%  4.1% 88.3%
+[libx264 @ 0x6e3ca40] mb I  I16..4: 16.5% 59.3% 24.2%
+[libx264 @ 0x6e3ca40] mb P  I16..4:  4.0%  8.3%  2.3%  P16..4: 19.6% 10.7%  7.6%  0.0%  0.0%    skip:47.4%
+[libx264 @ 0x6e3ca40] mb B  I16..4:  0.5%  0.6%  0.0%  B16..8: 24.5%  5.8%  1.4%  direct: 2.2%  skip:65.0%  L0:46.7% L1:46.8% BI: 6.5%
+[libx264 @ 0x6e3ca40] 8x8 transform intra:56.4% inter:68.2%
+[libx264 @ 0x6e3ca40] coded y,uvDC,uvAC intra: 25.1% 13.4% 3.6% inter: 8.8% 2.8% 0.0%
+[libx264 @ 0x6e3ca40] i16 v,h,dc,p: 47% 38% 11%  4%
+[libx264 @ 0x6e3ca40] i8 v,h,dc,ddl,ddr,vr,hd,vl,hu: 25% 14% 54%  1%  1%  1%  1%  1%  1%
+[libx264 @ 0x6e3ca40] i4 v,h,dc,ddl,ddr,vr,hd,vl,hu: 42% 14% 12%  4%  6%  8%  6%  6%  3%
+[libx264 @ 0x6e3ca40] i8c dc,h,v,p: 83% 10%  6%  1%
+[libx264 @ 0x6e3ca40] Weighted P-Frames: Y:0.0% UV:0.0%
+[libx264 @ 0x6e3ca40] ref P L0: 59.3% 14.7% 17.5%  8.5%
+[libx264 @ 0x6e3ca40] ref B L0: 87.3%  9.8%  2.9%
+[libx264 @ 0x6e3ca40] ref B L1: 95.7%  4.3%
+[libx264 @ 0x6e3ca40] kb/s:3143.20
+  scene done → /root/projects/empire/data/pension/video/clips_final/03_pov_demo.mp4

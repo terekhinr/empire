@@ -1,0 +1,53 @@
+# Telegram: HA → http://172.30.32.1:8766/notify (empire-ha-proxy на armbian) → VPS :8877
+# secrets: ha_notify_url, ha_notify_token (см. secrets.yaml.example, docs/HA_MVP_SETUP.md)
+#
+# Если в журнале: «ID empire_protecka_telegram already exists» — тот же id в другом файле
+# (часто дубликат в /config/automations.yaml из UI). Удалите дубликат или смените id одной автоматизации.
+
+rest_command:
+  empire_telegram:
+    url: !secret ha_notify_url
+    method: POST
+    headers:
+      Authorization: !secret ha_notify_token
+      Content-Type: application/json
+    content_type: "application/json"
+    timeout: 15
+    payload: '{"message": "{{ message }}"}'
+
+script:
+  empire_test_telegram:
+    alias: "Empire — тест Telegram"
+    sequence:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Home Assistant: тест Telegram (empire)."
+
+automation:
+  - id: empire_protecka_telegram
+    alias: "Протечка — Telegram"
+    description: "HOBEIAN ZG-222Z. Сухо=off, вода=on → Алярм! Тонем!"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.hobeian_zg_222z
+        from: "off"
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Алярм! Тонем!"
+    mode: single
+
+  - id: empire_gaz_telegram
+    alias: "Газ — Telegram"
+    description: "Tuya TS0601 _TZE284_chbyv06x (Zigbee). Газ=on → Алярм!"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.balkon_datchik_gaza
+        from: "off"
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Алярм! Утечка газа!"
+    mode: single

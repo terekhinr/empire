@@ -1,0 +1,26 @@
+# Пример: ИК + сцены для Алисы. Скопировать в packages/ после настройки Broadlink.
+# Замените remote.broadlink_* и команды на свои.
+
+# script:
+#   tv_gostevaya_power:
+#     alias: "ТВ — питание"
+#     sequence:
+#       - service: remote.send_command
+#         target:
+#           entity_id: remote.broadlink_gostevaya
+#         data:
+#           device: tv
+#           command: power
+#
+#   svet_gostevaya_50:
+#     alias: "Свет гостиная — 50% (ИК, выученный код)"
+#     sequence:
+#       - service: remote.send_command
+#         target:
+#           entity_id: remote.broadlink_gostevaya
+#         data:
+#           device: lamp
+#           command: brightness_50
+
+# yandex_smart_home настраивается через UI интеграции;
+# для script задайте «Имя в Умном доме»: «Свет гостиная пятьдесят процентов»

@@ -1,0 +1,10 @@
+# Скопируйте в C:\Users\<вы>\.ssh\config (или допишите блок Host).
+# Cursor: Remote-SSH → Connect to Host → empire-vps
+
+Host empire-vps
+    HostName 193.233.232.48
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 30
+    ServerAliveCountMax 6
+    TCPKeepAlive yes

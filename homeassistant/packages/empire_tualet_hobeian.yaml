@@ -1,0 +1,95 @@
+# Туалет: HOBEIAN ZG-301Z → light.empire_tualet_svet (дашборд + Алиса).
+
+script:
+  empire_tualet_hobeian_set:
+    alias: "Туалет — HOBEIAN установить on/off"
+    mode: queued
+    max: 3
+    fields:
+      want_on:
+        description: "true = включить, false = выключить"
+        selector:
+          boolean:
+    sequence:
+      - variables:
+          target: "{{ 'on' if want_on else 'off' }}"
+          cmd: "{{ 'light.turn_on' if want_on else 'light.turn_off' }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: light.hobeian_zg_301z
+      - if:
+          - condition: template
+            value_template: "{{ is_state('light.hobeian_zg_301z', target) }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: light.empire_tualet_svet
+          - stop: "HOBEIAN already {{ target }}"
+      - repeat:
+          count: 8
+          sequence:
+            - action: "{{ cmd }}"
+              target:
+                entity_id: light.hobeian_zg_301z
+              continue_on_error: true
+            - wait_template: "{{ is_state('light.hobeian_zg_301z', target) }}"
+              timeout: "00:00:04"
+              continue_on_timeout: true
+            - if:
+                - condition: template
+                  value_template: "{{ is_state('light.hobeian_zg_301z', target) }}"
+              then:
+                - stop: "HOBEIAN {{ target }}"
+            - delay:
+                milliseconds: 600
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.hobeian_zg_301z
+            - light.empire_tualet_svet
+
+template:
+  - light:
+      - name: "Туалет свет"
+        unique_id: empire_tualet_svet
+        default_entity_id: light.empire_tualet_svet
+        icon: mdi:ceiling-light
+        availability: >
+          {{ states('light.hobeian_zg_301z') not in ['unavailable', 'unknown', 'none'] }}
+        state: >
+          {{ is_state('light.hobeian_zg_301z', 'on') }}
+        turn_on:
+          - action: script.empire_tualet_hobeian_set
+            data:
+              want_on: true
+        turn_off:
+          - action: script.empire_tualet_hobeian_set
+            data:
+              want_on: false
+
+automation:
+  - id: empire_tualet_hobeian_poll
+    alias: "Туалет — опрос состояния HOBEIAN"
+    trigger:
+      - platform: time_pattern
+        minutes: "/2"
+      - platform: homeassistant
+        event: start
+    action:
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.hobeian_zg_301z
+            - light.empire_tualet_svet
+
+  - id: empire_tualet_hobeian_state_sync
+    alias: "Туалет — синхрон состояния HOBEIAN → template"
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: state
+        entity_id: light.hobeian_zg_301z
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: light.empire_tualet_svet

@@ -1,0 +1,36 @@
+{
+  "outbounds": [
+    {
+      "tag": "direct",
+      "type": "direct",
+      "domain_strategy": "prefer_ipv4"
+    },
+    {
+      "tag": "vless-vps",
+      "type": "vless",
+      "server": "193.233.232.48",
+      "server_port": 8443,
+      "uuid": "19dd1a1d-a8a1-40ea-a977-121c0a01ddf6",
+      "flow": "xtls-rprx-vision",
+      "domain_strategy": "prefer_ipv4",
+      "connect_timeout": "8s",
+      "tcp_fast_open": false,
+      "multiplex": {
+        "enabled": false
+      },
+      "tls": {
+        "enabled": true,
+        "server_name": "www.microsoft.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        },
+        "reality": {
+          "enabled": true,
+          "public_key": "***REMOVED***",
+          "short_id": "1b74bb3a"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-inner">
+        <span class="hero-eyebrow">Манифест</span>
+        <h1 class="hero-title">На пенсию <span class="accent">никогда</span>.</h1>
+        <p class="hero-sub">{{ site_tagline }}. Книга против капитуляции, замаскированной под отдых. Кэшфлоу, антихрупкость, штанга и земля — до конца.</p>
+        <div class="hero-cta">
+            <a class="btn btn-primary" href="/book" data-pension-goal="pension_book_toc_open">Читать книгу →</a>
+            <a class="btn btn-ghost" href="/buy" data-pension-goal="pension_book_cta_buy">Купить PDF</a>
+            <a class="btn btn-ghost" href="/articles">Свежие разборы</a>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="manifest">
+    <h2 class="section-header">Философия</h2>
+    <p class="section-lead">Жизнь — это процесс решения проблем нарастающей сложности. Когда проблемы заканчиваются — заканчиваетесь вы. Мы выбираем бесконечность.</p>
+    <div class="manifest-grid">
+        <div class="manifest-card">
+            <span class="num">01</span>
+            <h3>Игнорируй шум</h3>
+            <p>Рынок паникует — мы покупаем. Хрупкий портфель не переживает даже одного «чёрного лебедя». Антихрупкий становится сильнее от каждого.</p>
+        </div>
+        <div class="manifest-card">
+            <span class="num">02</span>
+            <h3>Кэшфлоу строит империю</h3>
+            <p>Стабильный денежный поток важнее активов роста. Всегда. Без исключений. ОФЗ-ин, ЗПИФы и дивидендные истории — фундамент.</p>
+        </div>
+        <div class="manifest-card">
+            <span class="num">03</span>
+            <h3>Тело — главный актив</h3>
+            <p>Мышцы — единственная валюта, которую не может девальвировать ни один центральный банк. Штанга, гиря, талия меньше веса.</p>
+        </div>
+        <div class="manifest-card">
+            <span class="num">04</span>
+            <h3>ИИ — рычаг, не хозяин</h3>
+            <p>Интеллект — точка опоры. ИИ — длина рычага. Нулевая точка опоры × бесконечный рычаг = ноль. Инвестируйте в свою голову.</p>
+        </div>
+        <div class="manifest-card">
+            <span class="num">05</span>
+            <h3>Земля кормит</h3>
+            <p>Дача — это база автономии, а не ностальгия. Помидор, выращенный своими руками, в момент инфляционного кризиса бесценен.</p>
+        </div>
+        <div class="manifest-card">
+            <span class="num">06</span>
+            <h3>Пилотирование обезьяны</h3>
+            <p>Лишь тот, кто умеет эффективно пилотировать свою «внутреннюю обезьяну», может сохранять и сберегать 50% (и более) своих доходов.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <h2 class="section-header">Книга</h2>
+    <p class="section-lead">«{{ book_title }}» — {{ book_subtitle }}. {{ book_chapters_count }} глав о том, как не сдаться по расписанию пенсионного фонда.</p>
+    <div class="book-promo">
+        <div class="book-cover">
+            <div class="book-cover-mark">
+                <img src="/static/logo3.png" alt="F.I.R.E." width="80" height="80" loading="lazy">
+            </div>
+            <div class="book-cover-title">{{ book_title }}</div>
+            <div class="book-cover-sub">Иосиф Борода</div>
+        </div>
+        <div class="book-promo-info">
+            <h2>Великий пенсионный обман и инструкция по эксплуатации жизни</h2>
+            <p>Демографический МММ, инфляция как невидимый вор, личный Госплан кэшфлоу, железная страховка тела, ИИ как рычаг и приусадебный фронт. Без эвфемизмов.</p>
+            <a class="btn btn-primary" href="/book" data-pension-goal="pension_book_toc_open">Открыть оглавление →</a>
+            <a class="btn btn-ghost" href="/buy" data-pension-goal="pension_book_cta_buy" style="margin-left: 12px;">Купить PDF →</a>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="waitlist">
+    <h2 class="section-header">Книга на сайте</h2>
+    <p class="section-lead">Полная PDF-версия скоро. Оставьте email — пришлём ссылку на скачивание и напомним о выходе.</p>
+    <form class="waitlist-form" id="waitlist-form" novalidate>
+        <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" aria-label="Email">
+        <button type="submit" class="btn btn-primary" data-pension-goal="pension_email_submit">Уведомить меня</button>
+    </form>
+    <p id="waitlist-msg" class="waitlist-msg muted" hidden></p>
+    {% if waitlist_count %}<p class="muted" style="font-size: 0.85rem; margin-top: 8px;">Уже в списке: {{ waitlist_count }}</p>{% endif %}
+</section>
+
+{% if articles %}
+<section class="section">
+    <h2 class="section-header">Последние разборы</h2>
+    <p class="section-lead">Свежие лонгриды из системы. Каждый — про реальный инструмент или ловушку.</p>
+    <div class="articles-list">
+        {% for a in articles %}
+        <a class="article-card" href="/articles/{{ a.id }}">
+            <span class="article-meta">{{ a.created_at.strftime('%d.%m.%Y') }}</span>
+            <h3>{{ (a.text_content | striptags)[:90] }}…</h3>
+            <p>{{ (a.text_content | striptags)[90:240] }}…</p>
+        </a>
+        {% endfor %}
+    </div>
+    <p style="margin-top: 28px;"><a class="btn btn-ghost" href="/articles">Все статьи →</a></p>
+</section>
+{% endif %}
+
+{% if videos %}
+<section class="section">
+    <h2 class="section-header">Видео</h2>
+    <p class="section-lead">Короткие разборы без воды. Полный список — в разделе видео.</p>
+    <div class="video-grid">
+        {% for v in videos %}
+        <div class="video-card">
+            <div class="video-frame">
+                <iframe src="https://www.youtube.com/embed/{{ v.youtube_id }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+            <div class="video-meta">
+                <div class="video-info">{{ v.duration }} · {{ v.published_at }}</div>
+                <h3>{{ v.title }}</h3>
+                <p class="video-desc">{{ v.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <p style="margin-top: 28px;"><a class="btn btn-ghost" href="/videos">Все видео →</a></p>
+</section>
+{% else %}
+<section class="section">
+    <h2 class="section-header">YouTube</h2>
+    <p class="section-lead">Канал «{{ youtube_channel_name or 'Иосиф Борода' }}» — длинные разборы и резерв без VPN-блокировок Telegram.</p>
+    <p style="margin-top: 20px;">
+        <a class="btn btn-primary" href="{{ youtube_channel_url or pension_youtube_url }}" target="_blank" rel="noopener" data-pension-goal="pension_youtube_click">Подписаться на YouTube ↗</a>
+        <a class="btn btn-ghost" href="/videos" style="margin-left: 12px;">Раздел видео →</a>
+    </p>
+</section>
+{% endif %}
+
+<section class="section center">
+    <h2 class="section-header" style="justify-content: center;">Начни сейчас</h2>
+    <p class="section-lead" style="margin-left: auto; margin-right: auto;">Штанга, код, земля и кэшфлоу — до конца.</p>
+    <a class="btn btn-primary" href="/book/introduction">Прочитать введение →</a>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var form = document.getElementById("waitlist-form");
+    var msg = document.getElementById("waitlist-msg");
+    if (!form) return;
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var email = (form.querySelector('input[name="email"]') || {}).value || "";
+        fetch("/api/pension/waitlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim() })
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            msg.hidden = false;
+            if (res.ok) {
+                msg.textContent = "Готово. Проверьте почту (и спам) — скоро напишем.";
+                msg.style.color = "var(--accent-2)";
+                if (typeof window.pensionMetrikaReach === "function") {
+                    window.pensionMetrikaReach("pension_email_submit", { ok: true });
+                }
+                form.reset();
+            } else {
+                msg.textContent = "Не удалось сохранить. Проверьте email.";
+                msg.style.color = "var(--accent)";
+            }
+          }).catch(function () {
+            msg.hidden = false;
+            msg.textContent = "Ошибка сети. Попробуйте позже.";
+          });
+    });
+})();
+</script>
+{% endblock %}

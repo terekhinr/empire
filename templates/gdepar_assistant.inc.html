@@ -1,0 +1,311 @@
+<div class="gdepar-assistant-dock" id="gdepar-assistant-dock" aria-label="Помощник по выбору бани">
+    <button type="button" class="gdepar-assistant-fab" id="gdepar-assistant-toggle" aria-expanded="false" aria-controls="gdepar-assistant-panel" title="Помощник по выбору бани — нажмите, чтобы открыть"><span class="gdepar-assistant-fab-label" aria-hidden="true">Где пар?</span><span class="gdepar-assistant-fab-hint">Помощник</span></button>
+    <div class="gdepar-assistant-panel" id="gdepar-assistant-panel" role="region" aria-label="Панель помощника по выбору бани" hidden>
+        <p class="gdepar-assistant-lead">Опишите город, нагрев (дрова / электро), пожелания. При включённой модели ответ строится по каталогу и одобренным отзывам; иначе — подсказка и карта.</p>
+        <label class="gdepar-assistant-label" for="gdepar-assistant-q">Ваш запрос</label>
+        <textarea id="gdepar-assistant-q" class="gdepar-assistant-textarea" rows="3" maxlength="2000" placeholder="Например: дровяная баня в Химках, не шумная…" title="Enter — отправить; Shift+Enter — новая строка"></textarea>
+        <button type="button" class="gdepar-assistant-send" id="gdepar-assistant-send">Спросить</button>
+        <p class="gdepar-assistant-meta" id="gdepar-assistant-meta" hidden></p>
+        <div class="gdepar-assistant-out" id="gdepar-assistant-out" aria-live="polite"></div>
+        <ul class="gdepar-assistant-picks" id="gdepar-assistant-picks" hidden aria-live="polite"></ul>
+        <p class="gdepar-transparency-note" id="gdepar-assistant-disclaimer" hidden aria-live="polite"></p>
+    </div>
+</div>
+<script>
+(function () {
+    var fab = document.getElementById('gdepar-assistant-toggle');
+    var panel = document.getElementById('gdepar-assistant-panel');
+    var send = document.getElementById('gdepar-assistant-send');
+    var q = document.getElementById('gdepar-assistant-q');
+    var out = document.getElementById('gdepar-assistant-out');
+    var picksEl = document.getElementById('gdepar-assistant-picks');
+    var metaEl = document.getElementById('gdepar-assistant-meta');
+    if (!fab || !panel || !send || !q || !out) return;
+    panel.addEventListener('click', function (ev) {
+        var t = ev.target.closest && ev.target.closest('a.gdepar-assistant-pick-link');
+        if (!t || !panel.contains(t)) return;
+        var sid = t.getAttribute('data-gdepar-assistant-spot') || '';
+        var href = (t.getAttribute('href') || '').trim();
+        var dest = href.indexOf('/banya/') === 0 ? 'banya' : 'map';
+        if (typeof window.gdeparMetrikaReach === 'function' && sid) {
+            window.gdeparMetrikaReach('gdepar_assistant_pick_click', { spot_id: sid, dest: dest });
+        }
+    });
+    fab.addEventListener('click', function () {
+        var willOpen = panel.hidden;
+        panel.hidden = !willOpen;
+        fab.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        if (typeof window.gdeparMetrikaReach === 'function') {
+            window.gdeparMetrikaReach('gdepar_assistant_fab_click', {
+                action: willOpen ? 'open' : 'close'
+            });
+            if (willOpen) {
+                window.gdeparMetrikaReach('gdepar_assistant_open', {});
+            }
+        }
+        if (willOpen) {
+            window.requestAnimationFrame(function () {
+                try {
+                    q.focus();
+                } catch (eF) {}
+            });
+        }
+    });
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape' || panel.hidden) return;
+        ev.preventDefault();
+        panel.hidden = true;
+        fab.setAttribute('aria-expanded', 'false');
+        try {
+            fab.focus();
+        } catch (eE) {}
+    });
+    function renderAssistantResponse(data, packed) {
+        data = data || {};
+        packed = packed || { ok: true, status: 200 };
+        var disc = document.getElementById('gdepar-assistant-disclaimer');
+        out.textContent = data.reply ? data.reply : 'Нет ответа.';
+        out.removeAttribute('aria-label');
+                if (metaEl) {
+                    var bits = [];
+                    if (data.cached) bits.push('из кэша');
+                    if (data.llm) bits.push('модель');
+                    metaEl.textContent = bits.length ? bits.join(' · ') : '';
+                    metaEl.hidden = !bits.length;
+                }
+                if (picksEl) {
+                    picksEl.innerHTML = '';
+                    picksEl.hidden = true;
+                    picksEl.removeAttribute('aria-label');
+                    var rec = data.recommendations;
+                    if (Array.isArray(rec) && rec.length) {
+                        picksEl.hidden = false;
+                        rec.forEach(function (row) {
+                            if (!row || row.spot_id == null) return;
+                            var sidType = typeof row.spot_id;
+                            if (sidType !== 'number' && sidType !== 'string') return;
+                            var sidStr = String(row.spot_id);
+                            var li = document.createElement('li');
+                            li.className = 'gdepar-assistant-pick';
+                            var slug = (row.slug && String(row.slug).trim()) || '';
+                            var titleText = (row.title && String(row.title).trim()) || ('Точка ' + sidStr);
+                            var mapHref = '/map?spot=' + encodeURIComponent(sidStr);
+                            var nav = document.createElement('span');
+                            nav.className = 'gdepar-assistant-pick-nav';
+                            if (slug) {
+                                var aBanya = document.createElement('a');
+                                aBanya.href = '/banya/' + encodeURIComponent(slug);
+                                aBanya.textContent = titleText;
+                                aBanya.className = 'gdepar-assistant-pick-link';
+                                aBanya.setAttribute('data-gdepar-assistant-spot', sidStr);
+                                aBanya.setAttribute('aria-label', titleText + ', страница бани');
+                                nav.appendChild(aBanya);
+                                var sep = document.createElement('span');
+                                sep.className = 'gdepar-assistant-pick-sep';
+                                sep.textContent = ' · ';
+                                nav.appendChild(sep);
+                                var aMap = document.createElement('a');
+                                aMap.href = mapHref;
+                                aMap.textContent = 'На карте';
+                                aMap.className = 'gdepar-assistant-pick-link gdepar-assistant-pick-link--sub';
+                                aMap.setAttribute('data-gdepar-assistant-spot', sidStr);
+                                aMap.setAttribute('aria-label', 'Открыть на карте: ' + titleText);
+                                nav.appendChild(aMap);
+                            } else {
+                                var aMapOnly = document.createElement('a');
+                                aMapOnly.href = mapHref;
+                                aMapOnly.textContent = titleText;
+                                aMapOnly.className = 'gdepar-assistant-pick-link';
+                                aMapOnly.setAttribute('data-gdepar-assistant-spot', sidStr);
+                                aMapOnly.setAttribute('aria-label', titleText + ', открыть на карте');
+                                nav.appendChild(aMapOnly);
+                            }
+                            li.appendChild(nav);
+                            if (row.reason) {
+                                var span = document.createElement('span');
+                                span.className = 'gdepar-assistant-pick-reason';
+                                span.textContent = ' — ' + String(row.reason);
+                                li.appendChild(span);
+                            }
+                            if (row.score != null && row.score !== '') {
+                                var scEl = document.createElement('span');
+                                scEl.className = 'gdepar-assistant-pick-score';
+                                scEl.textContent = ' · ' + String(row.score) + '/100';
+                                li.appendChild(scEl);
+                            }
+                            picksEl.appendChild(li);
+                        });
+                        picksEl.setAttribute('aria-label', 'Рекомендации из каталога: ' + String(rec.length));
+                    }
+                }
+                if (disc) {
+                    if (data.disclaimer) {
+                        disc.textContent = data.disclaimer;
+                        disc.hidden = false;
+                    } else {
+                        disc.textContent = '';
+                        disc.hidden = true;
+                    }
+                }
+                if (typeof window.gdeparMetrikaReach === 'function') {
+                    if (data.rate_limited) {
+                        window.gdeparMetrikaReach('gdepar_assistant_rate_limited', { status: packed.status });
+                    } else if (packed.ok) {
+                        try {
+                            if (!data.empty && !data.rate_limited && !data.spam_blocked && !data.toxic_blocked) {
+                                var sk = 'gdepar_assistant_used_session';
+                                if (!sessionStorage.getItem(sk)) {
+                                    sessionStorage.setItem(sk, '1');
+                                    window.gdeparMetrikaReach('gdepar_assistant_session_used', {
+                                        page: (typeof window.gdeparPage === 'string' && window.gdeparPage) ? window.gdeparPage : 'home'
+                                    });
+                                }
+                            }
+                        } catch (eS) {}
+                        var recsArr = data.recommendations;
+                        var recsN = (Array.isArray(recsArr) && recsArr.length) ? recsArr.length : 0;
+                        window.gdeparMetrikaReach('gdepar_assistant_reply_ok', {
+                            stub: !!data.stub,
+                            empty: !!data.empty,
+                            cached: !!data.cached,
+                            llm: !!data.llm,
+                            llm_rollout: !!data.llm_rollout,
+                            spam_blocked: !!data.spam_blocked,
+                            toxic_blocked: !!data.toxic_blocked,
+                            recs: recsN
+                        });
+                    } else {
+                        window.gdeparMetrikaReach('gdepar_assistant_reply_fail', { status: packed.status });
+                    }
+                }
+    }
+    function parseAssistantSseBlock(block) {
+        var eventName = 'message';
+        var dataLine = '';
+        (block || '').split('\n').forEach(function (line) {
+            if (line.indexOf('event: ') === 0) eventName = line.slice(7).trim();
+            if (line.indexOf('data: ') === 0) dataLine = line.slice(6);
+        });
+        if (!dataLine) return null;
+        try {
+            return { event: eventName, data: JSON.parse(dataLine) };
+        } catch (eP) {
+            return null;
+        }
+    }
+    function finishAssistantUi() {
+        out.classList.remove('is-loading');
+        out.removeAttribute('aria-busy');
+        out.removeAttribute('aria-label');
+        send.removeAttribute('aria-busy');
+        send.disabled = false;
+    }
+    function runAssistantSubmit() {
+        if (send.disabled) return;
+        var text = (q.value || '').trim();
+        out.textContent = '';
+        out.setAttribute('aria-busy', 'true');
+        out.setAttribute('aria-label', 'Загрузка ответа помощника');
+        out.classList.add('is-loading');
+        send.disabled = true;
+        send.setAttribute('aria-busy', 'true');
+        if (metaEl) {
+            metaEl.textContent = '';
+            metaEl.hidden = true;
+        }
+        if (picksEl) {
+            picksEl.innerHTML = '';
+            picksEl.hidden = true;
+            picksEl.removeAttribute('aria-label');
+        }
+        var bucket = text.length < 1 ? '0' : text.length < 80 ? '1-79' : text.length < 400 ? '80-399' : '400+';
+        if (typeof window.gdeparMetrikaReach === 'function') {
+            window.gdeparMetrikaReach('gdepar_assistant_submit', { len_bucket: bucket });
+        }
+        var seenRaw = (typeof window.gdeparGetSeenSpotIds === "function") ? window.gdeparGetSeenSpotIds() : [];
+        var seenForApi = Array.isArray(seenRaw) ? seenRaw.slice(0, 48) : [];
+        var postBody = JSON.stringify({
+            message: text,
+            page: (typeof window.gdeparPage === "string" && window.gdeparPage) ? window.gdeparPage : "home",
+            city: (typeof window.gdeparFilterCity === "string" && window.gdeparFilterCity) ? window.gdeparFilterCity : null,
+            heat: (typeof window.gdeparFilterHeat === "string" && window.gdeparFilterHeat) ? window.gdeparFilterHeat : null,
+            seen_spot_ids: seenForApi
+        });
+        function fallbackJsonAssistant() {
+            return fetch('/api/gdepar/assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: postBody
+            }).then(function (r) {
+                return r.json().then(function (data) {
+                    return { ok: r.ok, status: r.status, data: data || {} };
+                });
+            }).then(function (packed) {
+                renderAssistantResponse(packed.data, packed);
+            });
+        }
+        fetch('/api/gdepar/assistant/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+            body: postBody
+        })
+            .then(function (r) {
+                var ct = (r.headers.get('content-type') || '').toLowerCase();
+                if (!r.ok || ct.indexOf('text/event-stream') === -1 || !r.body || !r.body.getReader) {
+                    return fallbackJsonAssistant();
+                }
+                var reader = r.body.getReader();
+                var dec = new TextDecoder();
+                var buf = '';
+                var packed = { ok: r.ok, status: r.status, data: {} };
+                function onSseParsed(parsed) {
+                    if (!parsed) return;
+                    if (parsed.event === 'delta' && parsed.data && parsed.data.text) {
+                        out.classList.remove('is-loading');
+                        out.removeAttribute('aria-label');
+                        out.textContent += String(parsed.data.text);
+                    }
+                    if (parsed.event === 'done' && parsed.data) {
+                        packed.data = parsed.data;
+                    }
+                }
+                function pump() {
+                    return reader.read().then(function (chunk) {
+                        if (chunk.value) buf += dec.decode(chunk.value, { stream: true });
+                        var parts = buf.split('\n\n');
+                        buf = parts.pop() || '';
+                        parts.forEach(function (block) {
+                            onSseParsed(parseAssistantSseBlock(block));
+                        });
+                        if (chunk.done) {
+                            if (buf.trim()) onSseParsed(parseAssistantSseBlock(buf));
+                            renderAssistantResponse(packed.data, packed);
+                            return;
+                        }
+                        return pump();
+                    });
+                }
+                return pump();
+            })
+            .catch(function () {
+                out.classList.remove('is-loading');
+                out.removeAttribute('aria-busy');
+                out.removeAttribute('aria-label');
+                out.textContent = 'Не удалось связаться с сервером.';
+                if (typeof window.gdeparMetrikaReach === 'function') {
+                    window.gdeparMetrikaReach('gdepar_assistant_reply_fail', {});
+                }
+            })
+            .then(function () {
+                finishAssistantUi();
+            });
+    }
+    send.addEventListener('click', runAssistantSubmit);
+    q.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' && !ev.shiftKey) {
+            ev.preventDefault();
+            runAssistantSubmit();
+        }
+    });
+})();
+</script>

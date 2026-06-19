@@ -1,0 +1,52 @@
+{
+    "outbounds": [
+        {
+            "tag": "vless-reality",
+            "protocol": "vless",
+            "settings": {
+                "vnext": [
+                    {
+                        "address": "193.233.232.48",
+                        "port": 8443,
+                        "users": [
+                            {
+                                "id": "19dd1a1d-a8a1-40ea-a977-121c0a01ddf6",
+                                "flow": "xtls-rprx-vision",
+                                "encryption": "none",
+                                "level": 0
+                            }
+                        ]
+                    }
+                ]
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                    "publicKey": "***REMOVED***",
+                    "fingerprint": "chrome",
+                    "serverName": "www.microsoft.com",
+                    "shortId": "1b74bb3a",
+                    "spiderX": "/"
+                },
+                "sockopt": {
+                    "tcpMaxSeg": 1380,
+                    "tcpNoDelay": true
+                }
+            }
+        },
+        {
+            "protocol": "freedom",
+            "tag": "direct"
+        },
+        {
+            "tag": "block",
+            "protocol": "blackhole",
+            "settings": {
+                "response": {
+                    "type": "http"
+                }
+            }
+        }
+    ]
+}

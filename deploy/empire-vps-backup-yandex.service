@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire VPS backup to Yandex Disk (rclone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/projects/empire/scripts/vps_backup_to_yandex.sh
+User=root
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

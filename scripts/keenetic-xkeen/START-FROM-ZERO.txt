@@ -1,0 +1,104 @@
+XKeen + VPS — установка с нуля (Keenetic Giga + MTS)
+=====================================================
+
+VPS уже настроен:
+  Xray VLESS Reality  193.233.232.48:8443
+  Bootstrap HTTP      http://193.233.232.48:8787/
+
+=== ЧАСТЬ 1 — ФЛЕШКА НА ПК (WSL) ===
+
+1. Вытащи маленькую флешку (12–16 ГБ) из роутера, воткни в ПК.
+2. PowerShell → wsl → lsblk  (найди флешку, НЕ системный диск!)
+
+3. Замени sde на свою букву:
+
+   sudo parted /dev/sde --script mklabel gpt
+   sudo parted /dev/sde --script mkpart primary ext3 1MiB 1025MiB
+   sudo parted /dev/sde --script mkpart primary ext4 1025MiB 100%
+   sudo mkswap /dev/sde1
+   sudo mkfs.ext4 -L OPKG /dev/sde2
+   sudo mkdir -p /mnt/usb
+   sudo mount /dev/sde2 /mnt/usb
+   sudo mkdir -p /mnt/usb/install
+   sudo wget -O /mnt/usb/install/mipsel-installer.tar.gz \
+     https://bin.entware.net/mipselsf-k3.4/installer/mipsel-installer.tar.gz
+   ls -la /mnt/usb/install/
+   sudo umount /mnt/usb
+   exit
+
+   Файл: install/mipsel-installer.tar.gz  (именно mipsel, не mips!)
+
+=== ЧАСТЬ 2 — РОУТЕР: ENTWARE ===
+
+4. Флешку в USB-порт 2 роутера (большой NTFS — порт 1).
+
+5. Keenetic Web → Управление → OPKG:
+     Накопитель = EXT4 ~12.7 ГБ (не SWAP, не NTFS, не встроенное)
+     Доступ = вкл
+     initrc = пусто
+     Сохранить → перезагрузка
+
+6. Диагностика → журнал: "Entware installed!"
+
+7. Telnet 192.168.1.1:23 → admin → exec sh
+
+   mount | grep 'on /opt '
+   # должно: /dev/sdb2 ext4
+
+   opkg update
+
+   НИКОГДА не вводи: no opkg disk
+
+=== ЧАСТЬ 3 — XKEEN ===
+
+8. В shell (/ #):
+
+   opkg install curl tar
+   export PATH=/opt/bin:/opt/sbin:$PATH
+   curl -fsSL http://193.233.232.48:8787/00-router-pull.sh | sh
+   xkeen -i
+
+   Меню:
+     Xray        → 1
+     Версия      → 1 (последняя)
+     GeoIP       → 1
+     GeoSite     → 1 (+ Zkeen если есть)
+     Россия IP   → 1 (исключить из прокси)
+     Автообновление → 1, ежедневно (8)
+     Автозагрузка   → 1 (да)
+
+9. Конфиг VPS:
+
+   curl -fL -o /opt/etc/xray/configs/04_outbounds.json \
+     http://193.233.232.48:8787/04_outbounds.json
+
+   grep address /opt/etc/xray/configs/04_outbounds.json
+
+=== ЧАСТЬ 4 — KEENETIC WEB ===
+
+10. Политики → XKeen, eth3 (МТС)
+11. Применение политик → ПК + Салют + Wi-Fi
+12. DNS → DoH вкл, ускоритель ВЫКЛ
+
+=== ЧАСТЬ 5 — ЗАПУСК ===
+
+13. xkeen -start
+    xkeen -status
+
+    SSH Entware (опционально): порт 222, root, keenetic
+
+=== ЧАСТЬ 6 — ПК ===
+
+14. CMD от администратора — ДВЕ команды отдельно:
+
+    netsh interface tcp set global timestamps=enabled
+    ipconfig /flushdns
+
+15. YouTube инкогнито, 1080p. SmartTube на Салюте.
+
+=== ПРОВЕРКА ===
+
+  mount | grep opt     → ext4 sd...
+  xkeen -status        → xray running
+  sberbank.ru          → напрямую
+  youtube.com          → через VPS

@@ -1,0 +1,29 @@
+# Фаза 2: устройства. Скопировать в /config/packages/
+# После ZHA/LocalTuya — включить автоматизацию протечки и дописать entity в группу.
+
+group:
+  tekhnika_otpusk:
+    name: "Техника — выкл. в отпуске"
+  # entities: добавьте в Настройки → Группы или раскомментируйте:
+  # Отпуск (rezhim_otpusk): включить после настройки обеих розеток:
+  #   - switch.kuhnya_chainik
+  #   - switch.balkon_multivarka
+
+automation:
+  - id: empire_otpusk_tekhnika_off
+    alias: "Отпуск — выключить технику"
+    description: "Розетки из группы tekhnika_otpusk"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_otpusk
+        to: "on"
+    condition:
+      - condition: template
+        value_template: "{{ expand('group.tekhnika_otpusk') | selectattr('domain', 'eq', 'switch') | list | count > 0 }}"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: group.tekhnika_otpusk
+    mode: single
+
+# Протечка → Telegram: homeassistant/packages/empire_telegram.yaml

@@ -1,0 +1,22 @@
+{
+  "telegram_mention": {
+    "garden": "",
+    "lenin": "",
+    "stern": "",
+    "gdepar": "",
+    "pension": ""
+  },
+  "pension_video": {
+    "youtube": "https://youtu.be/iua-mg-O_UU",
+    "vk": "https://vk.com/video-203057439_456239465",
+    "rutube": "https://rutube.ru/video/ffabe80de6627b145432818a24b41bdb/"
+  },
+  "pension_ps": {
+    "max_label": "",
+    "max_url": "",
+    "book1_title": "",
+    "book1_url": "",
+    "book2_title": "",
+    "book2_url": ""
+  }
+}

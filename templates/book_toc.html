@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Книга «{{ book.title }}» — {{ site_title }}{% endblock %}
+{% block meta_description %}{{ book.title }}: {{ book.subtitle }}. Полное оглавление и тексты глав на сайте {{ canonical_host }}.{% endblock %}
+
+{% block content %}
+<section class="section">
+    <h2 class="section-header">Книга</h2>
+    <h1 style="font-family: var(--serif); font-weight: 800; font-size: clamp(2rem, 5vw, 3rem); margin: 8px 0 8px;">{{ book.title }}</h1>
+    <p class="section-lead">{{ book.subtitle }} · {{ book.author }}</p>
+    <div class="toc-list">
+        {% for c in book.chapters %}
+        <a class="toc-item" href="/book/{{ c.slug }}">
+            <div class="toc-num">{{ c.number }}</div>
+            <div>
+                <h3 class="toc-title">{{ c.title }}</h3>
+                {% if c.subtitle %}<p class="toc-sub">{{ c.subtitle }}</p>{% endif %}
+            </div>
+            <div class="toc-arrow">→</div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

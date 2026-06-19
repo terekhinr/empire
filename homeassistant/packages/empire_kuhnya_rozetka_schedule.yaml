@@ -1,0 +1,49 @@
+# Кухня: розетка Tuya — включена с 05:30 до 01:00 (ночная пауза 01:00–05:30).
+# entity: switch.kuhnya_chainik (Wifi Plug LSP-16DL, LocalTuya)
+
+automation:
+  - id: empire_kuhnya_rozetka_on
+    alias: "Кухня — розетка включить 05:30"
+    description: "Ежедневно в 05:30 включает розетку на кухне"
+    mode: single
+    trigger:
+      - platform: time
+        at: "05:30:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.kuhnya_chainik
+
+  - id: empire_kuhnya_rozetka_off
+    alias: "Кухня — розетка выключить 01:00"
+    description: "Ежедневно в 01:00 выключает розетку до 05:30"
+    mode: single
+    trigger:
+      - platform: time
+        at: "01:00:00"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.kuhnya_chainik
+
+  - id: empire_kuhnya_rozetka_startup
+    alias: "Кухня — розетка синхронизация при старте HA"
+    description: "После перезапуска HA приводит розетку к нужному состоянию по времени"
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >
+                  {{ (now().hour > 5 or (now().hour == 5 and now().minute >= 30)) or now().hour < 1 }}
+            sequence:
+              - service: switch.turn_on
+                target:
+                  entity_id: switch.kuhnya_chainik
+        default:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.kuhnya_chainik

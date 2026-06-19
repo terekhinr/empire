@@ -1,0 +1,5 @@
+{
+  "auto_import": true,
+  "import_interval_minutes": 10,
+  "reminder_hours_before": 2
+}

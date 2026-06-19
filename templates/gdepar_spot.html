@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ og_description }}">
+    <title>{{ og_title }}</title>
+
+    {% if metrika_id %}
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    {% endif %}
+    <link rel="canonical" href="{{ canonical_page_url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Где Пар">
+    <meta property="og:url" content="{{ canonical_page_url }}">
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:image" content="{{ spot_og_image }}">
+    <meta property="og:image:alt" content="{{ (spot.title or 'Баня') | e }}">
+    <meta name="twitter:card" content="{% if show_spot_cover_hero %}summary_large_image{% else %}summary{% endif %}">
+    <meta name="twitter:image" content="{{ spot_og_image }}">
+    <meta name="twitter:image:alt" content="{{ (spot.title or 'Баня') | e }}">
+    <meta property="og:locale" content="ru_RU">
+
+    {% if spot_created_iso %}
+    <meta property="article:published_time" content="{{ spot_created_iso }}">
+    {% endif %}
+    {% if spot_modified_iso %}
+    <meta property="article:modified_time" content="{{ spot_modified_iso }}">
+    <meta property="og:updated_time" content="{{ spot_modified_iso }}">
+    {% endif %}
+
+    <script type="application/ld+json">{{ spot_schema_org_json }}</script>
+
+    <link rel="icon" type="image/svg+xml" href="/static/gdepar/logos/03-drop.svg">
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
+</head>
+<body{% if spot.id %} data-gdepar-spot-id="{{ spot.id }}"{% endif %}>
+{% include "gdepar_metrika.inc.html" %}
+{% include "gdepar_seen.inc.html" %}
+
+{% set nav_active = nav_active or 'map' %}
+{% include "gdepar_nav.inc.html" %}
+
+{% set yu = spot.yandex_url | gdepar_http_url %}
+{% set tg = spot.twogis_url | gdepar_http_url %}
+{% set su = spot.site_url | gdepar_http_url %}
+
+<nav class="gdepar-spot-breadcrumb muted" aria-label="Хлебные крошки">
+    <a href="/">Где Пар</a>
+    <span aria-hidden="true"> · </span>
+    <a href="/map">Карта</a>
+    <span aria-hidden="true"> · </span>
+    <span>{{ (spot.title or 'Баня') | e }}</span>
+</nav>
+
+<section class="section" style="padding-bottom: 12px;">
+    <div class="section-ornament" aria-hidden="true">
+        <object data="/static/gdepar/ornaments/divider.svg" type="image/svg+xml" aria-hidden="true"></object>
+    </div>
+    <h1 class="section-header">{{ (spot.title or 'Баня') | e }}</h1>
+    <p class="section-lead" style="margin-bottom: 0.5rem;">
+        {% if spot.city %}{{ spot.city | e }}{% endif %}
+        {% if spot.city and spot.address %} · {% endif %}
+        {{ (spot.address or '') | e }}
+    </p>
+    <p class="muted" style="font-size: 0.9rem;">
+        {% if spot.heating == 'wood' %}Дровяная{% elif spot.heating == 'electric' %}Электро{% elif spot.heating == 'mixed' %}Смешанный нагрев{% elif spot.heating == 'unknown' %}Нагрев не указан{% else %}{{ spot.heating or '' }}{% endif %}
+        {% if spot.kind == 'public' %} · общественная{% elif spot.kind %} · {{ spot.kind }}{% endif %}
+        {% if spot.visited %} · <span style="color:var(--accent)">ходили лично</span>{% endif %}
+    </p>
+    {% if spot.rating_avg %}
+    <p style="margin-top: 0.75rem;">★ {{ spot.rating_avg }}{% if spot.reviews_total %} <span class="muted">({{ spot.reviews_total }} отзывов)</span>{% endif %}</p>
+    {% endif %}
+    {% if show_spot_cover_hero %}
+    <div class="gdepar-spot-cover-wrap">
+        <img class="gdepar-spot-cover-img" src="{{ spot_og_image | e }}" alt="{{ (spot.title or 'Баня') | e }}" width="920" height="518" decoding="async" loading="eager" fetchpriority="high">
+    </div>
+    {% endif %}
+</section>
+
+{% set clip0 = spot.clips[0] if spot.clips else none %}
+{% if clip0 and clip0.embed_url %}
+<section class="section gdepar-spot-clip-wrap">
+    <h2 class="section-header" style="font-size:1.1rem;">Видео</h2>
+    <div class="gdepar-spot-embed">
+        {% if clip0.provider == 'file' %}
+        <video controls preload="metadata" title="Видео"><source src="{{ clip0.embed_url }}"></video>
+        {% else %}
+        <iframe src="{{ clip0.embed_url }}" title="Видео" loading="lazy" allowfullscreen></iframe>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{% if spot_reviews %}
+<section class="section gdepar-spot-reviews-wrap">
+    <h2 class="section-header" style="font-size:1.1rem;">Отзывы</h2>
+    <ul class="gdepar-spot-reviews">
+        {% for rv in spot_reviews %}
+        <li class="gdepar-spot-review">
+            <div class="gdepar-spot-review-head">
+                <strong>{{ rv.author | e }}</strong>
+                {% if rv.rating %}<span class="muted">★ {{ rv.rating }}</span>{% endif %}
+                {% if rv.source %}<span class="muted gdepar-spot-review-source">{{ rv.source | e }}</span>{% endif %}
+            </div>
+            {% if rv.text %}
+            <p class="muted gdepar-spot-review-text">{{ rv.text | e }}</p>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    <p class="muted gdepar-spot-reviews-note">Показаны одобренные модерацией; на карте в попапе точки — полный список и саммари.</p>
+</section>
+{% endif %}
+
+{% if spot.id %}
+<section
+    class="section gdepar-spot-summary-wrap"
+    id="gdepar-spot-summary-section"
+    data-spot-id="{{ spot.id }}"
+    {% if yu %}data-yandex-url="{{ yu | e }}"{% endif %}
+>
+    <h2 class="section-header" style="font-size:1.1rem;">Сводка по отзывам</h2>
+    <p class="muted gdepar-spot-reviews-note">Та же эвристическая сводка, что по кнопке «Дай саммари» в попапе на карте.</p>
+    <button type="button" class="btn btn-ghost gdepar-spot-summary-btn" id="gdepar-spot-summary-btn" aria-expanded="false" aria-controls="gdepar-spot-summary-out">Дай саммари</button>
+    <div id="gdepar-spot-summary-out" class="gdepar-spot-summary-out gdepar-assistant-out" hidden aria-live="polite"></div>
+</section>
+{% endif %}
+
+<section class="section">
+    <h2 class="section-header" style="font-size:1.1rem;">Карта и контакты</h2>
+    <p style="margin-top: 0.75rem;">
+        <a href="/map?spot={{ spot.id }}" data-gdepar-spot-map-link="{{ spot.id }}">Открыть на карте «Где Пар» →</a>
+    </p>
+    <p style="margin-top: 1rem; line-height: 1.6;">
+        {% if yu %}<a href="{{ yu | e }}" target="_blank" rel="noopener" data-gdepar-spot-external="yandex" data-gdepar-spot-id="{{ spot.id }}">Яндекс Карты</a>{% endif %}
+        {% if yu and tg %} · {% endif %}
+        {% if tg %}<a href="{{ tg | e }}" target="_blank" rel="noopener" data-gdepar-spot-external="twogis" data-gdepar-spot-id="{{ spot.id }}">2ГИС</a>{% endif %}
+        {% if (yu or tg) and su %} · {% endif %}
+        {% if su %}<a href="{{ su | e }}" target="_blank" rel="noopener" data-gdepar-spot-external="site" data-gdepar-spot-id="{{ spot.id }}">Сайт</a>{% endif %}
+        {% if spot.phone %}
+        {% if yu or tg or su %} · {% endif %}
+        <a href="tel:{{ spot.phone }}" data-gdepar-spot-external="phone" data-gdepar-spot-id="{{ spot.id }}">{{ spot.phone | e }}</a>
+        {% endif %}
+    </p>
+    {% if spot.description %}
+    <div class="section-lead" style="margin-top: 1.25rem; max-width: 42rem;">
+        {% for line in spot.description.split('\n') %}
+        {{ line | e }}{% if not loop.last %}<br>{% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if spot.tags %}
+    <p style="margin-top: 1.25rem;">
+        {% for t in spot.tags %}
+        <span class="tag">#{{ t | e }}</span>{% if not loop.last %} {% endif %}
+        {% endfor %}
+    </p>
+    {% endif %}
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">ГДЕ <span>ПАР</span></div>
+            <p class="footer-tagline">{{ site_tagline }}</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/map" data-gdepar-nav="map">Карта</a>
+            <a href="/#bayki" data-gdepar-nav="bayki">Байки</a>
+            <a href="/#manifesto" data-gdepar-nav="manifesto">Манифест</a>
+            <a href="/#merch" data-gdepar-nav="merch">Мерч</a>
+            <a href="/#contacts" data-gdepar-nav="contacts">Контакты</a>
+        </nav>
+        <div class="footer-legal">
+            <p>&copy; 2026 Где Пар.</p>
+            <p class="muted">{{ canonical_host }} · зеркало гдепар.рф</p>
+        </div>
+    </div>
+</footer>
+
+<script src="/static/gdepar/summary_render.js?v={{ asset_version }}"></script>
+<script>
+    (function () {
+        var saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+    })();
+    function toggleTheme() {
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var next = current === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
+    (function gdeparSpotSummary() {
+        var btn = document.getElementById('gdepar-spot-summary-btn');
+        var out = document.getElementById('gdepar-spot-summary-out');
+        var wrap = document.getElementById('gdepar-spot-summary-section');
+        if (!btn || !out || !wrap) return;
+        var sid = wrap.getAttribute('data-spot-id');
+        if (!sid) return;
+        var loaded = false;
+        var collapsed = true;
+        function esc(t) {
+            if (!t) return '';
+            var d = document.createElement('div');
+            d.textContent = t;
+            return d.innerHTML;
+        }
+        function metaHtml(lastAt) {
+            if (!lastAt) return '';
+            try {
+                var d = new Date(lastAt);
+                if (isNaN(d.getTime())) return '';
+                return '<p class="gdepar-spot-summary-asof">По данным сайта новых одобренных отзывов после <strong>' +
+                    d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
+                    '</strong> не было — ориентируйтесь на эту дату; перед визитом перепроверьте часы по телефону бани или на картах.</p>';
+            } catch (e) {
+                return '';
+            }
+        }
+        function attributionHtml() {
+            var yu = (wrap.getAttribute('data-yandex-url') || '').trim();
+            if (yu) {
+                return '<p class="gdepar-spot-reviews-source">Тексты отзывов — мнение авторов на площадках. Оригинал: <a href="' +
+                    esc(yu) + '" target="_blank" rel="noopener">Яндекс.Карты</a>. «Где Пар» публикует отзывы после модерации, смысл авторов не искажается.</p>';
+            }
+            return '<p class="gdepar-spot-reviews-source muted">Тексты отзывов собираются с внешних площадок; при наличии ссылок на карты выше можно открыть карточку организации там.</p>';
+        }
+        function syncSpotSummaryBtnAria() {
+            btn.setAttribute('aria-expanded', out.hidden ? 'false' : 'true');
+        }
+        btn.addEventListener('click', function () {
+            if (loaded && out.innerHTML) {
+                collapsed = !collapsed;
+                out.hidden = collapsed;
+                btn.textContent = collapsed ? 'Дай саммари' : 'Скрыть саммари';
+                syncSpotSummaryBtnAria();
+                return;
+            }
+            btn.textContent = 'Загрузка…';
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            out.hidden = false;
+            out.innerHTML = '';
+            out.setAttribute('aria-busy', 'true');
+            out.setAttribute('aria-label', 'Загрузка саммари');
+            out.classList.add('is-loading');
+            syncSpotSummaryBtnAria();
+            fetch('/api/banya/reviews-block/' + encodeURIComponent(sid) + '?limit=8&include_summary=1')
+                .then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function (data) {
+                    out.removeAttribute('aria-busy');
+                    out.removeAttribute('aria-label');
+                    out.classList.remove('is-loading');
+                    var yu = (wrap.getAttribute('data-yandex-url') || '').trim();
+                    var html = (typeof window.gdeparRenderReviewsSummary === 'function')
+                        ? window.gdeparRenderReviewsSummary(data, {
+                            variant: 'spot',
+                            includeAttribution: true,
+                            yandexUrl: yu
+                        })
+                        : '';
+                    if (!html) {
+                        html = '<p class="muted">Сводки нет — нечего обобщать по одобренным отзывам.</p>';
+                    }
+                    out.innerHTML = html;
+                    out.hidden = false;
+                    collapsed = false;
+                    loaded = true;
+                    btn.textContent = 'Скрыть саммари';
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-busy');
+                    if (typeof window.gdeparMetrikaReach === 'function') {
+                        var src2 = (data && data.summary_source) ? String(data.summary_source) : 'heuristic';
+                        window.gdeparMetrikaReach('gdepar_summary_request', { spot_id: String(sid), summary_source: src2 });
+                    }
+                    syncSpotSummaryBtnAria();
+                })
+                .catch(function () {
+                    out.removeAttribute('aria-busy');
+                    out.removeAttribute('aria-label');
+                    out.classList.remove('is-loading');
+                    out.innerHTML = '<p class="muted">Не удалось загрузить саммари. Попробуйте ещё раз.</p>';
+                    out.hidden = false;
+                    btn.textContent = 'Не загрузилось';
+                    btn.disabled = false;
+                    btn.removeAttribute('aria-busy');
+                    syncSpotSummaryBtnAria();
+                });
+        });
+    })();
+</script>
+{% include "gdepar_assistant.inc.html" %}
+</body>
+</html>

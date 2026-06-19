@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+
+  <style>
+    text { font-family: 'DejaVu Sans', Arial, sans-serif; fill: #1a1a2e; }
+    .title { font-size: 22px; font-weight: bold; }
+    .sub { font-size: 13px; fill: #555; }
+    .axis { stroke: #ccc; stroke-width: 1; }
+    .grid { stroke: #eee; stroke-width: 1; }
+    .accent { fill: #e85d04; }
+    .blue { fill: #2563eb; }
+    .green { fill: #16a34a; }
+    .red { fill: #dc2626; }
+    .line-kids { stroke: #2563eb; stroke-width: 3; fill: none; }
+    .line-workers { stroke: #16a34a; stroke-width: 3; fill: none; }
+    .line-old { stroke: #e85d04; stroke-width: 3; fill: none; }
+    .bar { fill: #2563eb; }
+    .bar-hi { fill: #e85d04; }
+    .ref { stroke: #dc2626; stroke-width: 2; stroke-dasharray: 6 4; }
+  </style>
+
+
+  <text x="40" y="36" class="title">Фасад разный — механизм один</text>
+  <text x="40" y="58" class="sub">Где-то режут балл, где-то возраст, где-то льготу</text>
+  <rect x="80" y="120" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="92" y="148" class="sub" font-weight="bold">Швеция</text>
+<text x="92" y="172" class="sub">«тормоз» при дефиците</text>
+<rect x="320" y="120" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="332" y="148" class="sub" font-weight="bold">Греция</text>
+<text x="332" y="172" class="sub">срез 10%+</text>
+<rect x="560" y="120" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="572" y="148" class="sub" font-weight="bold">Франция</text>
+<text x="572" y="172" class="sub">возраст 64</text>
+<rect x="80" y="260" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="92" y="288" class="sub" font-weight="bold">Великобритания</text>
+<text x="92" y="312" class="sub">льгота на отопление</text>
+<rect x="320" y="260" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="332" y="288" class="sub" font-weight="bold">США</text>
+<text x="332" y="312" class="sub">Social Security</text>
+<rect x="560" y="260" width="200" height="90" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+<text x="572" y="288" class="sub" font-weight="bold">Чили</text>
+<text x="572" y="312" class="sub">частные AFP</text>
+
+
+</svg>

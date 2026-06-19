@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Видео — {{ site_title }}{% endblock %}
+{% block meta_description %}Видео-разборы рынка, антихрупкости, кэшфлоу и физической формы. YouTube-канал «{{ channel_name }}».{% endblock %}
+
+{% block content %}
+<section class="section">
+    <h2 class="section-header">Видео</h2>
+    <p class="section-lead">Канал «{{ channel_name }}» на YouTube — короткие разборы без воды и алгоритмических подделок.</p>
+    <p style="margin-top: -20px; margin-bottom: 36px;">
+        <a class="btn btn-primary" href="{{ channel_url }}" target="_blank" rel="noopener" data-pension-goal="pension_youtube_click">Подписаться на YouTube ↗</a>
+    </p>
+
+    {% if videos %}
+    <div class="video-grid">
+        {% for v in videos %}
+        <div class="video-card">
+            <div class="video-frame">
+                <iframe src="https://www.youtube.com/embed/{{ v.youtube_id }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+            <div class="video-meta">
+                <div class="video-info">{{ v.duration }} · {{ v.published_at }}</div>
+                <h3>{{ v.title }}</h3>
+                <p class="video-desc">{{ v.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="contact-card" style="max-width: 640px;">
+        <p>Первые выпуски в работе. Подпишитесь на канал — новые ролики появятся здесь автоматически, как только мы добавим их в каталог сайта.</p>
+        <p class="muted" style="margin-top: 12px; font-size: 0.9rem;">Telegram и статьи на сайте — без VPN. YouTube — резервная площадка для длинных разборов.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

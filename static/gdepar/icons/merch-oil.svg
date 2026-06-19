@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Oil bottle">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#f6d68a"/>
+      <stop offset="100%" stop-color="#9b5e2a"/>
+    </linearGradient>
+  </defs>
+  <rect x="46" y="14" width="28" height="14" rx="3" fill="#3d2f23"/>
+  <rect x="48" y="28" width="24" height="8" fill="#9b5e2a"/>
+  <path d="M38 36 h 44 v 64 q 0 8 -8 8 h -28 q -8 0 -8 -8 z" fill="url(#glass)" stroke="#3d2f23" stroke-width="2"/>
+  <rect x="44" y="60" width="32" height="22" fill="#fbf2dc" stroke="#3d2f23" stroke-width="1"/>
+  <text x="60" y="74" text-anchor="middle" font-family="Georgia, serif" font-size="9" font-weight="700" fill="#3d2f23">OLEUM</text>
+  <path d="M46 44 q 14 -6 28 0" fill="none" stroke="#fbf2dc" stroke-width="2" opacity="0.5"/>
+</svg>

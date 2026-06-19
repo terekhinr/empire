@@ -1,0 +1,127 @@
+{% if metrika_id %}
+<script type="text/javascript">
+(function () {
+    var MID = {{ metrika_id | int }};
+    var PAGE = {{ (metrika_page or "home") | tojson }};
+    (function (m, e, t, r, i, k, a) {
+        m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+            if (document.scripts[j].src === r) { return; }
+        }
+        k = e.createElement(t);
+        a = e.getElementsByTagName(t)[0];
+        k.async = 1;
+        k.src = r;
+        a.parentNode.insertBefore(k, a);
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    try {
+        ym(MID, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true });
+    } catch (err) {}
+    window.gdeparMetrikaReach = function (goal, params) {
+        try {
+            if (typeof ym === "function") ym(MID, "reachGoal", goal, params || {});
+        } catch (e2) {}
+    };
+    window.gdeparMetrikaId = MID;
+    window.gdeparPage = PAGE;
+    var GDEPAR_SECTION_HASH = { karta: 1, bayki: 1, manifesto: 1, merch: 1, contacts: 1 };
+    function gdeparEmitHashSection() {
+        try {
+            var ha = (location.hash || "").replace(/^#/, "");
+            if (!ha) return;
+            var key = ha.toLowerCase();
+            if (!GDEPAR_SECTION_HASH[key]) return;
+            if (typeof window.gdeparMetrikaReach !== "function") return;
+            window.gdeparMetrikaReach("gdepar_hash_section", { section: key, page: PAGE });
+        } catch (eH) {}
+    }
+    window.addEventListener("hashchange", gdeparEmitHashSection);
+    document.addEventListener("click", function (ev) {
+        try {
+            var fn = window.gdeparMetrikaReach;
+            if (typeof fn !== "function") return;
+            var t = ev.target.closest && ev.target.closest("[data-gdepar-nav]");
+            if (t) {
+                var nd = t.getAttribute("data-gdepar-nav");
+                if (nd) fn("gdepar_nav_click", { dest: nd });
+                return;
+            }
+            var h = ev.target.closest && ev.target.closest("[data-gdepar-home-cta]");
+            if (h) {
+                var hd = h.getAttribute("data-gdepar-home-cta");
+                if (hd) {
+                    fn("gdepar_home_cta", { dest: hd });
+                    return;
+                }
+            }
+            var bay = ev.target.closest && ev.target.closest("[data-gdepar-bayka-id]");
+            if (bay) {
+                var pid = bay.getAttribute("data-gdepar-bayka-id");
+                if (pid) {
+                    fn("gdepar_bayka_card_click", { post_id: pid });
+                    return;
+                }
+            }
+            var c = ev.target.closest && ev.target.closest("[data-gdepar-contact]");
+            if (c) {
+                var ch = c.getAttribute("data-gdepar-contact");
+                if (ch) {
+                    fn("gdepar_contact_click", { channel: ch });
+                    return;
+                }
+            }
+            var merch = ev.target.closest && ev.target.closest("[data-gdepar-merch]");
+            if (merch) {
+                var sku = merch.getAttribute("data-gdepar-merch");
+                if (sku) {
+                    fn("gdepar_merch_interest", { sku: sku });
+                    return;
+                }
+            }
+            var sEx = ev.target.closest && ev.target.closest("[data-gdepar-spot-external]");
+            if (sEx) {
+                var ek = sEx.getAttribute("data-gdepar-spot-external");
+                var sidEx = sEx.getAttribute("data-gdepar-spot-id") || "";
+                if (ek === "phone") {
+                    fn("gdepar_phone_click", { spot_id: sidEx });
+                    return;
+                }
+                if (ek) {
+                    fn("gdepar_spot_click_out", { spot_id: sidEx, kind: ek });
+                    return;
+                }
+            }
+            var sml = ev.target.closest && ev.target.closest("[data-gdepar-spot-map-link]");
+            if (sml) {
+                var sid = sml.getAttribute("data-gdepar-spot-map-link");
+                if (sid) {
+                    fn("gdepar_spot_page_map_link", { spot_id: sid });
+                    return;
+                }
+            }
+        } catch (eNav) {}
+    }, true);
+    document.addEventListener("DOMContentLoaded", function () {
+        try {
+            window.gdeparMetrikaReach("gdepar_page_view", { page: PAGE });
+            try {
+                var sk = "gdepar_metrika_session";
+                if (!sessionStorage.getItem(sk)) {
+                    sessionStorage.setItem(sk, "1");
+                    window.gdeparMetrikaReach("gdepar_session_start", { page: PAGE });
+                }
+            } catch (e4) {}
+            gdeparEmitHashSection();
+        } catch (e3) {}
+    });
+})();
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/{{ metrika_id }}" style="position:absolute;left:-9999px;" alt=""></div></noscript>
+{% else %}
+<script>
+window.gdeparMetrikaReach = function () {};
+window.gdeparMetrikaId = null;
+window.gdeparPage = {{ (metrika_page or "home") | tojson }};
+</script>
+{% endif %}

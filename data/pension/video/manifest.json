@@ -1,0 +1,30 @@
+{
+  "scenes": [
+    {
+      "id": "01_room_wide",
+      "keyframe": "/root/projects/empire/data/pension/video/keyframes/01_room_wide.jpg",
+      "ok_keyframe": true
+    },
+    {
+      "id": "02_to_window",
+      "keyframe": "/root/projects/empire/data/pension/video/keyframes/02_to_window.jpg",
+      "ok_keyframe": true
+    },
+    {
+      "id": "03_pov_demo",
+      "keyframe": "/root/projects/empire/data/pension/video/keyframes/03_pov_demo.jpg",
+      "ok_keyframe": true
+    },
+    {
+      "id": "04_close_window",
+      "keyframe": "/root/projects/empire/data/pension/video/keyframes/04_close_window.jpg",
+      "ok_keyframe": true
+    },
+    {
+      "id": "05_monitor",
+      "keyframe": "/root/projects/empire/data/pension/video/keyframes/05_monitor.jpg",
+      "ok_keyframe": true
+    }
+  ],
+  "final": "/root/projects/empire/data/pension/video/pension_demo_final.mp4"
+}

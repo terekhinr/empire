@@ -1,0 +1,6 @@
+aiogram
+httpx
+sqlalchemy
+asyncpg
+apscheduler
+python-dotenv

@@ -1,0 +1,40 @@
+# Устарело: используйте homeassistant/yandex_smart_home.yaml (готовый filter + entity_config).
+# См. docs/HA_YANDEX_ALICE_SETUP.md
+
+entity_config:
+  # Режимы — как сценарии для Алисы
+  script.rezhim_noch_vklyuchit:
+    name: Ночь
+    room: Общее
+  script.rezhim_ushel_vklyuchit:
+    name: Ушёл
+    room: Общее
+  script.rezhim_deti_spiat_vklyuchit:
+    name: Дети спят
+    room: Общее
+  script.rezhim_otpusk_vklyuchit:
+    name: Отпуск
+    room: Общее
+
+  script.empire_test_telegram:
+    name: Тест Telegram
+    room: Общее
+
+  # Ванная: только исправленный свет (on/off инвертирован у TS0052)
+  light.empire_vannaya_svet:
+    name: Свет ванная
+    room: Ванная
+  # НЕ отдавать Алисе: light.tz3000_mgusv51k_ts0052
+
+  # Пример света (подставьте свои entity после LocalTuya/ZHA):
+  # light.kuhnya_svet:
+  #   name: Свет кухня
+  #   room: Кухня
+  # switch.kuhnya_chainik:
+  #   name: Чайник
+  #   room: Кухня
+
+# Скрыть лишнее из Алисы (опционально):
+# filter:
+#   exclude_entities:
+#     - script.rezhim_noch_vyklyuchit

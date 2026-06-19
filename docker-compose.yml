@@ -1,0 +1,32 @@
+services:
+  # NB: ранее здесь был сервис `landing` (nginx:alpine на 0.0.0.0:80) —
+  # он перехватывал внешние запросы вместо системного Nginx, мешая
+  # сайтам neverretire.ru / gdepar.ru. Удалён 2026-05-11.
+  # Если потребуется заглушка — поднимать на 127.0.0.1:8089 или другом порту.
+
+  # База данных
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: user_gdepar
+      POSTGRES_PASSWORD: password_gdepar # Смени потом на свой!
+      POSTGRES_DB: gdepar_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Николай Степанович
+  stepanich:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ./bots/stepanich:/app
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user_gdepar:password_gdepar@db:5432/gdepar_db
+    command: sh -c "pip install -r requirements.txt && python main.py"
+    restart: always
+
+volumes:
+  postgres_data:

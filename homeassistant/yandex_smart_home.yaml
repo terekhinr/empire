@@ -1,0 +1,166 @@
+# Yandex Smart Home (Yaha Cloud) — empire
+# См. docs/HA_LIGHTING_ALICE_ROADMAP.md и docs/HA_YANDEX_ALICE_SETUP.md
+#
+# В Алису: режимы дома + ручной свет (кухня, спальня, прихожая…) + ванная (template).
+# НЕ в Алису: сырой zbeacon/dimmer, input_boolean.
+
+filter:
+  include_entities:
+    # --- Режимы дома (сценарии) ---
+    - script.rezhim_noch_vklyuchit
+    - script.rezhim_noch_vyklyuchit
+    - script.ya_ushel
+    - script.rezhim_ushel_vyklyuchit
+    - script.rezhim_deti_spiat_vklyuchit
+    - script.rezhim_deti_spiat_vyklyuchit
+    - script.rezhim_otpusk_vklyuchit
+    - script.rezhim_otpusk_vyklyuchit
+    - script.svet_vyklyuchit_vezde
+    - script.svet_vkluchit_vezde
+    # --- Ванная (template, инверсия TS0052) ---
+    - light.empire_vannaya_svet
+    - script.svet_vannaya_vkl
+    - script.svet_vannaya_vyk
+    # --- Кухня: один свет для Алисы (без дублей script.*) ---
+    - light.empire_kuhnya_svet
+    - switch.balkon_multivarka
+    # --- Туалет ---
+    - light.empire_tualet_svet
+    # --- Прихожая (template Zbeacon + автосвет по датчику) ---
+    - light.empire_prihozhaya_svet
+    - script.svet_prihozhaya_vkl
+    - script.svet_prihozhaya_vyk
+    # --- Домофон (SmartIntercom ESPHome) ---
+    - script.empire_domofon_otkryt
+    # --- Спальня (W602 LocalTuya, 2× свет) ---
+    - switch.spalnya_svet
+    - switch.spalnya_svet_2
+    # --- Гостевая + комната Макса (Sonoff BASICR2) ---
+    - switch.basicr2_ded_sonoff_10011f1029
+    - switch.basicr2_max_sonoff_10011f28d9
+    - script.svet_gostevaya_vkl
+    - script.svet_gostevaya_vyk
+    - script.svet_maks_vkl
+    - script.svet_maks_vyk
+  exclude_entities:
+    - light.tz3000_mgusv51k_ts0052
+    - light.zbeacon_ts0001
+    - light.zbeacon_ts0001_2
+    - script.empire_test_telegram
+    - switch.kuhnya_chainik
+
+entity_config:
+  script.rezhim_noch_vklyuchit:
+    name: Ночь
+    room: Общее
+  script.rezhim_noch_vyklyuchit:
+    name: Выключить ночь
+    room: Общее
+  script.ya_ushel:
+    name: Я ушёл
+    room: Общее
+    slow: true
+  script.rezhim_ushel_vyklyuchit:
+    name: Выключить ушёл
+    room: Общее
+  script.rezhim_deti_spiat_vklyuchit:
+    name: Дети спят
+    room: Общее
+  script.rezhim_deti_spiat_vyklyuchit:
+    name: Выключить дети спят
+    room: Общее
+  script.rezhim_otpusk_vklyuchit:
+    name: Отпуск
+    room: Общее
+  script.rezhim_otpusk_vyklyuchit:
+    name: Выключить отпуск
+    room: Общее
+  script.svet_vyklyuchit_vezde:
+    name: Выключить свет везде
+    room: Общее
+    slow: true
+  script.svet_vkluchit_vezde:
+    name: Включить свет везде
+    room: Общее
+    slow: true
+  light.empire_vannaya_svet:
+    name: Свет
+    room: Ванная
+    slow: true
+  script.svet_vannaya_vkl:
+    name: Свет ванная
+    room: Ванная
+    slow: true
+  script.svet_vannaya_vyk:
+    name: Выключить свет ванная
+    room: Ванная
+    slow: true
+  light.empire_kuhnya_svet:
+    name: Свет
+    room: Кухня
+    slow: true
+    turn_on:
+      action: script.svet_kuhnya_vkl
+    turn_off:
+      action: script.svet_kuhnya_vyk
+  light.empire_tualet_svet:
+    name: Свет
+    room: Туалет
+    slow: true
+    turn_on:
+      action: script.svet_tualet_vkl
+    turn_off:
+      action: script.svet_tualet_vyk
+  light.empire_prihozhaya_svet:
+    name: Свет
+    room: Прихожая
+    slow: true
+  script.svet_prihozhaya_vkl:
+    name: Свет прихожая
+    room: Прихожая
+    slow: true
+  script.svet_prihozhaya_vyk:
+    name: Выключить свет прихожая
+    room: Прихожая
+    slow: true
+  script.empire_domofon_otkryt:
+    name: Открыть домофон
+    room: Прихожая
+    slow: true
+  switch.balkon_multivarka:
+    name: Мультиварка
+    room: Балкон
+  switch.spalnya_svet:
+    name: Свет один
+    room: Спальня
+  switch.spalnya_svet_2:
+    name: Свет два
+    room: Спальня
+  switch.basicr2_ded_sonoff_10011f1029:
+    name: Свет
+    room: Гостевая
+    slow: true
+  switch.basicr2_max_sonoff_10011f28d9:
+    name: Свет
+    room: Комната Макса
+    slow: true
+  script.svet_gostevaya_vkl:
+    name: Свет гостевая
+    room: Гостевая
+    slow: true
+  script.svet_gostevaya_vyk:
+    name: Выключить свет гостевая
+    room: Гостевая
+    slow: true
+  script.svet_maks_vkl:
+    name: Свет Макс
+    room: Комната Макса
+    slow: true
+  script.svet_maks_vyk:
+    name: Выключить свет Макс
+    room: Комната Макса
+    slow: true
+  # Примеры (раскомментировать с реальными entity_id):
+  # light.kuhnya_potolok:
+  #   name: Свет
+  #   room: Кухня

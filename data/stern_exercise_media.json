@@ -1,0 +1,167 @@
+{
+  "_comment": "Упражнения ↔ pool + видео гиревиков из матрицы #161–#200. Матрица: data/stern_technique_matrix_161_200.json",
+  "exercises": [
+    {
+      "id": "mcgill_curl_up",
+      "name_ru": "Скручивание МакГилла (curl-up)",
+      "aliases": "(?i)(curl[\\s-]?up|скручиван|пресс\\s+макгилл|modified\\s+curl)",
+      "source": "Stuart McGill, Back Mechanic (2017), стр. 63–65",
+      "pool": [
+        "Stuart McGill - Back Mechanic - 2017_p0063_2_f729bb68e5.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0065_2_9e970ca8b8.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0065_3_62d73ddcbd.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=Gj5t98qZaFY"
+    },
+    {
+      "id": "mcgill_side_plank",
+      "name_ru": "Боковая планка (side plank)",
+      "aliases": "(?i)(side[\\s-]?plank|боков[а-я]*\\s+планк|антиротац)",
+      "source": "Stuart McGill, Back Mechanic (2017), стр. 66–67",
+      "pool": [
+        "Stuart McGill - Back Mechanic - 2017_p0066_2_3e032851eb.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0067_2_a04d71bccd.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=K2VljzCC16g"
+    },
+    {
+      "id": "mcgill_bird_dog",
+      "name_ru": "Птица-собака (bird dog)",
+      "aliases": "(?i)(bird[\\s-]?dog|птич[а-я]*[\\s\\-–]*собак|quadruped)",
+      "source": "Stuart McGill, Back Mechanic (2017), стр. 76–80",
+      "pool": [
+        "Stuart McGill - Back Mechanic - 2017_p0076_2_d4556b71bb.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0076_3_1b094b174e.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0078_2_969a1a29ae.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0079_2_f262f90a9f.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0080_2_8e94fd0304.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=wiFNA3sqjCA"
+    },
+    {
+      "id": "mcgill_big3",
+      "name_ru": "Big-3 МакГилла (комплекс)",
+      "aliases": "(?i)(big[\\s-]?3|биг[\\s-]?3|три\\s+упражнен|макгилл.*комплекс)",
+      "source": "Stuart McGill, Back Mechanic (2017), гл. 6",
+      "pool": [
+        "Stuart McGill - Back Mechanic - 2017_p0061_4_2f79897faf.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0065_4_d7da621670.jpg",
+        "Stuart McGill - Back Mechanic - 2017_p0078_4_e2e1c8f433.jpg"
+      ],
+      "video": null
+    },
+    {
+      "id": "kettlebell_swing",
+      "name_ru": "Мах гирей (swing)",
+      "aliases": "(?i)(мах\\s+гир|kettlebell\\s+swing|\\bswing\\b)",
+      "source": "Матрица #185; гиревики блока 5",
+      "pool": [
+        "Гиревой тренинг. Уникальная методика тренировки с гирями Павла Цацулина - 2015_p0021_0_bf4a726934.jpg",
+        "Гиревой тренинг. Уникальная методика тренировки с гирями Павла Цацулина - 2015_p0022_0_37232d7b45.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=hfzBArkbshg",
+      "matrix_ref": "technique_185_swing_fitness",
+      "video_clips": [
+        {
+          "file": "media/stern/technique_clips/185_swing_fitness_sub.mp4",
+          "srt": "media/stern/technique_subs/185_swing_fitness.srt"
+        }
+      ]
+    },
+    {
+      "id": "kettlebell_snatch",
+      "name_ru": "Рывок гири (snatch)",
+      "aliases": "(?i)(рывок|snatch|подъ[её]м\\s+гири)",
+      "source": "Матрица #161–168, #193–194, #199; Руднев, Анасенко, Дедюхина, Денисов, Хвостов",
+      "pool": [
+        "Гиревой тренинг. Уникальная методика тренировки с гирями Павла Цацулина - 2015_p0065_0_cc0029bf42.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=94IXjNokwD8",
+      "matrix_ref": "technique_161_snatch_rudnev",
+      "video_clips": [
+        {
+          "label": "Руднев — рывок",
+          "file": "media/stern/technique_clips/161_snatch_rudnev_sub.mp4",
+          "matrix_ref": "technique_161_snatch_rudnev"
+        },
+        {
+          "label": "Анасенко — рывок",
+          "file": "media/stern/technique_clips/162_snatch_anasenko_sub.mp4",
+          "matrix_ref": "technique_162_snatch_anasenko"
+        },
+        {
+          "label": "Дедюхина — техника",
+          "file": "media/stern/technique_clips/164_snatch_dedyukhina_sub.mp4",
+          "matrix_ref": "technique_164_snatch_dedyukhina"
+        }
+      ]
+    },
+    {
+      "id": "kettlebell_jerk",
+      "name_ru": "Толчок двух гирь (jerk)",
+      "aliases": "(?i)(толчок|jerk|двоеборь)",
+      "source": "Матрица #169–175, #192, #195; Мишин, Хвостов, Анасенко, Руднев, Меркулин, Денисов",
+      "pool": [],
+      "video": "https://www.youtube.com/watch?v=WnaerIKK0HA",
+      "matrix_ref": "technique_169_jerk_mishin",
+      "video_clips": [
+        {
+          "file": "media/stern/technique_clips/169_jerk_mishin_sub.mp4",
+          "matrix_ref": "technique_169_jerk_mishin"
+        },
+        {
+          "file": "media/stern/technique_clips/170_jerk_khvostov_sub.mp4",
+          "matrix_ref": "technique_170_jerk_khvostov"
+        }
+      ]
+    },
+    {
+      "id": "kettlebell_long_cycle",
+      "name_ru": "Длинный цикл",
+      "aliases": "(?i)(длинн\\w*\\s+цикл|long\\s+cycle|\\bдц\\b)",
+      "source": "Матрица #176–178; Васильев, Денисов, Беляев",
+      "pool": [],
+      "video": "https://www.youtube.com/watch?v=yi6_coQ3w6E",
+      "matrix_ref": "technique_176_long_cycle_vasilev",
+      "video_clips": [
+        {
+          "file": "media/stern/technique_clips/176_long_cycle_vasilev_sub.mp4",
+          "matrix_ref": "technique_176_long_cycle_vasilev"
+        }
+      ]
+    },
+    {
+      "id": "kettlebell_getup",
+      "name_ru": "Турецкий подъём (get-up)",
+      "aliases": "(?i)(турецк|get[\\s-]?up|getup)",
+      "source": "Матрица #183–184; Виктор Блуд",
+      "pool": [
+        "Гиревой тренинг. Уникальная методика тренировки с гирями Павла Цацулина - 2015_p0069_0_b80fef00fc.jpg"
+      ],
+      "video": "https://www.youtube.com/watch?v=8bkSRusyevQ",
+      "matrix_ref": "technique_183_tgu_blud",
+      "video_clips": [
+        {
+          "file": "media/stern/technique_clips/183_tgu_blud_sub.mp4",
+          "matrix_ref": "technique_183_tgu_blud"
+        }
+      ]
+    },
+    {
+      "id": "push_up",
+      "name_ru": "Отжимания",
+      "aliases": "(?i)(отжимани|push[\\s-]?up)",
+      "source": "Приросший, «Воркаут»",
+      "pool": [],
+      "video": null
+    },
+    {
+      "id": "pull_up",
+      "name_ru": "Подтягивания",
+      "aliases": "(?i)(подтягиван|pull[\\s-]?up|chin[\\s-]?up)",
+      "source": "Приросший, «Воркаут»",
+      "pool": [],
+      "video": null
+    }
+  ]
+}

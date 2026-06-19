@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Gde Par shaika">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#c98a4a"/>
+      <stop offset="55%" stop-color="#9b5e2a"/>
+      <stop offset="100%" stop-color="#5d3614"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#a8c465"/>
+      <stop offset="100%" stop-color="#3b5a16"/>
+    </linearGradient>
+    <linearGradient id="bind" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#7a3a00"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(120,18) rotate(-12)">
+    <rect x="-3" y="40" width="6" height="86" rx="2" fill="url(#wood)"/>
+    <path d="M0 0 c -36 14 -54 56 -32 96 c 32 28 64 28 96 0 c 22 -40 4 -82 -32 -96 c -10 -4 -22 -4 -32 0 z"
+          fill="url(#leaf)" stroke="#2c4710" stroke-width="2"/>
+    <g stroke="#5e8a26" stroke-width="1.5" fill="none" opacity="0.7">
+      <path d="M-22 20 q22 22 44 0"/>
+      <path d="M-26 50 q26 30 52 0"/>
+      <path d="M-22 78 q22 26 44 0"/>
+    </g>
+    <rect x="-12" y="50" width="24" height="10" rx="3" fill="url(#bind)" stroke="#3d2f23" stroke-width="1.5"/>
+  </g>
+  <g>
+    <path d="M44 140 L196 140 L176 220 L64 220 Z" fill="url(#wood)" stroke="#3d2f23" stroke-width="3"/>
+    <g stroke="#3d2f23" stroke-width="1.5" opacity="0.45">
+      <line x1="72"  y1="142" x2="78"  y2="218"/>
+      <line x1="100" y1="142" x2="102" y2="218"/>
+      <line x1="120" y1="142" x2="120" y2="218"/>
+      <line x1="140" y1="142" x2="138" y2="218"/>
+      <line x1="168" y1="142" x2="162" y2="218"/>
+    </g>
+    <path d="M50 152 L190 152 L170 162 L70 162 Z" fill="url(#bind)" stroke="#3d2f23" stroke-width="1.5"/>
+    <path d="M60 198 L180 198 L172 210 L68 210 Z" fill="url(#bind)" stroke="#3d2f23" stroke-width="1.5"/>
+    <path d="M64 145 L96 215" stroke="#f6c98b" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+  </g>
+  <g opacity="0.8">
+    <path d="M70 130 q14 -10 28 0 q14 10 28 0 q14 -10 28 0" fill="none" stroke="#f6efe3" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+  </g>
+</svg>

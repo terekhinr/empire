@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Banya hat">
+  <defs>
+    <linearGradient id="felt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#fbf2dc"/>
+      <stop offset="55%" stop-color="#e8d4a8"/>
+      <stop offset="100%" stop-color="#b48c54"/>
+    </linearGradient>
+  </defs>
+  <path d="M60 18 c -22 0 -34 16 -34 36 c 0 14 8 24 8 32 l 52 0 c 0 -8 8 -18 8 -32 c 0 -20 -12 -36 -34 -36 z" fill="url(#felt)" stroke="#5d3614" stroke-width="2"/>
+  <path d="M30 84 l 60 0 l -2 8 l -56 0 z" fill="#b48c54" stroke="#5d3614" stroke-width="1.5"/>
+  <path d="M44 36 q 16 -10 32 0" fill="none" stroke="#a3784a" stroke-width="2" opacity="0.6"/>
+  <path d="M44 48 q 16 -10 32 0" fill="none" stroke="#a3784a" stroke-width="1.5" opacity="0.4"/>
+</svg>

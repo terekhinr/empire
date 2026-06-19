@@ -1,0 +1,33 @@
+{
+  "auto_start": {
+    "enable": 1,
+    "delay": 5
+  },
+  "policy": {
+    "enable": 1,
+    "name": "SKeen"
+  },
+  "network": {
+    "ipv6": 0,
+    "tuning": 0,
+    "check": ["1.1.1.1", "ya.ru"]
+  },
+  "firewall": {
+    "intercept": {
+      "dns": 0,
+      "port": []
+    },
+    "exclude": {
+      "port": [123, "137:139", 445, 1900],
+      "ipv4_cidr": [],
+      "ipv6_cidr": []
+    },
+    "redirect_dns": {
+      "enable": 0,
+      "to_port": "",
+      "use_policy": 0
+    },
+    "proxy_router": 0,
+    "use_conntrack": 1
+  }
+}

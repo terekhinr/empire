@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360">
+
+  <style>
+    text { font-family: 'DejaVu Sans', Arial, sans-serif; fill: #1a1a2e; }
+    .title { font-size: 22px; font-weight: bold; }
+    .sub { font-size: 13px; fill: #555; }
+    .axis { stroke: #ccc; stroke-width: 1; }
+    .grid { stroke: #eee; stroke-width: 1; }
+    .accent { fill: #e85d04; }
+    .blue { fill: #2563eb; }
+    .green { fill: #16a34a; }
+    .red { fill: #dc2626; }
+    .line-kids { stroke: #2563eb; stroke-width: 3; fill: none; }
+    .line-workers { stroke: #16a34a; stroke-width: 3; fill: none; }
+    .line-old { stroke: #e85d04; stroke-width: 3; fill: none; }
+    .bar { fill: #2563eb; }
+    .bar-hi { fill: #e85d04; }
+    .ref { stroke: #dc2626; stroke-width: 2; stroke-dasharray: 6 4; }
+  </style>
+
+
+  <text x="40" y="36" class="title">Накопительная часть: мораторий с 2014</text>
+  <rect x="60" y="100" width="140" height="50" rx="8" fill="#dbeafe"/>
+  <text x="80" y="132" class="sub">6% взносов</text>
+  <text x="240" y="132" class="sub">→</text>
+  <rect x="270" y="90" width="180" height="70" rx="8" fill="#fecaca"/>
+  <text x="290" y="120" class="sub">🔒 Мораторий</text>
+  <text x="290" y="142" class="sub">с 2014, продлевают</text>
+  <text x="470" y="132" class="sub">→</text>
+  <rect x="500" y="100" width="200" height="50" rx="8" fill="#fed7aa"/>
+  <text x="520" y="132" class="sub">Общий котёл</text>
+  <text x="60" y="220" class="sub">Текущим пенсионерам</text>
+  <rect x="60" y="250" width="200" height="50" rx="8" fill="#bbf7d0"/>
+  <text x="80" y="282" class="sub">ПДС — добровольно</text>
+  <text x="280" y="282" class="sub">(ваш отдельный выбор)</text>
+
+</svg>

@@ -1,0 +1,96 @@
+{
+  "_readme": "Curated-рубрики (gdepar/lenin/stern): слоты по расписанию → черновик в боте → обязательный approve. Автопост в канал выключен (enabled:false). Без фото публикация заблокирована; короткий текст (<260 симв.) — предупреждение.",
+  "enabled": false,
+  "scheduled_only": true,
+  "notify_admin_compact": true,
+  "defaults": {
+    "min_body_chars": 400,
+    "require_image": true,
+    "require_zero_regen": true,
+    "require_zero_badimg": true,
+    "max_selfcrit_issues": 0
+  },
+  "personas": {
+    "garden": { "enabled": false, "min_body_chars": 450 },
+    "gdepar": { "enabled": false, "min_body_chars": 500 },
+    "stern": { "enabled": false, "min_body_chars": 700 },
+    "lenin": { "enabled": false, "min_body_chars": 500 },
+    "pension": { "enabled": false }
+  },
+  "rubrics": {
+    "gdepar_classic_banya": {
+      "enabled": false,
+      "personas": ["gdepar"],
+      "topic_markers": ["[Классическая баня]", "[SPECIAL:classic_banya]"],
+      "min_body_chars": 260,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "lenin_curated": {
+      "enabled": false,
+      "personas": ["lenin"],
+      "topic_markers": [
+        "[Ленин в литературе]",
+        "[Ленин в искусстве]",
+        "[Ленин · биография]",
+        "[Ленин в кино]"
+      ],
+      "min_body_chars": 500,
+      "skip_body_floor": false,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "stern_curated": {
+      "enabled": false,
+      "personas": ["stern"],
+      "topic_markers": [
+        "[История гирь]",
+        "[Русские силачи]",
+        "[Спортмед и реабилитация]",
+        "[Экипировка и лайфхаки]",
+        "[Гиревой фитнес]"
+      ],
+      "min_body_chars": 550,
+      "skip_body_floor": false,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "gdepar_book_rubrics": {
+      "enabled": true,
+      "personas": ["gdepar"],
+      "topic_markers": [
+        "[Печь и баня]",
+        "[История бани]",
+        "[Баня и здоровье]"
+      ],
+      "min_body_chars": 280,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "stern_week_arc": {
+      "enabled": true,
+      "personas": ["stern"],
+      "topic_markers": [
+        "[План на неделю]",
+        "[Тест недели]",
+        "[Разбор полетов] Итоги недели"
+      ],
+      "min_body_chars": 350,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": false,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    }
+  }
+}

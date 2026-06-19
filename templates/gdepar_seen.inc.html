@@ -1,0 +1,49 @@
+{# ТЗ §3 v2: localStorage «уже смотрели» — передаётся в помощник как seen_spot_ids. #}
+<script>
+(function () {
+    var KEY = 'gdepar_seen_spot_ids_v1';
+    var MAX = 64;
+    function parseIds() {
+        try {
+            var raw = localStorage.getItem(KEY);
+            if (!raw) return [];
+            var a = JSON.parse(raw);
+            if (!Array.isArray(a)) return [];
+            var out = [];
+            for (var i = 0; i < a.length; i++) {
+                var n = parseInt(String(a[i]), 10);
+                if (!isNaN(n) && n > 0 && out.indexOf(n) === -1) out.push(n);
+                if (out.length >= MAX) break;
+            }
+            return out;
+        } catch (e) {
+            return [];
+        }
+    }
+    function saveIds(arr) {
+        try {
+            localStorage.setItem(KEY, JSON.stringify(arr.slice(0, MAX)));
+        } catch (e2) {}
+    }
+    window.gdeparRecordSpotSeen = function (id) {
+        var n = parseInt(String(id), 10);
+        if (isNaN(n) || n < 1) return;
+        var cur = parseIds();
+        var next = [n].concat(cur.filter(function (x) { return x !== n; }));
+        saveIds(next);
+    };
+    window.gdeparGetSeenSpotIds = function () {
+        return parseIds();
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            var b = document.body;
+            if (!b || !b.getAttribute) return;
+            var sid = b.getAttribute('data-gdepar-spot-id');
+            if (sid && typeof window.gdeparRecordSpotSeen === 'function') {
+                window.gdeparRecordSpotSeen(sid);
+            }
+        } catch (eDom) {}
+    });
+})();
+</script>

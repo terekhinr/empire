@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}О проекте — {{ site_title }}{% endblock %}
+{% block meta_description %}О проекте «На пенсию никогда»: манифест против пенсионной капитуляции, инструменты антихрупкости, контакты автора.{% endblock %}
+
+{% block content %}
+<section class="about">
+    <h1>О проекте</h1>
+    <p>«{{ site_title }}» — это не сборник советов «как накопить на старость». Это операционный манифест против капитуляции, замаскированной под отдых.</p>
+    <p>Мы не верим в седого бодрячка на пляже из рекламы страховой. Мы верим в кэшфлоу, который работает без вашего присутствия, в штангу, которая ставит дисциплину сильнее любого тренера, и в землю, которая кормит, когда полки в магазине пустеют.</p>
+    <p>Здесь вы найдёте: книгу «{{ site_title }}» — манифест из шести глав; ленту статей-разборов; видео-канал; ссылки на инструменты.</p>
+    <p style="font-family: var(--sans); font-weight: 700; color: var(--accent); margin-top: 24px;">Штанга, код, земля и кэшфлоу — до конца.</p>
+
+    <div class="contact-card">
+        <h2>Контакты</h2>
+        <p>Сотрудничество, вопросы по книге, предложения: <a href="mailto:info@{{ canonical_host }}">info@{{ canonical_host }}</a></p>
+        <p style="margin-top: 18px;">Канал: <a href="{{ pension_tg_url or 'https://t.me/pensiya_nikogda' }}" target="_blank" rel="noopener" data-pension-goal="pension_tg_click">@pensiya_nikogda ↗</a></p>
+        {% if pension_tg_personal_url %}
+        <p>Личный Telegram автора: <a href="{{ pension_tg_personal_url }}" target="_blank" rel="noopener" data-pension-goal="pension_tg_personal_click">@iosif_boroda ↗</a></p>
+        {% endif %}
+        {% if pension_vk_url %}<p>ВКонтакте: <a href="{{ pension_vk_url }}" target="_blank" rel="noopener" data-pension-goal="pension_vk_click">сообщество ↗</a></p>{% endif %}
+        {% if pension_dzen_url %}<p>Дзен · Пенсия никогда: <a href="{{ pension_dzen_url }}" target="_blank" rel="noopener" data-pension-goal="pension_dzen_click">канал ↗</a></p>{% endif %}
+        <p>YouTube: <a href="{{ pension_youtube_url }}" target="_blank" rel="noopener" data-pension-goal="pension_youtube_click">Иосиф Борода ↗</a></p>
+        <p class="muted" style="margin-top: 24px; font-size: 0.88rem;">Материалы сайта не являются индивидуальной инвестиционной рекомендацией. Все решения вы принимаете самостоятельно.</p>
+    </div>
+</section>
+{% endblock %}

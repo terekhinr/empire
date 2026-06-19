@@ -1,0 +1,113 @@
+{% if metrika_id %}
+<script type="text/javascript">
+(function () {
+    var MID = {{ metrika_id | int }};
+    var PAGE = {{ (metrika_page or "home") | tojson }};
+    (function (m, e, t, r, i, k, a) {
+        m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+        m[i].l = 1 * new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+            if (document.scripts[j].src === r) { return; }
+        }
+        k = e.createElement(t);
+        a = e.getElementsByTagName(t)[0];
+        k.async = 1;
+        k.src = r;
+        a.parentNode.insertBefore(k, a);
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+    try {
+        ym(MID, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: true });
+    } catch (err) {}
+    window.pensionMetrikaReach = function (goal, params) {
+        try {
+            var p = params || {};
+            p.page = p.page || PAGE;
+            if (typeof ym === "function") ym(MID, "reachGoal", goal, p);
+        } catch (e2) {}
+    };
+    window.pensionMetrikaId = MID;
+    window.pensionPage = PAGE;
+
+    document.addEventListener("click", function (ev) {
+        try {
+            var fn = window.pensionMetrikaReach;
+            if (typeof fn !== "function") return;
+            var g = ev.target.closest && ev.target.closest("[data-pension-goal]");
+            if (g) {
+                var goal = g.getAttribute("data-pension-goal");
+                if (goal) {
+                    var extra = {};
+                    var slug = g.getAttribute("data-pension-slug");
+                    if (slug) extra.chapter_slug = slug;
+                    fn(goal, extra);
+                }
+            }
+        } catch (eNav) {}
+    }, true);
+
+    document.addEventListener("DOMContentLoaded", function () {
+        try {
+            window.pensionMetrikaReach("pension_page_view", { page: PAGE });
+            var sk = "pension_metrika_session";
+            if (!sessionStorage.getItem(sk)) {
+                sessionStorage.setItem(sk, "1");
+            }
+            if (PAGE === "book_toc") {
+                window.pensionMetrikaReach("pension_book_toc_open", {});
+            }
+            if (PAGE.indexOf("book_chapter:") === 0) {
+                var chSlug = PAGE.split(":")[1] || "";
+                var mainEl = document.querySelector(".chapter, .article-page");
+                if (mainEl && chSlug) {
+                    var fired = false;
+                    function onChapterRead() {
+                        if (fired) return;
+                        var rect = mainEl.getBoundingClientRect();
+                        var h = mainEl.scrollHeight || rect.height;
+                        var seen = window.scrollY + window.innerHeight - rect.top;
+                        if (h > 0 && seen / h >= 0.7) {
+                            fired = true;
+                            window.pensionMetrikaReach("pension_book_chapter_read", { chapter_slug: chSlug });
+                            window.removeEventListener("scroll", onChapterRead);
+                        }
+                    }
+                    window.addEventListener("scroll", onChapterRead, { passive: true });
+                    onChapterRead();
+                }
+            }
+            if (PAGE === "article") {
+                var art = document.querySelector(".article-page");
+                if (art) {
+                    var artFired = false;
+                    function onArtRead() {
+                        if (artFired) return;
+                        var r = art.getBoundingClientRect();
+                        var ah = art.scrollHeight || r.height;
+                        var aseen = window.scrollY + window.innerHeight - r.top;
+                        if (ah > 0 && aseen / ah >= 0.7) {
+                            artFired = true;
+                            window.pensionMetrikaReach("pension_article_read", {});
+                            window.removeEventListener("scroll", onArtRead);
+                        }
+                    }
+                    window.addEventListener("scroll", onArtRead, { passive: true });
+                    onArtRead();
+                }
+            }
+            document.querySelectorAll("iframe[src*='youtube.com']").forEach(function (frame) {
+                frame.addEventListener("load", function () {
+                    window.pensionMetrikaReach("pension_video_play", { page: PAGE });
+                });
+            });
+        } catch (e3) {}
+    });
+})();
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/{{ metrika_id }}" style="position:absolute;left:-9999px;" alt=""></div></noscript>
+{% else %}
+<script>
+window.pensionMetrikaReach = function () {};
+window.pensionMetrikaId = null;
+window.pensionPage = {{ (metrika_page or "home") | tojson }};
+</script>
+{% endif %}

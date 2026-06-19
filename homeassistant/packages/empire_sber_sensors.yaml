@@ -1,0 +1,18 @@
+# Sber Zigbee: SBDV-00079 (T/H), SBDV-00030 (открытие).
+# Pairing: bash deploy/ha_deploy_sber_sensors.sh
+# Entity id задаёт tools/ha_sber_sensors_setup.py после ZHA pairing.
+
+automation:
+  - id: empire_sber_otkrytie_telegram
+    alias: "Sber — дверь открыта, Telegram"
+    description: "binary_sensor.sber_otkrytie on → уведомление"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.sber_otkrytie
+        from: "off"
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Sber: дверь/окно открыто"
+    mode: single

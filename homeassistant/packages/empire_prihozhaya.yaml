@@ -1,0 +1,150 @@
+# Прихожая: SONOFF SNZB-06P + Zbeacon TS0001_2. Автосвет + голос (Алиса).
+
+script:
+  empire_prihozhaya_zbeacon_set:
+    alias: "Прихожая — Zbeacon установить on/off"
+    mode: queued
+    max: 3
+    fields:
+      want_on:
+        description: "true = включить, false = выключить"
+        selector:
+          boolean:
+    sequence:
+      - variables:
+          target: "{{ 'on' if want_on else 'off' }}"
+          cmd: "{{ 'light.turn_on' if want_on else 'light.turn_off' }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: light.zbeacon_ts0001_2
+      - if:
+          - condition: template
+            value_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
+        then:
+          - stop: "Zbeacon already {{ target }}"
+      - repeat:
+          count: 8
+          sequence:
+            - action: "{{ cmd }}"
+              target:
+                entity_id: light.zbeacon_ts0001_2
+              continue_on_error: true
+            - wait_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
+              timeout: "00:00:04"
+              continue_on_timeout: true
+            - if:
+                - condition: template
+                  value_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
+              then:
+                - stop: "Zbeacon {{ target }}"
+            - delay:
+                milliseconds: 600
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.zbeacon_ts0001_2
+            - light.empire_prihozhaya_svet
+
+  empire_prihozhaya_zbeacon_on:
+    alias: "Прихожая — включить свет (Zbeacon)"
+    mode: restart
+    sequence:
+      - action: script.empire_prihozhaya_zbeacon_set
+        data:
+          want_on: true
+
+  empire_prihozhaya_zbeacon_off:
+    alias: "Прихожая — выключить свет (Zbeacon)"
+    mode: restart
+    sequence:
+      - action: script.empire_prihozhaya_zbeacon_set
+        data:
+          want_on: false
+
+template:
+  - light:
+      - name: "Прихожая свет"
+        unique_id: empire_prihozhaya_svet
+        default_entity_id: light.empire_prihozhaya_svet
+        icon: mdi:ceiling-light
+        availability: >
+          {{ states('light.zbeacon_ts0001_2') not in ['unavailable', 'unknown', 'none'] }}
+        state: >
+          {{ is_state('light.zbeacon_ts0001_2', 'on') }}
+        turn_on:
+          - action: input_boolean.turn_off
+            target:
+              entity_id:
+                - input_boolean.rezhim_ushel
+                - input_boolean.rezhim_otpusk
+          - action: script.empire_prihozhaya_zbeacon_set
+            data:
+              want_on: true
+        turn_off:
+          - action: script.empire_prihozhaya_zbeacon_set
+            data:
+              want_on: false
+
+automation:
+  - id: empire_prihozhaya_sensor_init
+    alias: "Прихожая — настройка Sonoff PIR при старте"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      # Medium (2): High держит «присутствие» почти постоянно — свет не гаснет.
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:f2:cb:4e"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 34
+          value: 2
+      # Тайм-аут «нет присутствия» ~15 с (как в ванной).
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:f2:cb:4e"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 33
+          value: 15
+
+  - id: empire_prihozhaya_motion_light_on
+    alias: "Прихожая — присутствие, свет вкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p_2
+        to: "on"
+    actions:
+      - action: script.empire_prihozhaya_zbeacon_set
+        data:
+          want_on: true
+
+  - id: empire_prihozhaya_motion_light_off
+    alias: "Прихожая — нет присутствия, свет выкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p_2
+        to: "off"
+        for:
+          seconds: 20
+    actions:
+      - action: script.empire_prihozhaya_zbeacon_set
+        data:
+          want_on: false
+
+  - id: empire_prihozhaya_zbeacon_state_sync
+    alias: "Прихожая — синхрон состояния Zbeacon → template"
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: state
+        entity_id: light.zbeacon_ts0001_2
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: light.empire_prihozhaya_svet

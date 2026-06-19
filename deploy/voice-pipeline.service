@@ -1,0 +1,12 @@
+[Unit]
+Description=Voice: Google Drive -> Whisper -> routed Obsidian notes -> Yandex
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/projects/empire/scripts/voice_vps_pipeline.sh
+User=root
+
+[Install]
+WantedBy=multi-user.target

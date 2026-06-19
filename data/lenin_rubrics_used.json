@@ -1,0 +1,65 @@
+{
+  "by_rubric": {
+    "cinema": [
+      "film_lenin_april",
+      "film_documentary",
+      "film_sergeant",
+      "film_lenin_october",
+      "film_sergeant",
+      "film_lenin_october",
+      "film_lenin_october",
+      "film_documentary",
+      "film_documentary",
+      "film_lenin_april",
+      "film_lenin_april",
+      "film_documentary",
+      "film_documentary",
+      "film_sergeant",
+      "film_documentary",
+      "film_lenin_october",
+      "film_sergeant",
+      "film_lenin_october",
+      "film_lenin_april",
+      "film_sergeant",
+      "film_lenin_april",
+      "film_sergeant",
+      "danilkin_1870_1887_068",
+      "film_documentary"
+    ],
+    "art": [
+      "art_kuzma_petrograd",
+      "art_repin_smolny",
+      "art_serov_sketch",
+      "art_monument_volgograd",
+      "art_monument_volgograd",
+      "art_repin_smolny",
+      "art_repin_smolny",
+      "art_repin_smolny",
+      "art_monument_volgograd"
+    ],
+    "biography": [
+      "bio_danilkin_paris",
+      "bio_danilkin_train",
+      "bio_loginov_family",
+      "bio_loginov_notes",
+      "bio_loginov_family",
+      "bio_loginov_family",
+      "bio_loginov_notes",
+      "danilkin_1870_1887_067",
+      "danilkin_1905_1905_1907_017",
+      "danilkin_1912_1914_054"
+    ],
+    "literature": [
+      "lit_bulgakov",
+      "lit_solzhenitsyn",
+      "lit_danilkin_echo",
+      "lit_pasternak",
+      "lit_pasternak",
+      "lit_danilkin_echo",
+      "danilkin_1903_1905_005",
+      "danilkin_frag_074",
+      "danilkin_frag_057"
+    ]
+  },
+  "last": "2026-06-19T09:00:18.008214"
+}

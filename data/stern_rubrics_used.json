@@ -1,0 +1,52 @@
+{
+  "by_rubric": {
+    "equipment": [
+      "gear_shoes",
+      "gear_home",
+      "gear_chalk",
+      "gear_belt",
+      "gear_belt",
+      "gear_chalk",
+      "gear_belt",
+      "gear_home",
+      "gear_chalk",
+      "gear_chalk",
+      "gear_chalk",
+      "gear_home",
+      "gear_home",
+      "gear_chalk"
+    ],
+    "sports_med": [
+      "med_shoulder",
+      "med_return",
+      "med_lower_back",
+      "med_hr_zones",
+      "med_lower_back",
+      "med_lower_back",
+      "med_return",
+      "med_hr_zones",
+      "med_return"
+    ],
+    "kettlebell_fitness": [
+      "fit_long_cycle"
+    ],
+    "kettlebell_history": [
+      "hist_modern_federation",
+      "hist_soviet_sport",
+      "hist_circus_strong",
+      "hist_trade_weight",
+      "hist_competition_standard",
+      "hist_competition_standard",
+      "hist_circus_strong",
+      "hist_competition_standard"
+    ],
+    "russian_strongmen": [
+      "strong_kryloff",
+      "strong_raevsky",
+      "strong_poddubny",
+      "strong_women",
+      "strong_kryloff"
+    ]
+  },
+  "last": "2026-06-19T07:00:00.004845"
+}

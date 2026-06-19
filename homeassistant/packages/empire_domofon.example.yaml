@@ -1,0 +1,26 @@
+# Копия для справки. Активный файл: empire_domofon.yaml
+
+script:
+  empire_domofon_otkryt:
+    alias: "Домофон — открыть"
+    description: "Разовое открытие через SmartIntercom (ESPHome accept_call)"
+    mode: single
+    sequence:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.smartintercom_accept_call
+
+automation:
+  - id: empire_domofon_telegram
+    alias: "Домофон — Telegram при звонке"
+    description: "line_detect on → уведомление в Telegram"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.smartintercom_line_detect
+        from: "off"
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Звонок в домофон!"

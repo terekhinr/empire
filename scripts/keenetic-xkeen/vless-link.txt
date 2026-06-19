@@ -1,0 +1,1 @@
+vless://19dd1a1d-a8a1-40ea-a977-121c0a01ddf6@193.233.232.48:8443?type=tcp&security=reality&pbk=***REMOVED***&fp=chrome&sni=www.microsoft.com&sid=1b74bb3a&flow=xtls-rprx-vision#keenetic-mts

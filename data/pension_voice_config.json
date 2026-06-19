@@ -1,0 +1,20 @@
+{
+  "voices": [
+    {
+      "id": "antonov",
+      "label": "Антонов",
+      "telegram": "https://t.me/auantonov",
+      "tone_hint": "экономика и политика простым языком, ирония без паники, короткие абзацы"
+    },
+    {
+      "id": "crimson",
+      "label": "Кримсон",
+      "telegram": "https://t.me/crimsondigest",
+      "tone_hint": "нюансы против очевидностей, скепсис к мейнстриму, факты и контраргументы"
+    }
+  ],
+  "kb_voice_dir": "kb_sources/pension/voice",
+  "max_taleb_mentions_per_post": 1,
+  "rotate_authors": ["Талеб", "Марк", "Антонов", "Кримсон"],
+  "analysis_topic_prefix": "[ANALYSIS]"
+}

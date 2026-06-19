@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="180" viewBox="0 0 400 180" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="planks" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#3a2615"/>
+      <stop offset="35%"  stop-color="#2f1d0f"/>
+      <stop offset="70%"  stop-color="#3a2615"/>
+      <stop offset="100%" stop-color="#251609"/>
+    </linearGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9 0.06" numOctaves="2" seed="7"/>
+      <feColorMatrix values="0 0 0 0 0.18  0 0 0 0 0.10  0 0 0 0 0.05  0 0 0 0.55 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="rings" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="turbulence" baseFrequency="0.012 0.18" numOctaves="2" seed="3"/>
+      <feColorMatrix values="0 0 0 0 0.07  0 0 0 0 0.04  0 0 0 0 0.02  0 0 0 0.35 0"/>
+    </filter>
+  </defs>
+  <rect width="400" height="180" fill="url(#planks)"/>
+  <rect width="400" height="180" fill="#3a2615" filter="url(#grain)" opacity="0.45"/>
+  <rect width="400" height="180" fill="#3a2615" filter="url(#rings)" opacity="0.55"/>
+  <g stroke="#1a0e05" stroke-width="1" opacity="0.85">
+    <line x1="0" y1="44"  x2="400" y2="44"/>
+    <line x1="0" y1="98"  x2="400" y2="98"/>
+    <line x1="0" y1="142" x2="400" y2="142"/>
+  </g>
+  <g stroke="#5a3a1d" stroke-width="0.5" opacity="0.4">
+    <line x1="0" y1="45"  x2="400" y2="45"/>
+    <line x1="0" y1="99"  x2="400" y2="99"/>
+    <line x1="0" y1="143" x2="400" y2="143"/>
+  </g>
+</svg>

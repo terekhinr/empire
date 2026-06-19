@@ -1,0 +1,77 @@
+# Режимы → Telegram + действия при переключении с дашборда (input_boolean).
+# rest_command и протечка — в empire_telegram.yaml
+
+automation:
+  - id: empire_ushel_snyat_pri_svete
+    alias: "Снять «Ушёл» при включении света"
+    trigger:
+      - platform: state
+        entity_id:
+          - light.empire_kuhnya_svet
+          - light.empire_tualet_svet
+          - light.empire_vannaya_svet
+          - light.empire_prihozhaya_svet
+          - switch.spalnya_svet
+          - switch.spalnya_svet_2
+          - switch.basicr2_ded_sonoff_10011f1029
+          - switch.basicr2_max_sonoff_10011f28d9
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.rezhim_ushel
+        state: "on"
+    action:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.rezhim_ushel
+
+  - id: empire_rezhim_ushel_svet_off
+    alias: "Ушёл — выключить свет"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_ushel
+        to: "on"
+    action:
+      - service: script.empire_svet_vyklyuchit_ushel
+
+  - id: empire_rezhim_otpusk_svet_off
+    alias: "Отпуск — выключить свет"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_otpusk
+        to: "on"
+    action:
+      - service: script.empire_svet_vyklyuchit_ruchnoy
+
+  - id: empire_rezhim_otpusk_on
+    alias: "Режим Отпуск — уведомление"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_otpusk
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Режим «Отпуск» включён."
+
+  - id: empire_rezhim_otpusk_off
+    alias: "Режим Отпуск — выключен"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_otpusk
+        to: "off"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Режим «Отпуск» выключен."
+
+  - id: empire_rezhim_deti_spiat_on
+    alias: "Дети спят — уведомление"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.rezhim_deti_spiat
+        to: "on"
+    action:
+      - service: rest_command.empire_telegram
+        data:
+          message: "Режим «Дети спят» включён."

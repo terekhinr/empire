@@ -1,0 +1,41 @@
+# Скопировать на хост HA: /config/packages/empire_mvp.yaml
+# В configuration.yaml:
+#   homeassistant:
+#     packages: !include_dir_named packages
+
+input_boolean:
+  rezhim_noch:
+    name: "Режим: Ночь"
+    icon: mdi:weather-night
+  rezhim_ushel:
+    name: "Режим: Ушёл"
+    icon: mdi:home-export-outline
+  rezhim_deti_spiat:
+    name: "Режим: Дети спят"
+    icon: mdi:sleep
+  rezhim_otpusk:
+    name: "Режим: Отпуск"
+    icon: mdi:airplane
+
+group:
+  rezhimy_doma:
+    name: "Режимы дома"
+    entities:
+      - input_boolean.rezhim_noch
+      - input_boolean.rezhim_ushel
+      - input_boolean.rezhim_deti_spiat
+      - input_boolean.rezhim_otpusk
+
+  # Свет, которым управляете голосом (кухня, спальня, детские…).
+  # НЕ добавляйте ванную/коридор с автосветом — см. HA_LIGHTING_ALICE_ROADMAP.md
+  svet_alice:
+    name: "Свет — Алиса"
+    entities:
+      - light.empire_kuhnya_svet
+      - light.empire_tualet_svet
+      - light.empire_prihozhaya_svet
+      - switch.spalnya_svet
+      - switch.spalnya_svet_2
+      - switch.basicr2_ded_sonoff_10011f1029
+      - switch.basicr2_max_sonoff_10011f28d9
+    # Ванная/коридор с автосветом — не в группе (см. HA_LIGHTING_ALICE_ROADMAP.md)

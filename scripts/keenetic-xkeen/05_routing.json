@@ -1,0 +1,63 @@
+// Все устройства: Google/YouTube через VPS. БЕЗ блока UDP/443 (ломает Chrome + SmartTube).
+{
+  "routing": {
+    "rules": [
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "network": "udp",
+        "port": "135, 137, 138, 139"
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "block",
+        "type": "field",
+        "domain": ["appcenter.ms"]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "vless-reality",
+        "type": "field",
+        "domain": [
+          "google.com",
+          "gmail.com",
+          "googlemail.com",
+          "googlevideo.com",
+          "youtube.com",
+          "youtu.be",
+          "ytimg.com",
+          "ggpht.com",
+          "gstatic.com",
+          "googleapis.com",
+          "googleusercontent.com",
+          "youtubei.googleapis.com",
+          "gvt1.com",
+          "gvt2.com",
+          "withgoogle.com",
+          "ext:geosite_v2fly.dat:google",
+          "ext:geosite_v2fly.dat:youtube",
+          "ext:geosite_v2fly.dat:speedtest",
+          "ext:geosite_zkeen.dat:domains",
+          "ext:geosite_zkeen.dat:other",
+          "ext:geosite_zkeen.dat:youtube"
+        ]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "vless-reality",
+        "type": "field",
+        "ip": [
+          "ext:geoip_v2fly.dat:twitter",
+          "ext:geoip_zkeenip.dat:google",
+          "ext:geoip_zkeenip.dat:youtube"
+        ]
+      },
+      {
+        "inboundTag": ["redirect", "tproxy"],
+        "outboundTag": "direct",
+        "type": "field"
+      }
+    ]
+  }
+}

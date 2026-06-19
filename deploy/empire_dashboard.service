@@ -1,0 +1,20 @@
+[Unit]
+Description=Empire Streamlit Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/empire/empire.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/bin/bash /root/projects/empire/scripts/run_dashboard.sh
+Restart=always
+RestartSec=8
+MemoryMax=1024M
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

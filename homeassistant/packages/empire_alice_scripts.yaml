@@ -1,0 +1,263 @@
+# Сценарии для голоса Алисы (Yandex Smart Home — script без type: scenario в YAML).
+# После установки интеграции отметьте эти script в UI или см. yandex_smart_home.example.yaml
+#
+# Sonoff BASICR2 (eWeLink): гостевая = Ded, комната Макса = Max
+
+script:
+  empire_svet_vyklyuchit_ruchnoy:
+    alias: "Empire — выключить весь ручной свет"
+    sequence:
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.empire_kuhnya_svet
+            - light.empire_tualet_svet
+            - light.empire_vannaya_svet
+            - light.empire_prihozhaya_svet
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.spalnya_svet
+            - switch.spalnya_svet_2
+            - switch.basicr2_ded_sonoff_10011f1029
+            - switch.basicr2_max_sonoff_10011f28d9
+
+  empire_svet_vyklyuchit_ushel:
+    alias: "Empire — выключить свет (Ушёл, без прихожей)"
+    sequence:
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.empire_kuhnya_svet
+            - light.empire_tualet_svet
+            - light.empire_vannaya_svet
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.spalnya_svet
+            - switch.spalnya_svet_2
+            - switch.basicr2_ded_sonoff_10011f1029
+            - switch.basicr2_max_sonoff_10011f28d9
+
+  empire_svet_vklyuchit_ruchnoy:
+    alias: "Empire — включить весь ручной свет"
+    sequence:
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.spalnya_svet
+            - switch.spalnya_svet_2
+            - switch.basicr2_ded_sonoff_10011f1029
+            - switch.basicr2_max_sonoff_10011f28d9
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_vannaya_svet
+        data:
+          brightness_pct: 100
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_tualet_svet
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_kuhnya_svet
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_prihozhaya_svet
+
+  rezhim_noch_vklyuchit:
+    alias: "Ночь — включить"
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.rezhim_noch
+
+  rezhim_noch_vyklyuchit:
+    alias: "Ночь — выключить"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.rezhim_noch
+
+  ya_ushel:
+    alias: "Я ушёл"
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.rezhim_ushel
+
+  svet_vannaya_vkl:
+    alias: "Свет ванная — включить"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_vannaya_svet
+        data:
+          brightness_pct: 100
+
+  svet_vannaya_vyk:
+    alias: "Свет ванная — выключить"
+    sequence:
+      - service: light.turn_off
+        target:
+          entity_id: light.empire_vannaya_svet
+
+  rezhim_ushel_vklyuchit:
+    alias: "Ушёл — включить"
+    sequence:
+      - service: script.ya_ushel
+
+  rezhim_ushel_vyklyuchit:
+    alias: "Ушёл — выключить"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.rezhim_ushel
+
+  rezhim_deti_spiat_vklyuchit:
+    alias: "Дети спят — включить"
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.rezhim_deti_spiat
+
+  rezhim_deti_spiat_vyklyuchit:
+    alias: "Дети спят — выключить"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.rezhim_deti_spiat
+
+  rezhim_otpusk_vklyuchit:
+    alias: "Отпуск — включить"
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.rezhim_otpusk
+      - service: script.empire_svet_vyklyuchit_ruchnoy
+
+  rezhim_otpusk_vyklyuchit:
+    alias: "Отпуск — выключить"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.rezhim_otpusk
+
+  svet_vyklyuchit_vezde:
+    alias: "Выключить свет везде"
+    sequence:
+      - service: script.empire_svet_vyklyuchit_ruchnoy
+
+  svet_vkluchit_vezde:
+    alias: "Включить свет везде"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: script.empire_svet_vklyuchit_ruchnoy
+
+  svet_kuhnya_vkl:
+    alias: "Свет кухня — включить"
+    mode: restart
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: script.empire_kuhnya_zbeacon_set
+        data:
+          want_on: true
+
+  svet_kuhnya_vyk:
+    alias: "Свет кухня — выключить"
+    mode: restart
+    sequence:
+      - service: script.empire_kuhnya_zbeacon_set
+        data:
+          want_on: false
+
+  svet_tualet_vkl:
+    alias: "Свет туалет — включить"
+    mode: restart
+    sequence:
+      - service: script.empire_tualet_hobeian_set
+        data:
+          want_on: true
+
+  svet_tualet_vyk:
+    alias: "Свет туалет — выключить"
+    mode: restart
+    sequence:
+      - service: script.empire_tualet_hobeian_set
+        data:
+          want_on: false
+
+  svet_prihozhaya_vkl:
+    alias: "Свет прихожая — включить"
+    mode: restart
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: light.turn_on
+        target:
+          entity_id: light.empire_prihozhaya_svet
+
+  svet_prihozhaya_vyk:
+    alias: "Свет прихожая — выключить"
+    mode: restart
+    sequence:
+      - service: light.turn_off
+        target:
+          entity_id: light.empire_prihozhaya_svet
+
+  svet_gostevaya_vkl:
+    alias: "Свет гостевая — включить"
+    mode: restart
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: switch.turn_on
+        target:
+          entity_id: switch.basicr2_ded_sonoff_10011f1029
+
+  svet_gostevaya_vyk:
+    alias: "Свет гостевая — выключить"
+    mode: restart
+    sequence:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.basicr2_ded_sonoff_10011f1029
+
+  svet_maks_vkl:
+    alias: "Свет Макс — включить"
+    mode: restart
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.rezhim_ushel
+            - input_boolean.rezhim_otpusk
+      - service: switch.turn_on
+        target:
+          entity_id: switch.basicr2_max_sonoff_10011f28d9
+
+  svet_maks_vyk:
+    alias: "Свет Макс — выключить"
+    mode: restart
+    sequence:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.basicr2_max_sonoff_10011f28d9

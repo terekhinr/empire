@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "01_fire_illusion",
+    "title": "Иллюзия ранней пенсии (FIRE)",
+    "file": "01_fire_illusion.jpg",
+    "prompt": "Cinematic wide shot of an elderly but fit couple walking on a pristine tropical beach at sunset, holding hands, golden hour lighting, hyper-realistic, advertising style, bright and unnaturally perfect colors, 8k resolution"
+  },
+  {
+    "slug": "02_demographic_ponzi",
+    "title": "Демографическое МММ (Перевернутая пирамида)",
+    "file": "02_demographic_ponzi.jpg",
+    "prompt": "A futuristic holographic population pyramid chart glowing in neon red and blue colors, flipping upside down, dark cyberpunk background, high tech data visualization, 8k, photorealistic"
+  },
+  {
+    "slug": "03_turkey_error",
+    "title": "Ошибка Индейки (Иллюзия безопасности)",
+    "file": "03_turkey_error.jpg",
+    "prompt": "Close up POV shot from a fat turkey looking at a farmer holding a bucket of grain, sunny idyllic farm, dramatic foreshadowing shadows, hyper-detailed, cinematic lighting"
+  },
+  {
+    "slug": "04_digital_escapism",
+    "title": "Эскапизм и цифровое одиночество",
+    "file": "04_digital_escapism.jpg",
+    "prompt": "A massive crowd of people standing in a dark neon-lit subway station, every single person is looking down at a glowing smartphone screen, cold blue and purple lighting, dystopian atmosphere, cinematic, 8k"
+  },
+  {
+    "slug": "05_inflation_money_press",
+    "title": "Инфляция и сгорание денег",
+    "file": "05_inflation_money_press.jpg",
+    "prompt": "Macro shot of a massive industrial printing press rapidly printing endless sheets of paper money, motion blur on the paper, dark and dramatic factory lighting, financial crisis concept, photorealistic"
+  }
+]

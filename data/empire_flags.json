@@ -1,0 +1,8 @@
+{
+  "stop_publications": false,
+  "stop_neurocomment": true,
+  "stop_scout": false,
+  "stop_spy": true,
+  "stop_sales": true,
+  "stop_worker": false
+}

@@ -1,0 +1,502 @@
+# Empire — Mushroom + Mini Graph (стиль gendom.ru)
+# Требует: lovelace-mushroom, mini-graph-card в lovelace_resources
+
+title: Empire
+views:
+  - title: Дом
+    path: home
+    icon: mdi:home-heart
+    theme: default
+    cards:
+      - type: custom:mushroom-title-card
+        title: Empire
+        subtitle: "{{ now().strftime('%A, %d %B') }}"
+      - type: custom:mini-graph-card
+        name: Климат на балконе
+        icon: mdi:thermometer
+        hours_to_show: 24
+        points_per_hour: 2
+        line_width: 2
+        show:
+          legend: true
+          fill: fade
+        entities:
+          - entity: sensor.balkon_temperatura
+            name: t°
+            color: "#ff7043"
+          - entity: sensor.balkon_vlazhnost
+            name: влажность
+            color: "#42a5f5"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.sber_th_temperatura
+            name: Кухня
+            icon: mdi:stove
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_temperatura
+            name: Балкон
+            icon: mdi:home-thermometer-outline
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_vlazhnost
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_batareia
+            name: Батарея
+            icon: mdi:battery-40
+            layout: vertical
+      - type: custom:mushroom-title-card
+        title: Режимы
+        subtitle: Быстрые сценарии
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.rezhim_noch
+            name: Ночь
+            icon: mdi:weather-night
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.rezhim_ushel
+            name: Ушёл
+            icon: mdi:home-export-outline
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.rezhim_deti_spiat
+            name: Дети спят
+            icon: mdi:sleep
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: input_boolean.rezhim_otpusk
+            name: Отпуск
+            icon: mdi:airplane
+            tap_action:
+              action: toggle
+      - type: custom:mushroom-title-card
+        title: Свет
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-light-card
+            entity: light.empire_kuhnya_svet
+            name: Кухня
+            icon: mdi:ceiling-light
+            use_light_color: true
+            show_brightness_control: false
+          - type: custom:mushroom-light-card
+            entity: light.empire_vannaya_svet
+            name: Ванная
+            icon: mdi:shower-head
+            use_light_color: true
+            show_brightness_control: true
+          - type: custom:mushroom-light-card
+            entity: light.empire_tualet_svet
+            name: Туалет
+            icon: mdi:toilet
+            use_light_color: true
+            show_brightness_control: false
+          - type: custom:mushroom-light-card
+            entity: light.empire_prihozhaya_svet
+            name: Прихожая
+            icon: mdi:door
+            use_light_color: true
+            show_brightness_control: false
+          - type: custom:mushroom-entity-card
+            entity: switch.spalnya_svet
+            name: Спальня 1
+            icon: mdi:ceiling-light
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: switch.spalnya_svet_2
+            name: Спальня 2
+            icon: mdi:ceiling-light-outline
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: switch.basicr2_ded_sonoff_10011f1029
+            name: Гостевая
+            icon: mdi:ceiling-light
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: switch.basicr2_max_sonoff_10011f28d9
+            name: Комната Макса
+            icon: mdi:ceiling-light
+            tap_action:
+              action: toggle
+      - type: custom:mushroom-title-card
+        title: Детские
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+            name: Семён
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
+            name: Макс
+            icon: mdi:thermometer
+            layout: vertical
+      - type: custom:mushroom-title-card
+        title: Безопасность
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.hobeian_zg_222z
+            name: Протечка (ванная)
+            icon: mdi:water-alert
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.zbeacon_snzb_05p
+            name: Протечка (туалет)
+            icon: mdi:water-alert
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.balkon_datchik_gaza
+            name: Газ (балкон)
+            icon: mdi:gas-cylinder-alert
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.tz3210_up3pngle_ts0205
+            name: Дым
+            icon: mdi:smoke-detector
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.sonoff_snzb_06p
+            name: Ванная PIR
+            icon: mdi:motion-sensor
+          - type: custom:mushroom-entity-card
+            entity: binary_sensor.aoyan_ms01
+            name: Коридор PIR
+            icon: mdi:walk
+      - type: custom:mushroom-entity-card
+        entity: weather.forecast_home_assistant
+        name: Погода
+        icon: mdi:weather-partly-cloudy
+        layout: horizontal
+
+  - title: Кухня
+    path: kuhnya
+    icon: mdi:stove
+    cards:
+      - type: custom:mushroom-title-card
+        title: Кухня
+      - type: custom:mushroom-light-card
+        entity: light.empire_kuhnya_svet
+        name: Свет
+        icon: mdi:ceiling-light
+        use_light_color: true
+      - type: custom:mushroom-entity-card
+        entity: switch.kuhnya_chainik
+        name: Розетка
+        icon: mdi:power-socket-eu
+        tap_action:
+          action: toggle
+      - type: custom:mini-graph-card
+        name: Климат
+        icon: mdi:thermometer
+        hours_to_show: 24
+        line_width: 2
+        show:
+          legend: true
+          fill: fade
+        entities:
+          - entity: sensor.sber_th_temperatura
+            name: t°
+            color: "#ff7043"
+          - entity: sensor.sber_th_vlazhnost
+            name: влажность
+            color: "#42a5f5"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.sber_th_temperatura
+            name: Температура
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.sber_th_vlazhnost
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.sber_th_batareia
+            name: Батарея
+            icon: mdi:battery
+            layout: vertical
+
+  - title: Ванная
+    path: vannaya
+    icon: mdi:shower
+    cards:
+      - type: custom:mushroom-title-card
+        title: Ванная
+      - type: custom:mushroom-light-card
+        entity: light.empire_vannaya_svet
+        name: Свет
+        icon: mdi:ceiling-light
+        use_light_color: true
+        show_brightness_control: true
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.sonoff_snzb_06p
+        name: Присутствие
+        icon: mdi:motion-sensor
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.empire_vannaya_dim_night
+        name: Ночной режим
+        icon: mdi:weather-night
+      - type: custom:mushroom-entity-card
+        entity: sensor.sonoff_snzb_06p_poslednee_sostoianie_osveshchennosti
+        name: Освещённость
+        icon: mdi:brightness-6
+      - type: markdown
+        content: >
+          Автосвет по PIR. Ночью **20%** с 01:00 до 05:50 МСК. Алиса не управляет.
+
+  - title: Спальня
+    path: spalnya
+    icon: mdi:bed
+    cards:
+      - type: custom:mushroom-title-card
+        title: Спальня родителей
+        subtitle: W602 LocalTuya
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: switch.spalnya_svet
+            name: Свет один
+            icon: mdi:ceiling-light
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: switch.spalnya_svet_2
+            name: Свет два
+            icon: mdi:ceiling-light-outline
+            tap_action:
+              action: toggle
+
+  - title: Балкон
+    path: balkon
+    icon: mdi:balcony
+    cards:
+      - type: custom:mushroom-title-card
+        title: Балкон
+        subtitle: SRW-TH01 · облачный опрос
+      - type: custom:mini-graph-card
+        name: Температура и влажность
+        hours_to_show: 48
+        line_width: 2
+        show:
+          legend: true
+        entities:
+          - entity: sensor.balkon_temperatura
+            name: t°
+            color: "#ef5350"
+          - entity: sensor.balkon_vlazhnost
+            name: "влажность %"
+            color: "#29b6f6"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_temperatura
+            name: Температура
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_vlazhnost
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.balkon_batareia
+            name: Батарея
+            icon: mdi:battery
+            layout: vertical
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.balkon_datchik_gaza
+        name: Газ
+        icon: mdi:gas-cylinder-alert
+      - type: custom:mushroom-entity-card
+        entity: switch.balkon_multivarka
+        name: Мультиварка
+        icon: mdi:slow-cooker
+        tap_action:
+          action: toggle
+
+  - title: Коридор
+    path: koridor
+    icon: mdi:arrow-left-right
+    cards:
+      - type: custom:mushroom-title-card
+        title: Прихожая / коридор
+      - type: custom:mushroom-light-card
+        entity: light.empire_prihozhaya_svet
+        name: Свет
+        icon: mdi:ceiling-light
+        use_light_color: true
+        show_brightness_control: false
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.sonoff_snzb_06p_2
+        name: Присутствие
+        icon: mdi:motion-sensor
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.aoyan_ms01
+        name: Движение
+        icon: mdi:walk
+      - type: custom:mushroom-entity-card
+        entity: sensor.aoyan_ms01_batareia
+        name: Батарея PIR
+        icon: mdi:battery
+      - type: custom:mushroom-title-card
+        title: Домофон
+      - type: custom:mushroom-template-card
+        primary: Открыть
+        icon: mdi:door-open
+        tap_action:
+          action: call-service
+          service: script.empire_domofon_otkryt
+      - type: custom:mushroom-entity-card
+        entity: switch.smartintercom_accept_call
+        name: Открыть (реле)
+        icon: mdi:door-open
+      - type: custom:mushroom-entity-card
+        entity: binary_sensor.smartintercom_line_detect
+        name: Звонок
+        icon: mdi:phone-ring
+
+  - title: Комната Семена
+    path: komnata_semiona
+    icon: mdi:account-child
+    cards:
+      - type: custom:mushroom-title-card
+        title: Комната Семена
+        subtitle: eWeLink CK-TLSR8656 · ZHA
+      - type: custom:mini-graph-card
+        name: Температура и влажность
+        hours_to_show: 48
+        line_width: 2
+        show:
+          legend: true
+        entities:
+          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+            name: t°
+            color: "#ef5350"
+          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost
+            name: "влажность %"
+            color: "#29b6f6"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+            name: Температура
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia
+            name: Батарея
+            icon: mdi:battery
+            layout: vertical
+
+  - title: Комната Макса
+    path: komnata_maksa
+    icon: mdi:account-child-circle
+    cards:
+      - type: custom:mushroom-title-card
+        title: Комната Макса
+        subtitle: eWeLink CK-TLSR8656 · ZHA
+      - type: custom:mini-graph-card
+        name: Температура и влажность
+        hours_to_show: 48
+        line_width: 2
+        show:
+          legend: true
+        entities:
+          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
+            name: t°
+            color: "#ef5350"
+          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost_2
+            name: "влажность %"
+            color: "#29b6f6"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
+            name: Температура
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost_2
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia_2
+            name: Батарея
+            icon: mdi:battery
+            layout: vertical
+      - type: custom:mushroom-entity-card
+        entity: switch.basicr2_max_sonoff_10011f28d9
+        name: Свет
+        icon: mdi:ceiling-light
+        tap_action:
+          action: toggle
+
+  - title: Sonoff
+    path: sonoff
+    icon: mdi:flash
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: switch.basicr2_ded_sonoff_10011f1029
+            name: Ded
+            icon: mdi:power-socket
+            tap_action:
+              action: toggle
+          - type: custom:mushroom-entity-card
+            entity: switch.basicr2_max_sonoff_10011f28d9
+            name: Max
+            icon: mdi:power-socket
+            tap_action:
+              action: toggle
+
+  - title: Сервис
+    path: servis
+    icon: mdi:cog
+    cards:
+      - type: custom:mushroom-entity-card
+        entity: script.empire_test_telegram
+        name: Тест Telegram
+        icon: mdi:telegram
+        tap_action:
+          action: call-service
+          service: script.empire_test_telegram
+      - type: markdown
+        content: >
+          **Домофон:** только нативная Алиса (не через HA / Yaha Cloud).
+      - type: markdown
+        content: >
+          **Скоро:** прихожая · гостевая (ИК).

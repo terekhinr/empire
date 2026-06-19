@@ -1,0 +1,7 @@
+# Добавить в /config/configuration.yaml (один раз):
+
+homeassistant:
+  packages: !include_dir_named packages
+
+# Yandex Smart Home — список устройств для Алисы (см. docs/HA_YANDEX_ALICE_SETUP.md)
+yandex_smart_home: !include yandex_smart_home.yaml

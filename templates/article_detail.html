@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}{{ (article.text_content | striptags)[:60] }} — {{ site_title }}{% endblock %}
+{% block meta_description %}{{ (article.text_content | striptags)[:200] }}{% endblock %}
+
+{% block content %}
+<article class="article-page">
+    <a href="/articles" class="muted" style="font-family: var(--sans); text-transform: uppercase; letter-spacing: 2px; font-size: 0.78rem;">← Все статьи</a>
+    <span class="article-meta">{{ article.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+    <h1>{{ (article.text_content | striptags)[:120] }}</h1>
+    <div class="article-body">{{ article.text_content }}</div>
+</article>
+{% endblock %}

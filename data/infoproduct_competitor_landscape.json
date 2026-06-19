@@ -1,0 +1,100 @@
+{
+  "_updated": "2026-05-20",
+  "_method": "публичные страницы, Литрес, лендинги курсов (без складчин)",
+  "garden": {
+    "competitors": [
+      {
+        "name": "Дачный агроном (@dachnyagronom)",
+        "url": "https://t.me/dachnyagronom",
+        "price_rub": 0,
+        "format": "TG-канал + бот, лид-магниты PDF за подписку",
+        "scores": { "concrete": 3, "water": 3, "value_price": 5, "differentiation": 2, "trust": 4 },
+        "notes": "Сильная воронка и бренд; много «системы» и вебинаров, мало полевых тестов на 60 сек"
+      },
+      {
+        "name": "Шпаргалка ленивого огородника (Воронова, Литрес)",
+        "url": "https://www.litres.ru/book/olga-voronova/shpargalka-lenivogo-ogorodnika-vse-samoe-vazhnoe-v-tablicah-67293267/",
+        "price_rub": 159,
+        "format": "PDF-книга, таблицы на сезон",
+        "scores": { "concrete": 4, "water": 2, "value_price": 5, "differentiation": 3, "trust": 3 },
+        "notes": "Дешевле нашего tripwire; похожий формат таблиц — нужна отстройка «7 ошибок + цена косяка»"
+      },
+      {
+        "name": "Урожайный малозатратный экоогород (ogorodsamobranka.ru)",
+        "url": "https://ogorodsamobranka.ru/",
+        "price_rub": null,
+        "format": "9-модульный онлайн-курс, видео",
+        "scores": { "concrete": 3, "water": 4, "value_price": 2, "differentiation": 2, "trust": 3 },
+        "notes": "Обещания «урожай в 2 раза»; дороже и тяжелее нашего гайда 4 недели"
+      },
+      {
+        "name": "Умный садовник / Шевлякова (курс)",
+        "url": "https://umnyjsadovnik.ru/",
+        "price_rub": 25000,
+        "format": "12 мес доступ, куратор, чат",
+        "scores": { "concrete": 4, "water": 3, "value_price": 1, "differentiation": 3, "trust": 4 },
+        "notes": "Премиум-сегмент; мы не конкурируем по цене — tripwire 290 ₽ другой полки"
+      },
+      {
+        "name": "Курдюмов «Огород по месяцам» (Литрес)",
+        "url": "https://www.litres.ru/book/n-i-kurdumov/ogorod-poshagovoe-rukovodstvo-na-kazhdyy-mesyac-51406387/",
+        "price_rub": null,
+        "format": "Книга PDF",
+        "scores": { "concrete": 5, "water": 2, "value_price": 4, "differentiation": 4, "trust": 5 },
+        "notes": "Сильный эталон по структуре; наш гайд короче и с тестами, не энциклопедия"
+      }
+    ],
+    "our_products": {
+      "garden_tripwire_checklist": { "price_rub": 290, "verdict": "не хуже нишевых PDF; сильнее за счёт 7 приоритетов и полевого теста" },
+      "garden_guide_4weeks": { "price_rub": 1290, "verdict": "сильно дешевле курсов 10–25k; слабее по видео/куратору — компенсировать чек-листами недели" }
+    }
+  },
+  "stern": {
+    "competitors": [
+      {
+        "name": "Здоровая спина — мини-курс (body-oxy.ru)",
+        "url": "https://body-oxy.ru/mini-kurs-zdorovaya-spina/",
+        "price_rub": 990,
+        "format": "3×60 мин видео, пилатес",
+        "scores": { "concrete": 4, "water": 3, "value_price": 3, "differentiation": 3, "trust": 3 },
+        "notes": "Дороже tripwire; другая методика (пилатес vs офис/McGill)"
+      },
+      {
+        "name": "Здоровая спина за 21 день (Кононов)",
+        "url": "https://oleksiykononov.com/spine/challenge",
+        "price_rub": null,
+        "format": "21 день, 30 мин/день, чат, возврат",
+        "scores": { "concrete": 4, "water": 3, "value_price": 3, "differentiation": 3, "trust": 4 },
+        "notes": "Прямой конкурент по сроку 21 день; у них обратная связь и гарантия возврата — нам нужен дисклеймер + чёткий минимум"
+      },
+      {
+        "name": "Здоровый позвоночник (Герасянов)",
+        "url": "https://online.gerasyanov.com/course/healthy-spine",
+        "price_rub": 9900,
+        "format": "21 день, йога, тарифы",
+        "scores": { "concrete": 4, "water": 4, "value_price": 2, "differentiation": 4, "trust": 4 },
+        "notes": "Дороже нашего 4900; маркетинг осанки; мы — офис + гиря + McGill без «исцеления»"
+      },
+      {
+        "name": "Борщенко «24 упражнения, 15 мин» (Литрес)",
+        "url": "https://www.litres.ru/book/igor-borschenko/chtoby-ne-bolela-spina-24-uprazhneniya-15-minut-v-den-8707502/",
+        "price_rub": 240,
+        "format": "PDF книга, врач",
+        "scores": { "concrete": 5, "water": 2, "value_price": 5, "differentiation": 3, "trust": 5 },
+        "notes": "Дешевле tripwire; сильное доверие (врач); нет бота и прогрессии 21 день"
+      },
+      {
+        "name": "Курс с гирей (Sekta School)",
+        "url": "https://sektaschool.ru/online/shorts/kettlebell",
+        "price_rub": 2000,
+        "format": "1 неделя видео",
+        "scores": { "concrete": 5, "water": 2, "value_price": 3, "differentiation": 4, "trust": 4 },
+        "notes": "Гиря есть; нет фокуса на поясницу/офис; наш курс 21 день глубже по спине"
+      }
+    ],
+    "our_products": {
+      "tripwire_office": { "price_rub": 390, "verdict": "цена ок; нужны 3 снятых урока и пример в лендинге (не история гирь)" },
+      "course_iron_spine_21": { "price_rub": 4900, "verdict": "дешевле Герасянова; слабее Кононова по поддержке — указать McGill/противопоказания и минимум без обещаний" }
+    }
+  }
+}

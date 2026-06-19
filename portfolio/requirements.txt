@@ -1,0 +1,5 @@
+openpyxl>=3.1.0
+plotly>=6.0.0
+pyxirr>=0.10.0
+xlrd>=2.0.1
+beautifulsoup4>=4.12.0

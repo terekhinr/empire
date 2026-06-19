@@ -1,0 +1,20 @@
+{
+  "products": [
+    {
+      "code": "garden_tripwire_checklist",
+      "name": "7 ошибок грядки — чек-лист Степаныча",
+      "price_rub": 290,
+      "duration_days": 0,
+      "payments_enabled": false,
+      "description": "Не 100 советов — 7 дорогих ошибок + тест на участке за 60 сек. Средняя полоса."
+    },
+    {
+      "code": "garden_guide_4weeks",
+      "name": "Природный огород — 4 недели",
+      "price_rub": 1290,
+      "duration_days": 28,
+      "payments_enabled": false,
+      "description": "Внедрение по неделям (не перегруз). Почва → рассада → полив → сбор без «эко-воды»."
+    }
+  ]
+}

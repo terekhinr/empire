@@ -1,0 +1,52 @@
+# Секреты и локальная конфигурация (никогда не коммитить)
+.env
+.env.*
+!.env.example
+docs/dashboard_access.md
+sponsr.env
+sponsr_session.json
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.matplotlib_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+.cursor/
+*.swp
+.DS_Store
+
+# БД и тяжёлые runtime-артефакты (бэкап — rclone / backup_empire_db.sh)
+*.db
+*.db-shm
+*.db-wal
+portfolio.db
+data/health/health.db
+data/planning/planning.db
+data/portfolio_imports/
+
+# Медиа, RAG, vault (не в git — только на VPS + Я.Диск)
+media/
+vector_db/
+data/obsidian_vault/
+kb_sources/
+
+# Логи
+logs/*.log
+nohup.out
+
+# Локальные аварийные копии
+main.py.EMPTY.bak
+*.EMPTY.bak
+
+# Крупные PDF в корне (книги Ленина — на диске, не в git)
+/*.pdf

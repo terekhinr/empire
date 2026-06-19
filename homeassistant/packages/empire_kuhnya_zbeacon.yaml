@@ -1,0 +1,126 @@
+# Кухня: Zbeacon TS0001 → light.empire_kuhnya_svet (Алиса / дашборд)
+
+script:
+  empire_kuhnya_zbeacon_set:
+    alias: "Кухня — Zbeacon установить on/off"
+    mode: restart
+    max: 5
+    fields:
+      want_on:
+        description: "true = включить, false = выключить"
+        selector:
+          boolean:
+    sequence:
+      - variables:
+          zbeacon: light.zbeacon_ts0001
+          target: "{{ 'on' if want_on else 'off' }}"
+          cmd: "{{ 'light.turn_on' if want_on else 'light.turn_off' }}"
+      - action: homeassistant.update_entity
+        target:
+          entity_id: "{{ zbeacon }}"
+      - if:
+          - condition: template
+            value_template: "{{ is_state(zbeacon, target) }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: light.empire_kuhnya_svet
+          - stop: "Zbeacon already {{ target }}"
+      - action: button.press
+        target:
+          entity_id: button.zbeacon_ts0001_identifikatsiia
+        continue_on_error: true
+      - delay:
+          milliseconds: 800
+      - repeat:
+          count: 12
+          sequence:
+            - action: "{{ cmd }}"
+              target:
+                entity_id: "{{ zbeacon }}"
+              continue_on_error: true
+            - wait_template: "{{ is_state(zbeacon, target) }}"
+              timeout: "00:00:06"
+              continue_on_timeout: true
+            - if:
+                - condition: template
+                  value_template: "{{ is_state(zbeacon, target) }}"
+              then:
+                - action: homeassistant.update_entity
+                  target:
+                    entity_id: light.empire_kuhnya_svet
+                - stop: "Zbeacon {{ target }}"
+            - delay:
+                milliseconds: 800
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.zbeacon_ts0001
+            - light.empire_kuhnya_svet
+
+  empire_kuhnya_zbeacon_physical_on:
+    alias: "Кухня — включить свет (Zbeacon, с повторами)"
+    mode: single
+    sequence:
+      - action: script.empire_kuhnya_zbeacon_set
+        data:
+          want_on: true
+
+  empire_kuhnya_zbeacon_physical_off:
+    alias: "Кухня — выключить свет (Zbeacon, с повторами)"
+    mode: single
+    sequence:
+      - action: script.empire_kuhnya_zbeacon_set
+        data:
+          want_on: false
+
+template:
+  - light:
+      - name: "Кухня свет"
+        unique_id: empire_kuhnya_svet
+        default_entity_id: light.empire_kuhnya_svet
+        icon: mdi:ceiling-light
+        availability: >
+          {{ states('light.zbeacon_ts0001') not in ['unavailable', 'unknown', 'none'] }}
+        state: >
+          {{ is_state('light.zbeacon_ts0001', 'on') }}
+        turn_on:
+          - action: input_boolean.turn_off
+            target:
+              entity_id:
+                - input_boolean.rezhim_ushel
+                - input_boolean.rezhim_otpusk
+          - action: script.empire_kuhnya_zbeacon_set
+            data:
+              want_on: true
+        turn_off:
+          - action: script.empire_kuhnya_zbeacon_set
+            data:
+              want_on: false
+
+automation:
+  - id: empire_kuhnya_zbeacon_poll
+    alias: "Кухня — опрос состояния Zbeacon"
+    trigger:
+      - platform: time_pattern
+        seconds: "/30"
+      - platform: homeassistant
+        event: start
+    action:
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.zbeacon_ts0001
+            - light.empire_kuhnya_svet
+
+  - id: empire_kuhnya_zbeacon_state_sync
+    alias: "Кухня — синхрон состояния Zbeacon → template"
+    mode: queued
+    max: 5
+    triggers:
+      - trigger: state
+        entity_id: light.zbeacon_ts0001
+    actions:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: light.empire_kuhnya_svet

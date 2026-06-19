@@ -1,0 +1,48 @@
+{
+  "_comment": "Книги для curated-рубрик Гдепар. OCR (FineReader) → .txt в data/gdepar/incoming/ → tools/build_gdepar_book_excerpts.py",
+  "books": [
+    {
+      "id": "khoshev_pechi_2008",
+      "rubric_key": "pechi_banya",
+      "author": "Ю.М. Хошев",
+      "title": "Дачные бани и печи. Принципы конструирования",
+      "year": 2008,
+      "tag": "[Печь и баня]",
+      "matrix_slot": "Вт 11:00",
+      "ocr_status": "partial",
+      "source_files": [
+        "data/gdepar/Хошев Ю.М. - Дачные бани и печи. Принципы конструирования - 2008.djvu.rag.txt"
+      ],
+      "topics": ["печь", "дымоход", "каменки", "пар", "конструкция", "СНиП", "дачная баня"]
+    },
+    {
+      "id": "bogdanov_spb_2000",
+      "rubric_key": "istoriya_bani",
+      "author": "И.А. Богданов",
+      "title": "Три века петербургской бани",
+      "year": 2000,
+      "tag": "[История бани]",
+      "matrix_slot": "Чт 21:00",
+      "ocr_status": "pending",
+      "source_files": [
+        "data/gdepar/Богданов И.А. - Три века петербургской бани - 2000.pdf"
+      ],
+      "topics": ["Петербург", "Сандуны", "XIX век", "банный быт", "архив"]
+    },
+    {
+      "id": "mikulin_dolgoletie_1977",
+      "rubric_key": "zdorovje_par",
+      "author": "А.А. Микулин",
+      "title": "Активное долголетие",
+      "year": 1977,
+      "tag": "[Баня и здоровье]",
+      "matrix_slot": "резерв (не в матрице)",
+      "ocr_status": "partial",
+      "source_files": [
+        "data/gdepar/Микулин А.А. - Активное долголетие - 1977.fb2.rag.txt"
+      ],
+      "topics": ["движение", "дыхание", "закаливание", "профилактика"],
+      "note": "Брать только фрагменты про пар, пот, контраст, дыхание — не весь корпус."
+    }
+  ]
+}
