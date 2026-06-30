@@ -1,0 +1,490 @@
+[
+  {
+    "batch_id": "gdepar_01",
+    "channel": "gdepar",
+    "pool": "practice",
+    "count": 12,
+    "topic_ids": [
+      "GDP-PR-001",
+      "GDP-PR-002",
+      "GDP-PR-003",
+      "GDP-PR-004",
+      "GDP-PR-005",
+      "GDP-PR-006",
+      "GDP-PR-007",
+      "GDP-PR-008",
+      "GDP-PR-009",
+      "GDP-PR-010",
+      "GDP-PR-011",
+      "GDP-PR-012"
+    ]
+  },
+  {
+    "batch_id": "gdepar_02",
+    "channel": "gdepar",
+    "pool": "practice",
+    "count": 12,
+    "topic_ids": [
+      "GDP-PR-013",
+      "GDP-PR-014",
+      "GDP-PR-015",
+      "GDP-PR-016",
+      "GDP-PR-017",
+      "GDP-PR-018",
+      "GDP-PR-019",
+      "GDP-PR-020",
+      "GDP-PR-021",
+      "GDP-PR-022",
+      "GDP-PR-023",
+      "GDP-PR-024"
+    ]
+  },
+  {
+    "batch_id": "gdepar_03",
+    "channel": "gdepar",
+    "pool": "practice",
+    "count": 12,
+    "topic_ids": [
+      "GDP-PR-025",
+      "GDP-PR-026",
+      "GDP-PR-027",
+      "GDP-PR-028",
+      "GDP-PR-029",
+      "GDP-PR-030",
+      "GDP-PR-031",
+      "GDP-PR-032",
+      "GDP-PR-033",
+      "GDP-PR-034",
+      "GDP-PR-035",
+      "GDP-PR-036"
+    ]
+  },
+  {
+    "batch_id": "gdepar_04",
+    "channel": "gdepar",
+    "pool": "practice",
+    "count": 12,
+    "topic_ids": [
+      "GDP-PR-037",
+      "GDP-PR-038",
+      "GDP-PR-039",
+      "GDP-PR-040",
+      "GDP-PR-041",
+      "GDP-PR-042",
+      "GDP-PR-043",
+      "GDP-PR-044",
+      "GDP-PR-045",
+      "GDP-PR-046",
+      "GDP-PR-047",
+      "GDP-PR-048"
+    ]
+  },
+  {
+    "batch_id": "gdepar_05",
+    "channel": "gdepar",
+    "pool": "practice",
+    "count": 10,
+    "topic_ids": [
+      "GDP-PR-049",
+      "GDP-PR-050",
+      "GDP-PR-051",
+      "GDP-PR-052",
+      "GDP-PR-053",
+      "GDP-PR-054",
+      "GDP-PR-055",
+      "GDP-PR-056",
+      "GDP-PR-057",
+      "GDP-PR-058"
+    ]
+  },
+  {
+    "batch_id": "gdepar_06",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 12,
+    "topic_ids": [
+      "GDP-EV-001",
+      "GDP-EV-002",
+      "GDP-EV-003",
+      "GDP-EV-004",
+      "GDP-EV-005",
+      "GDP-EV-006",
+      "GDP-EV-007",
+      "GDP-EV-008",
+      "GDP-EV-009",
+      "GDP-EV-010",
+      "GDP-EV-011",
+      "GDP-EV-012"
+    ]
+  },
+  {
+    "batch_id": "gdepar_07",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 12,
+    "topic_ids": [
+      "GDP-EV-013",
+      "GDP-EV-014",
+      "GDP-EV-015",
+      "GDP-EV-016",
+      "GDP-EV-017",
+      "GDP-EV-018",
+      "GDP-EV-019",
+      "GDP-EV-020",
+      "GDP-EV-021",
+      "GDP-EV-022",
+      "GDP-EV-023",
+      "GDP-EV-024"
+    ]
+  },
+  {
+    "batch_id": "gdepar_08",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 12,
+    "topic_ids": [
+      "GDP-EV-025",
+      "GDP-EV-026",
+      "GDP-EV-027",
+      "GDP-EV-028",
+      "GDP-EV-029",
+      "GDP-EV-030",
+      "GDP-EV-031",
+      "GDP-EV-032",
+      "GDP-EV-033",
+      "GDP-EV-034",
+      "GDP-EV-035",
+      "GDP-EV-036"
+    ]
+  },
+  {
+    "batch_id": "gdepar_09",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 12,
+    "topic_ids": [
+      "GDP-EV-037",
+      "GDP-EV-038",
+      "GDP-EV-039",
+      "GDP-EV-040",
+      "GDP-EV-041",
+      "GDP-EV-042",
+      "GDP-EV-043",
+      "GDP-EV-044",
+      "GDP-EV-045",
+      "GDP-EV-046",
+      "GDP-EV-047",
+      "GDP-EV-048"
+    ]
+  },
+  {
+    "batch_id": "gdepar_10",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 12,
+    "topic_ids": [
+      "GDP-EV-049",
+      "GDP-EV-050",
+      "GDP-EV-051",
+      "GDP-EV-052",
+      "GDP-EV-053",
+      "GDP-EV-054",
+      "GDP-EV-055",
+      "GDP-EV-056",
+      "GDP-EV-057",
+      "GDP-EV-058",
+      "GDP-EV-059",
+      "GDP-EV-060"
+    ]
+  },
+  {
+    "batch_id": "gdepar_11",
+    "channel": "gdepar",
+    "pool": "evening",
+    "count": 9,
+    "topic_ids": [
+      "GDP-EV-061",
+      "GDP-EV-062",
+      "GDP-EV-063",
+      "GDP-EV-064",
+      "GDP-EV-065",
+      "GDP-EV-066",
+      "GDP-EV-067",
+      "GDP-EV-068",
+      "GDP-EV-069"
+    ]
+  },
+  {
+    "batch_id": "gdepar_12",
+    "channel": "gdepar",
+    "pool": "banya_week",
+    "count": 12,
+    "topic_ids": [
+      "GDP-BW-001",
+      "GDP-BW-002",
+      "GDP-BW-003",
+      "GDP-BW-004",
+      "GDP-BW-005",
+      "GDP-BW-006",
+      "GDP-BW-007",
+      "GDP-BW-008",
+      "GDP-BW-009",
+      "GDP-BW-010",
+      "GDP-BW-011",
+      "GDP-BW-012"
+    ]
+  },
+  {
+    "batch_id": "stern_01",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-001",
+      "STR-RT-002",
+      "STR-RT-003",
+      "STR-RT-004",
+      "STR-RT-005",
+      "STR-RT-006",
+      "STR-RT-007",
+      "STR-RT-008",
+      "STR-RT-009",
+      "STR-RT-010",
+      "STR-RT-011",
+      "STR-RT-012"
+    ]
+  },
+  {
+    "batch_id": "stern_02",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-013",
+      "STR-RT-014",
+      "STR-RT-015",
+      "STR-RT-016",
+      "STR-RT-017",
+      "STR-RT-018",
+      "STR-RT-019",
+      "STR-RT-020",
+      "STR-RT-021",
+      "STR-RT-022",
+      "STR-RT-023",
+      "STR-RT-024"
+    ]
+  },
+  {
+    "batch_id": "stern_03",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-025",
+      "STR-RT-026",
+      "STR-RT-027",
+      "STR-RT-028",
+      "STR-RT-029",
+      "STR-RT-030",
+      "STR-RT-031",
+      "STR-RT-032",
+      "STR-RT-033",
+      "STR-RT-034",
+      "STR-RT-035",
+      "STR-RT-036"
+    ]
+  },
+  {
+    "batch_id": "stern_04",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-037",
+      "STR-RT-038",
+      "STR-RT-039",
+      "STR-RT-040",
+      "STR-RT-041",
+      "STR-RT-042",
+      "STR-RT-043",
+      "STR-RT-044",
+      "STR-RT-045",
+      "STR-RT-046",
+      "STR-RT-047",
+      "STR-RT-048"
+    ]
+  },
+  {
+    "batch_id": "stern_05",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-049",
+      "STR-RT-050",
+      "STR-RT-051",
+      "STR-RT-052",
+      "STR-RT-053",
+      "STR-RT-054",
+      "STR-RT-055",
+      "STR-RT-056",
+      "STR-RT-057",
+      "STR-RT-058",
+      "STR-RT-059",
+      "STR-RT-060"
+    ]
+  },
+  {
+    "batch_id": "stern_06",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 12,
+    "topic_ids": [
+      "STR-RT-061",
+      "STR-RT-062",
+      "STR-RT-063",
+      "STR-RT-064",
+      "STR-RT-065",
+      "STR-RT-066",
+      "STR-RT-067",
+      "STR-RT-068",
+      "STR-RT-069",
+      "STR-RT-070",
+      "STR-RT-071",
+      "STR-RT-072"
+    ]
+  },
+  {
+    "batch_id": "stern_07",
+    "channel": "stern",
+    "slot": "0930",
+    "count": 8,
+    "topic_ids": [
+      "STR-RT-073",
+      "STR-RT-074",
+      "STR-RT-075",
+      "STR-RT-076",
+      "STR-RT-077",
+      "STR-RT-078",
+      "STR-RT-079",
+      "STR-RT-080"
+    ]
+  },
+  {
+    "batch_id": "stern_08",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 12,
+    "topic_ids": [
+      "STR-EV-001",
+      "STR-EV-002",
+      "STR-EV-003",
+      "STR-EV-004",
+      "STR-EV-005",
+      "STR-EV-006",
+      "STR-EV-007",
+      "STR-EV-008",
+      "STR-EV-009",
+      "STR-EV-010",
+      "STR-EV-011",
+      "STR-EV-012"
+    ]
+  },
+  {
+    "batch_id": "stern_09",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 12,
+    "topic_ids": [
+      "STR-EV-013",
+      "STR-EV-014",
+      "STR-EV-015",
+      "STR-EV-016",
+      "STR-EV-017",
+      "STR-EV-018",
+      "STR-EV-019",
+      "STR-EV-020",
+      "STR-EV-021",
+      "STR-EV-022",
+      "STR-EV-023",
+      "STR-EV-024"
+    ]
+  },
+  {
+    "batch_id": "stern_10",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 12,
+    "topic_ids": [
+      "STR-EV-025",
+      "STR-EV-026",
+      "STR-EV-027",
+      "STR-EV-028",
+      "STR-EV-029",
+      "STR-EV-030",
+      "STR-EV-031",
+      "STR-EV-032",
+      "STR-EV-033",
+      "STR-EV-034",
+      "STR-EV-035",
+      "STR-EV-036"
+    ]
+  },
+  {
+    "batch_id": "stern_11",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 12,
+    "topic_ids": [
+      "STR-EV-037",
+      "STR-EV-038",
+      "STR-EV-039",
+      "STR-EV-040",
+      "STR-EV-041",
+      "STR-EV-042",
+      "STR-EV-043",
+      "STR-EV-044",
+      "STR-EV-045",
+      "STR-EV-046",
+      "STR-EV-047",
+      "STR-EV-048"
+    ]
+  },
+  {
+    "batch_id": "stern_12",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 12,
+    "topic_ids": [
+      "STR-EV-049",
+      "STR-EV-050",
+      "STR-EV-051",
+      "STR-EV-052",
+      "STR-EV-053",
+      "STR-EV-054",
+      "STR-EV-055",
+      "STR-EV-056",
+      "STR-EV-057",
+      "STR-EV-058",
+      "STR-EV-059",
+      "STR-EV-060"
+    ]
+  },
+  {
+    "batch_id": "stern_13",
+    "channel": "stern",
+    "slot": "1900",
+    "count": 9,
+    "topic_ids": [
+      "STR-EV-061",
+      "STR-EV-062",
+      "STR-EV-063",
+      "STR-EV-064",
+      "STR-EV-065",
+      "STR-EV-066",
+      "STR-EV-067",
+      "STR-EV-068",
+      "STR-EV-069"
+    ]
+  }
+]

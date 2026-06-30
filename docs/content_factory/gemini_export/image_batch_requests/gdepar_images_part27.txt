@@ -1,0 +1,82 @@
+# ЗАДАНИЕ: gdepar_images_part27
+
+Сгенерируй **ровно** картинок: **6**.
+
+CHANNEL: gdepar (Где Пар? / Михалыч ↔ Кириллыч)
+MODEL: Gemini Nano Banana (flash image)
+
+Правила:
+- Одна картинка на блок `topic_id:`
+- Без текста на изображении, без водяных знаков
+- Сохрани файлы с именами из `filename:`
+- Формат ответа: приложи каждую картинку сразу после её блока
+
+Блок одной картинки:
+```
+topic_id: duo_queue_kovsh_02
+filename: duo_queue_kovsh_02.jpg
+aspect: 4:3
+
+PROMPT:
+{полный промпт EN}
+```
+
+---
+
+topic_id: duo_queue_kovsh_02
+filename: duo_queue_kovsh_02.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_first_time_03
+filename: duo_first_time_03.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_silence_parka_04
+filename: duo_silence_parka_04.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_review_hot_05
+filename: duo_review_hot_05.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_bannik_06
+filename: duo_bannik_06.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_alcohol_evening_07
+filename: duo_alcohol_evening_07.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+## CHECKLIST
+IMAGE_COUNT: 6
+IDS: duo_queue_kovsh_02, duo_first_time_03, duo_silence_parka_04, duo_review_hot_05, duo_bannik_06, duo_alcohol_evening_07

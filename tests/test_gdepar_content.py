@@ -133,6 +133,21 @@ def test_resolve_promo_slot():
     assert "promo" in topic.lower() or "SPECIAL" in topic
 
 
+def test_author_search_queries_surname():
+    qs = gdepar_content._author_search_queries("Ф.М. Достоевский")
+    assert any("Достоевский" in q for q in qs)
+    assert any("portrait" in q for q in qs)
+
+
+def test_portrait_url_rejects_banya():
+    assert not gdepar_content._portrait_url_ok(
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Russian_banya.jpg"
+    )
+    assert gdepar_content._portrait_url_ok(
+        "https://upload.wikimedia.org/wikipedia/commons/Dostoevsky.jpg"
+    )
+
+
 def test_classic_banya_json_valid():
     path = Path(__file__).resolve().parents[1] / "data" / "gdepar_classic_banya.json"
     data = json.loads(path.read_text(encoding="utf-8"))

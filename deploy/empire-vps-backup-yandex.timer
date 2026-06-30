@@ -2,7 +2,6 @@
 Description=Daily VPS backup to Yandex Disk (03:45 MSK ≈ 00:45 UTC winter / adjust on host)
 
 [Timer]
-OnBootSec=30min
 OnCalendar=*-*-* 00:45:00
 Persistent=true
 RandomizedDelaySec=300

@@ -4,8 +4,8 @@
     "delay": 5
   },
   "policy": {
-    "enable": 0,
-    "name": "SKeen"
+    "enable": 1,
+    "name": "Singbox"
   },
   "network": {
     "ipv6": 0,
@@ -15,7 +15,7 @@
   "firewall": {
     "intercept": {
       "dns": 0,
-      "port": []
+      "port": [443]
     },
     "exclude": {
       "port": [123, "137:139", 445, 1900],

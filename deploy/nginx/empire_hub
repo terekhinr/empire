@@ -1,33 +1,19 @@
 # =========================================================================
 # Конфигурация для всех сайтов медиаимперии.
-# Канонические домены:
-#   neverretire.ru  → FastAPI на 127.0.0.1:8000 (web_app.py, проект "Пенсия")
-#   gdepar.ru       → FastAPI на 127.0.0.1:8001 (gdepar_app.py, проект "Где Пар")
+#   neverretire.ru  → 127.0.0.1:8000 (web_app.py)
+#   gdepar.ru       → 127.0.0.1:8001 (gdepar_app.py)
+#   /hub/           → 127.0.0.1:8501 (Streamlit dashboard)
+#   /tasks/         → 127.0.0.1:8502 (planning PWA)
 #
-# Все зеркала редиректят (301) на канонические домены.
-# HTTP→HTTPS редирект делается только если запрос НЕ идёт через HTTPS-прокси
-# (т.е. X-Forwarded-Proto ≠ "https"). Это нужно, чтобы Cloudflare в режиме
-# "Flexible SSL" не зацикливал редиректы.
-#
-# HTTPS сертификаты — Let's Encrypt через certbot:
-#   sudo certbot certonly --webroot -w /var/www/certbot \
-#       -d neverretire.ru -d www.neverretire.ru \
-#       -d napensiyunikogda.ru -d www.napensiyunikogda.ru \
-#       -d xn--80aaiedsaqwcbog4a0r.xn--p1ai
-#   sudo certbot certonly --webroot -w /var/www/certbot \
-#       -d gdepar.ru -d www.gdepar.ru \
-#       -d xn--80afde4ch.xn--p1ai
-# (после выпуска — раскомментировать соответствующие 443 server-блоки ниже)
+# HTTP→HTTPS только если запрос не через HTTPS-прокси (Cloudflare Flexible).
 # =========================================================================
 
-# Признак "запрос уже через HTTPS" — либо порт 443, либо CF прислал
-# X-Forwarded-Proto: https. Используется для условного редиректа.
 map $http_x_forwarded_proto $is_https_request {
     default 0;
     "https" 1;
 }
 
-# -------------------- 1. NEVERRETIRE.RU — основной сайт --------------------
+# -------------------- 1. NEVERRETIRE.RU --------------------
 server {
     listen 80;
     listen [::]:80;
@@ -37,8 +23,6 @@ server {
         root /var/www/certbot;
     }
 
-    # Редирект на HTTPS только если запрос НЕ от Cloudflare HTTPS (Flexible mode).
-    # Иначе будет петля: CF→origin по HTTP → 301 → CF возвращает 301 пользователю → ...
     location / {
         if ($is_https_request = 0) {
             return 301 https://$host$request_uri;
@@ -48,9 +32,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_cache_bypass $http_upgrade;
     }
 
     include /root/projects/empire/deploy/nginx/neverretire_dashboard.inc;
+    include /root/projects/empire/deploy/nginx/neverretire_planning.inc;
 
     location /static/ {
         alias /root/projects/empire/static/;
@@ -75,10 +61,12 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 
     include /root/projects/empire/deploy/nginx/neverretire_dashboard.inc;
+    include /root/projects/empire/deploy/nginx/neverretire_planning.inc;
 
     location /static/ {
         alias /root/projects/empire/static/;
@@ -88,8 +76,7 @@ server {
     }
 }
 
-# -------------------- 2. Зеркала pension → редирект на neverretire.ru --------------------
-# napensiyunikogda.ru → neverretire.ru
+# -------------------- 2. Зеркала pension → neverretire.ru --------------------
 server {
     listen 80;
     listen [::]:80;
@@ -100,11 +87,13 @@ server {
     }
 
     location / {
+        if ($is_https_request = 0) {
+            return 301 https://$host$request_uri;
+        }
         return 301 https://neverretire.ru$request_uri;
     }
 }
 
-# HTTPS для napensiyunikogda.ru (CF Full strict → origin должен иметь валидный LE)
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -118,7 +107,6 @@ server {
     return 301 https://neverretire.ru$request_uri;
 }
 
-# напенсиюникогда.рф (Punycode: xn--80aaiedsaqwcbog4a0r.xn--p1ai) → neverretire.ru
 server {
     listen 80;
     listen [::]:80;
@@ -129,12 +117,13 @@ server {
     }
 
     location / {
+        if ($is_https_request = 0) {
+            return 301 https://$host$request_uri;
+        }
         return 301 https://neverretire.ru$request_uri;
     }
 }
 
-# HTTPS-блок для напенсиюникогда.рф / гдепар.рф — один сертификат покрывает оба.
-# Имя сертификата совпадает с первым доменом, указанным при выпуске.
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -148,7 +137,7 @@ server {
     return 301 https://neverretire.ru$request_uri;
 }
 
-# -------------------- 3. GDEPAR.RU — канонический "Где Пар" --------------------
+# -------------------- 3. GDEPAR.RU --------------------
 server {
     listen 80;
     listen [::]:80;
@@ -156,23 +145,6 @@ server {
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
-    }
-
-    location /api/gdepar/assistant/stream {
-        if ($is_https_request = 0) {
-            return 301 https://$host$request_uri;
-        }
-        proxy_pass http://127.0.0.1:8001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
-        proxy_http_version 1.1;
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 90s;
-        proxy_send_timeout 90s;
-        chunked_transfer_encoding on;
     }
 
     location / {
@@ -185,7 +157,6 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
         proxy_read_timeout 90s;
-        proxy_send_timeout 90s;
     }
 
     location /static/ {
@@ -196,7 +167,6 @@ server {
     }
 }
 
-# HTTPS-блок для gdepar.ru (LE: /etc/letsencrypt/live/gdepar.ru/)
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -207,28 +177,13 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    location /api/gdepar/assistant/stream {
-        proxy_pass http://127.0.0.1:8001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_http_version 1.1;
-        proxy_buffering off;
-        proxy_cache off;
-        proxy_read_timeout 90s;
-        proxy_send_timeout 90s;
-        chunked_transfer_encoding on;
-    }
-
     location / {
         proxy_pass http://127.0.0.1:8001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 90s;
-        proxy_send_timeout 90s;
     }
 
     location /static/ {
@@ -239,7 +194,7 @@ server {
     }
 }
 
-# -------------------- 4. гдепар.рф → редирект на gdepar.ru --------------------
+# -------------------- 4. гдепар.рф → gdepar.ru --------------------
 server {
     listen 80;
     listen [::]:80;
@@ -250,11 +205,13 @@ server {
     }
 
     location / {
+        if ($is_https_request = 0) {
+            return 301 https://$host$request_uri;
+        }
         return 301 https://gdepar.ru$request_uri;
     }
 }
 
-# HTTPS-блок для гдепар.рф — тот же сертификат, что и напенсиюникогда.рф (общий SAN).
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;

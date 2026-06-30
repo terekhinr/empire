@@ -32,3 +32,29 @@ curl -sS -X POST http://127.0.0.1:8001/api/gdepar/assistant/stream \
 ```
 
 `GDEPAR_ASSET_VERSION=20260520b`
+
+## CP-20260621 — B2B MVP + OSM EUROPE_RU
+
+**Сделано:**
+
+- MVP-схема БД: `tools/banya_schema_mvp.py` — цены, вместимость, `banya_leads`, `banya_owner_accounts`, `seo_landings`.
+- Лиды: `POST /api/banya/lead` (phone_reveal, whatsapp, booking_request, map_click); телефон скрыт в API до клика.
+- UI: `static/gdepar/lead.js` — «Показать телефон» на карте и карточке бани.
+- B2B: `/partners` + ссылка в навигации.
+- Регионы до Урала: `EUROPE_RU` — 56 областей в `tools/banya_regions.py`.
+- Парсинг: `./scripts/run_osm_europe_ru.sh` → `logs/osm_europe_ru.log` (retry Overpass 429, зеркало kumi).
+
+**Следующий шаг (не блокер):**
+
+- После OSM: `yandex_scrape.py enrich` по MO, MSK, SPB.
+- Owner dashboard, premium-сортировка, SEO-лендинги — по мастер-ТЗ.
+
+**Проверка:**
+
+```bash
+tail -f logs/osm_europe_ru.log
+curl -s http://127.0.0.1:8001/partners | head
+curl -sS -X POST http://127.0.0.1:8001/api/banya/lead \
+  -H 'Content-Type: application/json' \
+  -d '{"spot_id":1,"lead_type":"phone_reveal","source":"test"}' | python3 -m json.tool
+```

@@ -1,0 +1,82 @@
+# ЗАДАНИЕ: gdepar_images_part19
+
+Сгенерируй **ровно** картинок: **6**.
+
+CHANNEL: gdepar (Где Пар? / Михалыч ↔ Кириллыч)
+MODEL: Gemini Nano Banana (flash image)
+
+Правила:
+- Одна картинка на блок `topic_id:`
+- Без текста на изображении, без водяных знаков
+- Сохрани файлы с именами из `filename:`
+- Формат ответа: приложи каждую картинку сразу после её блока
+
+Блок одной картинки:
+```
+topic_id: GDP-EV-051
+filename: GDP-EV-051.jpg
+aspect: 4:3
+
+PROMPT:
+{полный промпт EN}
+```
+
+---
+
+topic_id: GDP-EV-051
+filename: GDP-EV-051.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-EV-052
+filename: GDP-EV-052.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-EV-053
+filename: GDP-EV-053.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-EV-054
+filename: GDP-EV-054.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-EV-055
+filename: GDP-EV-055.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-EV-056
+filename: GDP-EV-056.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+## CHECKLIST
+IMAGE_COUNT: 6
+IDS: GDP-EV-051, GDP-EV-052, GDP-EV-053, GDP-EV-054, GDP-EV-055, GDP-EV-056

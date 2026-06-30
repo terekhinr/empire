@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Бэкап критичных данных VPS → Яндекс.Диск (не весь диск, без venv — ~2–3 ГБ).
-set -euo pipefail
+# Бэкап критичных данных VPS → Яндекс.Диск (код + конфиг, без тяжёлого мусора).
+set -uo pipefail
+
+exec 9>/var/lock/empire-vps-backup.lock
+if ! flock -n 9; then
+  echo "[$(date -Iseconds)] SKIP: другой бэкап уже идёт"
+  exit 0
+fi
 
 REMOTE="${RCLONE_REMOTE:-yandex}"
 HOST="$(hostname -s 2>/dev/null || echo vps)"
@@ -46,7 +52,7 @@ for u in /etc/systemd/system/empire*.service /etc/systemd/system/obsidian*.timer
   [[ -f "$u" ]] && cp -a "$u" "$SYSTEMD_STAGING/" || true
 done
 
-log "Upload empire project (без venv) → ${REMOTE}:${REMOTE_DAY}/empire"
+log "Upload empire project (код, без venv/media/PDF/dist) → ${REMOTE}:${REMOTE_DAY}/empire"
 rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
   --exclude "venv/**" \
   --exclude ".git/**" \
@@ -54,9 +60,24 @@ rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
   --exclude "**/*.pyc" \
   --exclude "**/node_modules/**" \
   --exclude ".cursor/**" \
-  --transfers 4 \
-  --checkers 8 \
-  -v
+  --exclude "media/**" \
+  --exclude "data/gdepar/**" \
+  --exclude "data/audio/**" \
+  --exclude "data/obsidian_vault/**" \
+  --exclude "vector_db/**" \
+  --exclude "media/stern/technique_clips/**" \
+  --exclude "desktop/empire-tasks/dist/**" \
+  --exclude "scripts/keenetic-xkeen/blobs/**" \
+  --exclude "**/*.pdf" \
+  --max-size 50M \
+  --transfers 2 \
+  --checkers 4 \
+  --retries 10 \
+  --low-level-retries 20 \
+  --stats 5m \
+  --stats-one-line \
+  --timeout 5m \
+  -v || log "WARN: rclone copy empire — частичные ошибки (WebDAV)"
 
 log "Upload /etc/empire + systemd + sqlite backups"
 [[ -f "$ETC_TAR" ]] && rclone copy "$ETC_TAR" "${REMOTE}:${REMOTE_DAY}/" -v

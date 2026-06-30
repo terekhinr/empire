@@ -14,6 +14,7 @@
       "gear_chalk",
       "gear_home",
       "gear_home",
+      "gear_chalk",
       "gear_chalk"
     ],
     "sports_med": [
@@ -25,7 +26,9 @@
       "med_lower_back",
       "med_return",
       "med_hr_zones",
-      "med_return"
+      "med_return",
+      "med_shoulder",
+      "med_lower_back"
     ],
     "kettlebell_fitness": [
       "fit_long_cycle"
@@ -38,6 +41,20 @@
       "hist_competition_standard",
       "hist_competition_standard",
       "hist_circus_strong",
+      "hist_competition_standard",
+      "hist_soviet_sport",
+      "hist_competition_standard",
+      "hist_circus_strong",
+      "hist_trade_weight",
+      "hist_competition_standard",
+      "hist_competition_standard",
+      "hist_soviet_sport",
+      "hist_competition_standard",
+      "hist_circus_strong",
+      "hist_trade_weight",
+      "hist_trade_weight",
+      "hist_competition_standard",
+      "hist_circus_strong",
       "hist_competition_standard"
     ],
     "russian_strongmen": [
@@ -48,5 +65,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-06-19T07:00:00.004845"
+  "last": "2026-06-29T13:24:14.551847"
 }

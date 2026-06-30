@@ -3,5 +3,18 @@
 homeassistant:
   packages: !include_dir_named packages
 
+frontend:
+  themes: !include_dir_merge_named themes
+
 # Yandex Smart Home — список устройств для Алисы (см. docs/HA_YANDEX_ALICE_SETUP.md)
 yandex_smart_home: !include yandex_smart_home.yaml
+
+# Настенная панель (см. docs/HA_EZVIZ_WALL_DASHBOARD.md):
+# lovelace:
+#   dashboards:
+#     empire-wall:
+#       mode: yaml
+#       title: Панель
+#       icon: mdi:tablet-dashboard
+#       show_in_sidebar: true
+#       filename: dashboards/empire_wall.yaml

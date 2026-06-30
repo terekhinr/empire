@@ -1,0 +1,82 @@
+# ЗАДАНИЕ: stern_images_part06
+
+Сгенерируй **ровно** картинок: **6**.
+
+CHANNEL: stern (Снегири / Ян Штерн)
+MODEL: Gemini Nano Banana (flash image)
+
+Правила:
+- Одна картинка на блок `topic_id:`
+- Без текста на изображении, без водяных знаков
+- Сохрани файлы с именами из `filename:`
+- Формат ответа: приложи каждую картинку сразу после её блока
+
+Блок одной картинки:
+```
+topic_id: STR-RT-028
+filename: STR-RT-028.jpg
+aspect: 4:3
+
+PROMPT:
+{полный промпт EN}
+```
+
+---
+
+topic_id: STR-RT-028
+filename: STR-RT-028.jpg
+aspect: 4:3
+
+PROMPT:
+tennis ball on wooden floor, natural light, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+topic_id: STR-RT-029
+filename: STR-RT-029.jpg
+aspect: 4:3
+
+PROMPT:
+blank notepad on office desk, pen, calm shadows, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+topic_id: STR-RT-030
+filename: STR-RT-030.jpg
+aspect: 4:3
+
+PROMPT:
+car steering wheel, driver perspective, blurred road, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+topic_id: STR-RT-031
+filename: STR-RT-031.jpg
+aspect: 4:3
+
+PROMPT:
+bathroom tiles, water drops, cool morning light, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+topic_id: STR-RT-032
+filename: STR-RT-032.jpg
+aspect: 4:3
+
+PROMPT:
+asphalt parking lot, morning sun, car shadow, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+topic_id: STR-RT-033
+filename: STR-RT-033.jpg
+aspect: 4:3
+
+PROMPT:
+red traffic light blur, car interior, photorealistic, no person face. cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable. muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic. Avoid: text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie.
+
+---
+
+## CHECKLIST
+IMAGE_COUNT: 6
+IDS: STR-RT-028, STR-RT-029, STR-RT-030, STR-RT-031, STR-RT-032, STR-RT-033

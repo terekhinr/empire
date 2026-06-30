@@ -1,0 +1,14 @@
+@echo off
+REM С ПК в Wi-Fi. Двойной клик или cmd.
+echo Keenetic heal - telnet admin / пароль веб-панели
+echo.
+echo 1) telnet 192.168.1.1
+echo 2) Login: admin
+echo 3) Password: (ваш пароль Keenetic Web)
+echo 4) exec sh
+echo 5) curl -fsSL http://193.233.232.48:8787/55-minimal-nfqws2.sh ^| sh
+echo.
+echo Или одной строкой в PowerShell:
+echo   plink -telnet 192.168.1.1 -l admin
+echo.
+pause

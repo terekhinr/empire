@@ -141,9 +141,12 @@
         {% if tg %}<a href="{{ tg | e }}" target="_blank" rel="noopener" data-gdepar-spot-external="twogis" data-gdepar-spot-id="{{ spot.id }}">2ГИС</a>{% endif %}
         {% if (yu or tg) and su %} · {% endif %}
         {% if su %}<a href="{{ su | e }}" target="_blank" rel="noopener" data-gdepar-spot-external="site" data-gdepar-spot-id="{{ spot.id }}">Сайт</a>{% endif %}
-        {% if spot.phone %}
+        {% if spot.has_phone %}
         {% if yu or tg or su %} · {% endif %}
-        <a href="tel:{{ spot.phone }}" data-gdepar-spot-external="phone" data-gdepar-spot-id="{{ spot.id }}">{{ spot.phone | e }}</a>
+        <span class="gdepar-phone-lead-wrap">
+            <button type="button" class="btn btn-ghost gdepar-show-phone" data-spot-id="{{ spot.id }}" data-lead-source="spot_page">Показать телефон</button>
+            <span class="gdepar-phone-revealed" hidden></span>
+        </span>
         {% endif %}
     </p>
     {% if spot.description %}
@@ -296,6 +299,7 @@
         });
     })();
 </script>
+<script src="/static/gdepar/lead.js?v={{ asset_version }}"></script>
 {% include "gdepar_assistant.inc.html" %}
 </body>
 </html>

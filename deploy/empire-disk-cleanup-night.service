@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire night disk cleanup (large files + TOX1 → Yandex)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/projects/empire/scripts/vps_disk_cleanup_night.sh
+User=root
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

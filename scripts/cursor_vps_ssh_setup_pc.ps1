@@ -7,8 +7,10 @@
 
 $ErrorActionPreference = "Stop"
 $VpsHost = "193.233.232.48"
+$VpsHostTs = "100.84.19.35"
 $VpsUser = "root"
 $SshAlias = "empire-vps"
+$SshAliasTs = "empire-vps-ts"
 $KeyPath = Join-Path $env:USERPROFILE ".ssh\id_ed25519"
 $ConfigPath = Join-Path $env:USERPROFILE ".ssh\config"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -30,13 +32,23 @@ if (-not (Test-Path $KeyPath)) {
 $block = @"
 
 # --- empire-vps (Cursor Remote SSH) ---
+Host $SshAliasTs
+    HostName $VpsHostTs
+    User $VpsUser
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 30
+    ServerAliveCountMax 20
+    TCPKeepAlive yes
+    ConnectTimeout 60
+
 Host $SshAlias
     HostName $VpsHost
     User $VpsUser
     IdentityFile ~/.ssh/id_ed25519
     ServerAliveInterval 30
-    ServerAliveCountMax 6
+    ServerAliveCountMax 20
     TCPKeepAlive yes
+    ConnectTimeout 60
 "@
 
 $configText = ""
@@ -44,11 +56,13 @@ if (Test-Path $ConfigPath) {
     $configText = Get-Content -Raw $ConfigPath
 }
 
-if ($configText -match "Host\s+$SshAlias\b") {
-    Write-Host "Блок Host $SshAlias уже в $ConfigPath" -ForegroundColor Green
+if ($configText -match "Host\s+$SshAliasTs\b") {
+    Write-Host "Блок Host $SshAliasTs уже в $ConfigPath" -ForegroundColor Green
+} elseif ($configText -match "Host\s+$SshAlias\b") {
+    Write-Host "Допишите Host $SshAliasTs вручную — см. deploy/cursor_ssh_config_pc.example" -ForegroundColor Yellow
 } else {
     Add-Content -Path $ConfigPath -Value $block
-    Write-Host "Добавлен Host $SshAlias в $ConfigPath" -ForegroundColor Green
+    Write-Host "Добавлены Host $SshAliasTs и $SshAlias в $ConfigPath" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -72,5 +86,5 @@ Write-Host "Проверка: ssh $SshAlias hostname" -ForegroundColor Cyan
 ssh $SshAlias "hostname && test -d /root/projects/empire && echo OK: /root/projects/empire"
 
 Write-Host ""
-Write-Host "Cursor: Remote-SSH -> Connect to Host -> $SshAlias" -ForegroundColor Green
+Write-Host "Cursor: Remote-SSH -> Connect to Host -> $SshAliasTs (рекомендуется) или $SshAlias" -ForegroundColor Green
 Write-Host "Док: $RepoRoot\docs\cursor_vps_ssh_ru.md" -ForegroundColor Green

@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire weekly status report to Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_weekly_report.py
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

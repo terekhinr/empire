@@ -56,12 +56,15 @@ cat > "$BIND" << EOF
 #!/bin/sh
 export PATH="/opt/bin:/opt/sbin:\$PATH"
 sleep 30
-ndmc -c "ip hotspot host ${PC_MAC} policy ${POLICY}" 2>/dev/null || true
-ndmc -c "ip hotspot host ${SALUT_MAC} policy ${POLICY}" 2>/dev/null || true
-ndmc -c "ip hotspot policy Home ${POLICY}" 2>/dev/null || true
+ndmc -c "ip hotspot host ${PC_MAC} conform" 2>/dev/null || true
+ndmc -c "ip hotspot host ${SALUT_MAC} conform" 2>/dev/null || true
 ndmc -c "system configuration save" 2>/dev/null || true
 conntrack -F 2>/dev/null || true
 /opt/etc/init.d/S51nfqws2 firewall_iptables 2>/dev/null || true
+curl -fsSL ${BASE}/55-minimal-nfqws2.sh | sh 2>/dev/null || true
+if [ -x /opt/etc/keenetic-tunnel/start.sh ]; then
+  /opt/etc/keenetic-tunnel/start.sh 2>/dev/null || true
+fi
 EOF
 chmod +x "$BIND"
 ( crontab -l 2>/dev/null | grep -v nfqws2/bind-policy; echo "@reboot $BIND"; echo "*/30 * * * * $BIND" ) | crontab - 2>/dev/null || true

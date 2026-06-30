@@ -1,7 +1,9 @@
 # Empire — общий пайплайн и чеклисты
 
-**Обновлено:** 2026-06-01  
-**Зачем один файл:** видеть **что сделано / что осталось** по двум продуктовым линиям — **Pension** (neverretire.ru, YouTube) и **gdepar** (карта бань, «Пар?»), плюс общая инфраструктура.
+**Обновлено:** 2026-06-29 (R5 автопост)  
+**Зачем один файл:** видеть **что сделано / что осталось** по двум продуктовым линиям — **Pension** (neverretire.ru, YouTube) и **gdepar** (карта бань, «Пар?»), плюс **omni-publish** (5 TG) и инфраструктура.
+
+**Ревизия R5:** `docs/audit/14_PIPELINE_R5_AUTOPOST.md` — метрики, сроки, перераспределение времени.
 
 Статусы: `⬜` не начато · `🔄` в работе · `✅` готово · `⏸` ждёт вас (внешний сервис / ключ)
 
@@ -16,6 +18,33 @@
 | I3 | Obsidian vault синхрон с `data/obsidian_vault/Empire/` | 🔄 | посты в `pension/queue/` |
 | I4 | Еженедельные метрики Pension | ⬜ | `data/pension_weekly_metrics.json` |
 | I5 | Финансы P&L | ⬜ | `data/empire_finance_ledger.json` |
+| I6 | **Автопост 5 TG** (`auto_publish.json`) | ✅ | `journalctl -u empire \| grep autopublish` |
+| I7 | **KPI недели** (вкл. автопост + email) | ⬜ | `data/empire_weekly_kpi.json` · шаблон CSV |
+| I8 | Метрика **оба** сайта | ⏸ | gdepar + neverretire — блокер воронки |
+
+---
+
+## Блок D — Omni-publish · все TG
+
+**Док:** `docs/empire_autopost_strategy_2026.md` · **Ритуал:** ежедневно ~15 мин.
+
+```
+content/*/queue + рубрики JSON
+  → auto_publish.json (слоты по persona)
+  → 5 TG: gdepar, pension, stern, lenin, garden
+  → CTA UTM → neverretire.ru / gdepar.ru
+  → KPI: tg_posts_published, autopost_failures (еженедельно)
+```
+
+| # | Задача | Статус | Примечание |
+|---|--------|--------|------------|
+| D1 | Слоты всех 5 персон в `auto_publish.json` | ✅ | июнь 26 |
+| D2 | Curated-рубрики (gdepar, stern, lenin) | ✅ | `activate_curated_rubrics.sh` |
+| D3 | Подпитка queue (Obsidian → content) | 🔄 | не допускать пустых слотов |
+| D4 | `views_24h` в analytics.db | ⬜ | бэклог август |
+| D5 | Частота постов по данным | ⬜ | после 4–6 нед логов |
+
+**Не делать:** добавлять слоты >5/день на «медленных» каналах без A/B.
 
 ---
 
@@ -59,14 +88,17 @@
 | A3.3 | Выпуск №1 снят (сценарий yt-001) | ⬜ | 1–2 |
 | A3.4 | 12 роликов без пропуска >2 нед | ⬜ | Q1 2026 |
 | A3.5 | Дзен из сценариев (раз в 2 нед) | ⬜ | с нед. 3 |
-| A3.6 | Launch книги | ⬜ | октябрь 2026 |
+| A3.6 | Launch книги **299 ₽** | ⬜ | **15 сентября 2026** |
+| A3.7 | Pre-sale **149 ₽** | ⬜ | август 2026, цель 15–25 |
+| A3.8 | YT №1–2 смонтированы к 1 сен | ⬜ | съёмка в августе |
 
 ### A4. Пайплайн контента Pension (одна строка)
 
 ```
 Книга / Crimson RAG + новость дашборда
-  → сценарий YT (шаблон Мячина) → съёмка → YT
-  → нарезка лонгрида Дзен + пост TG + карточка neverretire.ru
+  → сценарий YT (шаблон Мячина) → съёмка → YT (с 1 сен)
+  → автопост TG Pension + спутники (CTA /book, /gift)
+  → нарезка лонгрида Дзен (после финала книги)
 ```
 
 **Команды:**
@@ -137,10 +169,13 @@ journalctl -u empire_gdepar | grep 'timing route='   # если тормозит
 
 ---
 
-## Сводка «что сделать в первую очередь»
+## Сводка «что сделать в первую очередь» (июль 26)
 
-1. **Pension:** дождаться/завершить RAG Crimson → снять yt-001 по готовому сценарию → Metrika neverretire (отдельно от gdepar).
-2. **gdepar:** Metrika ID + цели → проверить «Пар?» → через 2–4 недели LLM_PCT.
+1. **Метрика** — оба счётчика (без этого KPI слепые).
+2. **Pension:** финал книги → yt-001 съёмка → `/buy` pre-sale к 1 августа.
+3. **gdepar:** Metrika + «Пар?» → через 2–4 нед LLM_PCT.
+4. **Omni-publish:** ритуал + queue (автопост ✅, не расширять слоты).
+5. **KPI недели** — первая строка с `tg_posts_published`, `gift_emails`.
 
 ---
 
@@ -153,3 +188,5 @@ journalctl -u empire_gdepar | grep 'timing route='   # если тормозит
 | `docs/pension_content_calendar_2026.md` | 12 нед + год |
 | `kb_sources/pension/README.md` | Как класть Crimson |
 | `data/pension/scripts/README.md` | Папки scripts / reference |
+| `docs/audit/14_PIPELINE_R5_AUTOPOST.md` | R5: автопост, метрики, сроки |
+| `docs/empire_kpi_sheets_template.md` | Колонки KPI + пороги |

@@ -1,0 +1,18 @@
+# Снижаем нагрузку Cursor indexing на VPS (8 GB RAM).
+vector_db/
+venv/
+.venv/
+__pycache__/
+*.pyc
+data/
+media/
+node_modules/
+.git/
+var/tmp/
+*.img
+*.mp4
+*.zip
+*.tar
+*.gz
+empire.db-wal
+empire.db-shm

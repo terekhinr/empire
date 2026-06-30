@@ -1,0 +1,43 @@
+# ЗАДАНИЕ: gdepar_11_partB
+
+Сгенерируй **ровно** постов: **3**.
+
+BATCH_ID: gdepar_11
+POOL: evening
+PART: partB
+
+TOPIC_IDS и заголовки (по 1 посту на строку):
+
+- `GDP-EV-067` → headline: **Смущение наготы** → id: `duo_ev_067_b11`
+- `GDP-EV-068` → headline: **Не мерить пульс наугад** → id: `duo_ev_068_b11`
+- `GDP-EV-069` → headline: **Трещит печь — норма?** → id: `duo_ev_069_b11`
+
+УЖЕ ЕСТЬ Gdepar (не повторять id):
+duo_alcohol_evening_07, duo_bannik_06, duo_bench_level_01, duo_birch_soak_02, duo_bw_001_b12, duo_bw_002_b12, duo_bw_003_b12, duo_bw_004_b12, duo_bw_005_b12, duo_bw_006_b12, duo_bw_007_b12, duo_bw_008_b12, duo_bw_009_b12, duo_bw_010_b12, duo_bw_011_b12, duo_bw_012_b12, duo_detox_phone_01, duo_dizzy_01, duo_electric_stove_01, duo_ev_001_b06, duo_ev_002_b06, duo_ev_003_b06, duo_ev_004_b06, duo_ev_005_b06, duo_ev_006_b06, duo_ev_007_b06, duo_ev_008_b06, duo_ev_009_b06, duo_ev_010_b06, duo_ev_011_b06, duo_ev_012_b06, duo_ev_013_b07, duo_ev_014_b07, duo_ev_015_b07, duo_ev_016_b07, duo_ev_017_b07, duo_ev_018_b07, duo_ev_019_b07, duo_ev_020_b07, duo_ev_021_b07, duo_ev_022_b07, duo_ev_023_b07, duo_ev_024_b07, duo_ev_025_b08, duo_ev_026_b08, duo_ev_027_b08, duo_ev_028_b08, duo_ev_029_b08, duo_ev_030_b08, duo_ev_031_b08, duo_ev_032_b08, duo_ev_033_b08, duo_ev_034_b08, duo_ev_035_b08, duo_ev_036_b08, duo_ev_037_b09, duo_ev_038_b09, duo_ev_039_b09, duo_ev_040_b09, duo_ev_041_b09, duo_ev_042_b09, duo_ev_043_b09, duo_ev_044_b09, duo_ev_045_b09, duo_ev_046_b09, duo_ev_047_b09, duo_ev_048_b09, duo_ev_049_b10, duo_ev_050_b10, duo_ev_051_b10, duo_ev_052_b10, duo_ev_053_b10, duo_ev_054_b10, duo_ev_055_b10, duo_ev_056_b10, duo_ev_057_b10, duo_ev_058_b10, duo_ev_059_b10, duo_ev_060_b10, duo_ev_061_b11, duo_ev_062_b11, duo_ev_063_b11, duo_ev_064_b11, duo_ev_065_b11, duo_ev_066_b11, duo_ev_067_b11, duo_ev_068_b11, duo_ev_069_b11, duo_first_three_01, duo_first_time_03, duo_first_visit_01, duo_kvass_01, duo_minimal_kit_01, duo_neighbor_story_08, duo_oak_vs_birch_01, duo_pr_013_b02, duo_pr_014_b02, duo_pr_015_b02, duo_pr_016_b02, duo_pr_017_b02, duo_pr_018_b02, duo_pr_031_b03, duo_pr_032_b03, duo_pr_033_b03, duo_pr_034_b03, duo_pr_035_b03, duo_pr_036_b03, duo_pr_037_b04, duo_pr_038_b04, duo_pr_039_b04, duo_pr_040_b04, duo_pr_041_b04, duo_pr_042_b04, duo_pr_043_b04, duo_pr_044_b04, duo_pr_045_b04, duo_pr_046_b04, duo_pr_047_b04, duo_pr_048_b04, duo_pr_049_b05, duo_pr_050_b05, duo_pr_051_b05, duo_pr_052_b05, duo_pr_053_b05, duo_pr_054_b05, duo_pr_055_b05, duo_pr_056_b05, duo_pr_057_b05, duo_pr_058_b05, duo_queue_kovsh_01, duo_queue_kovsh_02, duo_review_hot_05, duo_silence_parka_04, duo_stones_crack_01, duo_stove_heat_01, duo_temp_three_01, duo_venik_birch_01, duo_venik_rhythm_01, duo_ventilation_01
+
+Формат поста:
+```
+---
+id: duo_{slug}
+pool: evening
+tag: {тег}
+headline: {без эмодзи}
+hashtags: #баня #гдепар #{тег}
+image_file: null
+---
+
+🔥 **{Заголовок}**
+
+**Михалыч:** …
+
+**Кириллыч:** …
+```
+
+Правила из gemini_PASTE_MSG1_BOOT.txt обязательны: ровно N постов, только markdown, P0 запрещён, CHECKLIST в конце.
+
+Имя файла в ответе: `gdepar_gdepar_11_partB.md`
+
+## CHECKLIST (обязательно в конце)
+POST_COUNT: 3
+P0_FOUND: 0
+IDS: duo_ev_067_b11, duo_ev_068_b11, duo_ev_069_b11

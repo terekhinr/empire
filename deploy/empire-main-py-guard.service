@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=RCLONE_REMOTE=yandex
-ExecStart=/root/projects/empire/scripts/guard_critical_files.sh --auto-restore --warn
+ExecStart=/bin/bash /root/projects/empire/scripts/guard_critical_files.sh --auto-restore --warn
 Nice=10
 
 [Install]

@@ -47,20 +47,33 @@ def save_weekly_row(row: dict) -> None:
     log_event("pension_weekly_metrics_saved", persona_key="pension", payload={"week": week})
 
 
-def append_waitlist_email(email: str, *, source: str = "site") -> bool:
+def append_waitlist_email(
+    email: str,
+    *,
+    source: str = "site",
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+) -> bool:
     email = (email or "").strip().lower()
     if not email or "@" not in email or len(email) > 254:
         return False
     rows = _load_json_list(WAITLIST_JSON)
     if any(r.get("email") == email for r in rows):
         return True
-    rows.append(
-        {
-            "email": email,
-            "source": source,
-            "created_at": date.today().isoformat(),
-        }
-    )
+    row: dict = {
+        "email": email,
+        "source": source,
+        "created_at": date.today().isoformat(),
+    }
+    for key, val in (
+        ("utm_source", utm_source),
+        ("utm_medium", utm_medium),
+        ("utm_campaign", utm_campaign),
+    ):
+        if val:
+            row[key] = val
+    rows.append(row)
     _save_json_list(WAITLIST_JSON, rows)
     log_event("pension_waitlist_signup", persona_key="pension", payload={"source": source})
     return True

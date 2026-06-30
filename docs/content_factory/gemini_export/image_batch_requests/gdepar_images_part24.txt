@@ -1,0 +1,82 @@
+# ЗАДАНИЕ: gdepar_images_part24
+
+Сгенерируй **ровно** картинок: **6**.
+
+CHANNEL: gdepar (Где Пар? / Михалыч ↔ Кириллыч)
+MODEL: Gemini Nano Banana (flash image)
+
+Правила:
+- Одна картинка на блок `topic_id:`
+- Без текста на изображении, без водяных знаков
+- Сохрани файлы с именами из `filename:`
+- Формат ответа: приложи каждую картинку сразу после её блока
+
+Блок одной картинки:
+```
+topic_id: GDP-BW-012
+filename: GDP-BW-012.jpg
+aspect: 4:3
+
+PROMPT:
+{полный промпт EN}
+```
+
+---
+
+topic_id: GDP-BW-012
+filename: GDP-BW-012.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_detox_phone_01
+filename: duo_detox_phone_01.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_queue_kovsh_01
+filename: duo_queue_kovsh_01.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_venik_birch_01
+filename: duo_venik_birch_01.jpg
+aspect: 4:3
+
+PROMPT:
+A traditional birch sauna whisk (banya venik), made of fresh green birch branches and leaves tied together at the handle with natural twine. The whisk is lying on a wet wooden sauna bench. Rising steam, warm rustic wooden background, water droplets on the leaves. Hyper-realistic, macro photography, cinematic lighting, highly detailed, 8k.
+
+---
+
+topic_id: duo_first_visit_01
+filename: duo_first_visit_01.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: duo_kvass_01
+filename: duo_kvass_01.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+## CHECKLIST
+IMAGE_COUNT: 6
+IDS: GDP-BW-012, duo_detox_phone_01, duo_queue_kovsh_01, duo_venik_birch_01, duo_first_visit_01, duo_kvass_01

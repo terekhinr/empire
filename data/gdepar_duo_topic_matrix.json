@@ -1,0 +1,162 @@
+{
+  "_comment": "Справочник тем для батч-генерации Gemini → gdepar_duo_curated",
+  "pools": {
+    "practice": "11:00",
+    "evening": "21:00",
+    "banya_week": "пт 11:00"
+  },
+  "practice": [
+    {
+      "id": "GDP-PR-01",
+      "dir": "TR",
+      "headline": "Берёзовый веник: замочить, не сварить"
+    },
+    {
+      "id": "GDP-PR-02",
+      "dir": "TR",
+      "headline": "Дубовый vs берёзовый"
+    },
+    {
+      "id": "GDP-PR-03",
+      "dir": "TE",
+      "headline": "Печь тлеет vs жарит"
+    },
+    {
+      "id": "GDP-PR-04",
+      "dir": "TE",
+      "headline": "Вентиляция и щель"
+    },
+    {
+      "id": "GDP-PR-05",
+      "dir": "NW",
+      "headline": "Первый заход: три коротких"
+    },
+    {
+      "id": "GDP-PR-06",
+      "dir": "NW",
+      "headline": "Жар на троечку"
+    },
+    {
+      "id": "GDP-PR-07",
+      "dir": "BT",
+      "headline": "Очередь к ковшу"
+    },
+    {
+      "id": "GDP-PR-08",
+      "dir": "BT",
+      "headline": "Разговор или тишина"
+    },
+    {
+      "id": "GDP-PR-09",
+      "dir": "PS",
+      "headline": "Баня vs смартфон"
+    },
+    {
+      "id": "GDP-PR-10",
+      "dir": "MP",
+      "headline": "Как читать отзыв на gdepar.ru"
+    },
+    {
+      "id": "GDP-PR-11",
+      "dir": "MP",
+      "headline": "Фильтр на карте"
+    },
+    {
+      "id": "GDP-PR-12",
+      "dir": "GN",
+      "headline": "Вода до и после"
+    },
+    {
+      "id": "GDP-PR-13",
+      "dir": "TR",
+      "headline": "Полки: низ не для слабаков"
+    },
+    {
+      "id": "GDP-PR-14",
+      "dir": "TE",
+      "headline": "Трещина в камнях"
+    },
+    {
+      "id": "GDP-PR-15",
+      "dir": "NW",
+      "headline": "Головокружение — стоп"
+    }
+  ],
+  "evening": [
+    {
+      "id": "GDP-EV-01",
+      "dir": "FL",
+      "headline": "Банник в деревне"
+    },
+    {
+      "id": "GDP-EV-02",
+      "dir": "BT",
+      "headline": "Сосед по полке"
+    },
+    {
+      "id": "GDP-EV-03",
+      "dir": "RC",
+      "headline": "Квас к пару"
+    },
+    {
+      "id": "GDP-EV-04",
+      "dir": "RC",
+      "headline": "Иван-чай и мёд"
+    },
+    {
+      "id": "GDP-EV-05",
+      "dir": "PS",
+      "headline": "Баня вдвоём"
+    },
+    {
+      "id": "GDP-EV-06",
+      "dir": "PS",
+      "headline": "Сон после воскресной бани"
+    },
+    {
+      "id": "GDP-EV-07",
+      "dir": "TR",
+      "headline": "Привычка, не культ"
+    },
+    {
+      "id": "GDP-EV-08",
+      "dir": "NW",
+      "headline": "Чужой веник"
+    },
+    {
+      "id": "GDP-EV-09",
+      "dir": "GN",
+      "headline": "Алкоголь и пар"
+    },
+    {
+      "id": "GDP-EV-10",
+      "dir": "TE",
+      "headline": "Электропечь vs дрова"
+    },
+    {
+      "id": "GDP-EV-11",
+      "dir": "MP",
+      "headline": "Язык отзывов на карте"
+    },
+    {
+      "id": "GDP-EV-12",
+      "dir": "FL",
+      "headline": "Приметы: быт или туризм"
+    },
+    {
+      "id": "GDP-EV-13",
+      "dir": "BT",
+      "headline": "Баня с подростком"
+    },
+    {
+      "id": "GDP-EV-14",
+      "dir": "RC",
+      "headline": "Травяной настой"
+    },
+    {
+      "id": "GDP-EV-15",
+      "dir": "PS",
+      "headline": "Холодная купель: осторожность"
+    }
+  ]
+}

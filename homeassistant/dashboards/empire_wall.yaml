@@ -1,0 +1,532 @@
+# Empire — настенная панель (glassmorphism, kiosk)
+# HACS: mushroom, mini-graph-card, card-mod (опционально)
+
+title: Панель
+views:
+  - title: Дом
+    path: dom
+    icon: mdi:home-heart
+    theme: empire_wall
+    panel: true
+    badges:
+      - entity: weather.forecast_home_assistant
+        name: Погода
+        show_name: false
+      - entity: sensor.sber_th_temperatura
+        name: Кухня
+        show_name: false
+        color: orange
+      - entity: binary_sensor.ezviz_prihozhaya_motion_alarm
+        name: Прихожая
+        show_name: false
+      - entity: binary_sensor.ezviz_podezd_motion_alarm
+        name: Подъезд
+        show_name: false
+    cards:
+      - type: vertical-stack
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+            }
+        cards:
+          # ── Шапка: время + погода ──
+          - type: custom:mushroom-template-card
+            primary: "{{ now().strftime('%H:%M') }}"
+            secondary: "{{ now().strftime('%A, %d %B') }} · {{ state_attr('weather.forecast_home_assistant', 'temperature') }}° {{ states('weather.forecast_home_assistant') }}"
+            icon: mdi:home-analytics
+            icon_color: teal
+            layout: horizontal
+            card_mod:
+              style: |
+                ha-card { font-size: 1.1em; }
+
+          # ── Камеры (компактная полоса) ──
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: picture-entity
+                entity: camera.ezviz_prihozhaya
+                name: Прихожая
+                camera_view: live
+                aspect_ratio: "2:1"
+                show_state: false
+                show_name: true
+                card_mod:
+                  style: |
+                    ha-card {
+                      border: 1px solid rgba(56, 189, 248, 0.35) !important;
+                      overflow: hidden;
+                      max-height: 130px !important;
+                    }
+                    #root, img, video, ha-camera-stream {
+                      max-height: 110px !important;
+                      object-fit: cover !important;
+                    }
+                tap_action:
+                  action: navigate
+                  navigation_path: /empire-wall/kamery
+              - type: picture-entity
+                entity: camera.ezviz_podezd
+                name: Подъезд
+                camera_view: live
+                aspect_ratio: "2:1"
+                show_state: false
+                show_name: true
+                card_mod:
+                  style: |
+                    ha-card {
+                      border: 1px solid rgba(56, 189, 248, 0.35) !important;
+                      overflow: hidden;
+                      max-height: 130px !important;
+                    }
+                    #root, img, video, ha-camera-stream {
+                      max-height: 110px !important;
+                      object-fit: cover !important;
+                    }
+                tap_action:
+                  action: navigate
+                  navigation_path: /empire-wall/kamery
+
+          # ── Режимы (чипы) ──
+          - type: custom:mushroom-chips-card
+            alignment: center
+            chips:
+              - type: entity
+                entity: input_boolean.rezhim_noch
+                icon: mdi:weather-night
+                content_info: name
+                tap_action:
+                  action: toggle
+              - type: entity
+                entity: input_boolean.rezhim_ushel
+                icon: mdi:home-export-outline
+                content_info: name
+                tap_action:
+                  action: toggle
+              - type: entity
+                entity: input_boolean.rezhim_deti_spiat
+                icon: mdi:sleep
+                content_info: name
+                tap_action:
+                  action: toggle
+              - type: entity
+                entity: input_boolean.rezhim_otpusk
+                icon: mdi:airplane
+                content_info: name
+                tap_action:
+                  action: toggle
+
+          # ── Основная сетка ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              # Левая колонка: безопасность + домофон
+              - type: vertical-stack
+                cards:
+                  - type: custom:mushroom-title-card
+                    title: Безопасность
+                    subtitle: Датчики
+                  - type: grid
+                    columns: 3
+                    square: false
+                    cards:
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.hobeian_zg_222z
+                        primary: Ванная
+                        secondary: "{{ 'Протечка!' if is_state('binary_sensor.hobeian_zg_222z', 'on') else 'Ок' }}"
+                        icon: mdi:water-alert
+                        icon_color: "{{ 'red' if is_state('binary_sensor.hobeian_zg_222z', 'on') else 'green' }}"
+                        layout: vertical
+                        tap_action:
+                          action: more-info
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.zbeacon_snzb_05p
+                        primary: Туалет
+                        secondary: "{{ 'Протечка!' if is_state('binary_sensor.zbeacon_snzb_05p', 'on') else 'Ок' }}"
+                        icon: mdi:water-alert
+                        icon_color: "{{ 'red' if is_state('binary_sensor.zbeacon_snzb_05p', 'on') else 'green' }}"
+                        layout: vertical
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.balkon_datchik_gaza
+                        primary: Газ
+                        secondary: "{{ 'Тревога!' if is_state('binary_sensor.balkon_datchik_gaza', 'on') else 'Ок' }}"
+                        icon: mdi:gas-cylinder-alert
+                        icon_color: "{{ 'red' if is_state('binary_sensor.balkon_datchik_gaza', 'on') else 'green' }}"
+                        layout: vertical
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.tz3210_up3pngle_ts0205
+                        primary: Дым
+                        secondary: "{{ 'Дым!' if is_state('binary_sensor.tz3210_up3pngle_ts0205', 'on') else 'Ок' }}"
+                        icon: mdi:smoke-detector
+                        icon_color: "{{ 'red' if is_state('binary_sensor.tz3210_up3pngle_ts0205', 'on') else 'green' }}"
+                        layout: vertical
+                      - type: custom:mushroom-template-card
+                        primary: Спальня
+                        secondary: >-
+                          {% set r = states('sensor.spalnya_temperatura') %}
+                          {% set o = states('sensor.spalnya_temperatura_ulica') %}
+                          {% if r in ['unknown','unavailable','none',''] %}
+                            —
+                          {% else %}
+                            {{ r }} °C · улица {{ o }} °C
+                          {% endif %}
+                        icon: mdi:bed
+                        icon_color: indigo
+                        layout: vertical
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.sonoff_snzb_06p
+                        primary: Ванная
+                        secondary: PIR
+                        icon: mdi:motion-sensor
+                        icon_color: "{{ 'blue' if is_state('binary_sensor.sonoff_snzb_06p', 'on') else 'grey' }}"
+                        layout: vertical
+                      - type: custom:mushroom-template-card
+                        entity: binary_sensor.aoyan_ms01
+                        primary: Коридор
+                        secondary: PIR
+                        icon: mdi:walk
+                        icon_color: "{{ 'blue' if is_state('binary_sensor.aoyan_ms01', 'on') else 'grey' }}"
+                        layout: vertical
+                  - type: custom:mushroom-template-card
+                    primary: Домофон
+                    secondary: BlueStreak · 192.168.1.65
+                    icon: mdi:door-open
+                    icon_color: green
+                    layout: horizontal
+                    tap_action:
+                      action: url
+                      url_path: http://192.168.1.65/
+
+              # Центр: климат со sparkline-графиками
+              - type: vertical-stack
+                cards:
+                  - type: custom:mushroom-title-card
+                    title: Климат
+                    subtitle: 24 часа
+                  - type: custom:mini-graph-card
+                    name: Кухня
+                    icon: mdi:stove
+                    hours_to_show: 24
+                    points_per_hour: 2
+                    line_width: 2
+                    font_size: 75
+                    animate: true
+                    show:
+                      name: true
+                      icon: true
+                      state: true
+                      legend: false
+                      graph: sparkline
+                      fill: fade
+                    entities:
+                      - entity: sensor.sber_th_temperatura
+                        name: t°
+                        color: "#f97316"
+                      - entity: sensor.sber_th_vlazhnost
+                        name: "%"
+                        color: "#38bdf8"
+                        y_axis: secondary
+                  - type: custom:mini-graph-card
+                    name: Балкон
+                    icon: mdi:balcony
+                    hours_to_show: 24
+                    points_per_hour: 2
+                    line_width: 2
+                    font_size: 75
+                    animate: true
+                    show:
+                      name: true
+                      icon: true
+                      state: true
+                      legend: false
+                      graph: sparkline
+                      fill: fade
+                    entities:
+                      - entity: sensor.balkon_temperatura
+                        name: t°
+                        color: "#ef4444"
+                      - entity: sensor.balkon_vlazhnost
+                        name: "%"
+                        color: "#38bdf8"
+                        y_axis: secondary
+                  - type: custom:mini-graph-card
+                    name: Спальня
+                    icon: mdi:bed
+                    hours_to_show: 24
+                    points_per_hour: 2
+                    line_width: 2
+                    font_size: 75
+                    animate: true
+                    show:
+                      name: true
+                      icon: true
+                      state: true
+                      legend: true
+                      graph: sparkline
+                      fill: fade
+                    entities:
+                      - entity: sensor.spalnya_temperatura
+                        name: комната
+                        color: "#818cf8"
+                      - entity: sensor.spalnya_temperatura_ulica
+                        name: улица
+                        color: "#64748b"
+                  - type: horizontal-stack
+                    cards:
+                      - type: custom:mini-graph-card
+                        name: Семён
+                        icon: mdi:account-child
+                        hours_to_show: 12
+                        line_width: 2
+                        font_size: 65
+                        show:
+                          name: true
+                          state: true
+                          graph: sparkline
+                          fill: fade
+                        entities:
+                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                            color: "#00d4aa"
+                      - type: custom:mini-graph-card
+                        name: Макс
+                        icon: mdi:account-child-circle
+                        hours_to_show: 12
+                        line_width: 2
+                        font_size: 65
+                        show:
+                          name: true
+                          state: true
+                          graph: sparkline
+                          fill: fade
+                        entities:
+                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
+                            color: "#a78bfa"
+
+              # Правая колонка: свет
+              - type: vertical-stack
+                cards:
+                  - type: custom:mushroom-title-card
+                    title: Свет
+                    subtitle: Комнаты
+                  - type: grid
+                    columns: 2
+                    square: false
+                    cards:
+                      - type: custom:mushroom-light-card
+                        entity: light.empire_kuhnya_svet
+                        name: Кухня
+                        icon: mdi:ceiling-light
+                        use_light_color: true
+                        show_brightness_control: true
+                        layout: vertical
+                      - type: custom:mushroom-light-card
+                        entity: light.empire_vannaya_svet
+                        name: Ванная
+                        icon: mdi:shower-head
+                        use_light_color: true
+                        show_brightness_control: true
+                        layout: vertical
+                      - type: custom:mushroom-light-card
+                        entity: light.empire_tualet_svet
+                        name: Туалет
+                        icon: mdi:toilet
+                        use_light_color: true
+                        show_brightness_control: false
+                        layout: vertical
+                      - type: custom:mushroom-light-card
+                        entity: light.empire_prihozhaya_svet
+                        name: Прихожая
+                        icon: mdi:door
+                        use_light_color: true
+                        show_brightness_control: false
+                        layout: vertical
+                      - type: custom:mushroom-entity-card
+                        entity: switch.spalnya_svet
+                        name: Спальня
+                        icon: mdi:bed
+                        layout: vertical
+                        tap_action:
+                          action: toggle
+                      - type: custom:mushroom-entity-card
+                        entity: switch.spalnya_svet_2
+                        name: Спальня 2
+                        icon: mdi:bed-outline
+                        layout: vertical
+                        tap_action:
+                          action: toggle
+                      - type: custom:mushroom-entity-card
+                        entity: switch.basicr2_ded_sonoff_10011f1029
+                        name: Гостевая
+                        icon: mdi:sofa
+                        layout: vertical
+                        tap_action:
+                          action: toggle
+                      - type: custom:mushroom-entity-card
+                        entity: switch.basicr2_max_sonoff_10011f28d9
+                        name: Макс
+                        icon: mdi:desk-lamp
+                        layout: vertical
+                        tap_action:
+                          action: toggle
+
+          # ── Нижний ряд: gauge-индикаторы ──
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: gauge
+                entity: sensor.sber_th_temperatura
+                name: Кухня
+                min: 15
+                max: 35
+                severity:
+                  green: 20
+                  yellow: 26
+                  red: 30
+                needle: true
+              - type: gauge
+                entity: sensor.sber_th_vlazhnost
+                name: Влажность
+                unit: "%"
+                min: 0
+                max: 100
+                severity:
+                  green: 40
+                  yellow: 60
+                  red: 75
+                needle: true
+              - type: gauge
+                entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                name: Семён
+                min: 15
+                max: 30
+                severity:
+                  green: 20
+                  yellow: 25
+                  red: 28
+                needle: true
+
+  - title: Камеры
+    path: kamery
+    icon: mdi:cctv
+    theme: empire_wall
+    panel: true
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: picture-entity
+            entity: camera.ezviz_prihozhaya
+            name: Прихожая
+            camera_view: live
+            aspect_ratio: "16:9"
+            show_state: false
+            show_name: true
+            card_mod:
+              style: |
+                ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
+          - type: picture-entity
+            entity: camera.ezviz_podezd
+            name: Подъезд
+            camera_view: live
+            aspect_ratio: "16:9"
+            show_state: false
+            show_name: true
+            card_mod:
+              style: |
+                ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
+
+  - title: Климат
+    path: klima
+    icon: mdi:thermometer
+    theme: empire_wall
+    panel: true
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:mini-graph-card
+            name: Кухня — 48 ч
+            icon: mdi:stove
+            hours_to_show: 48
+            line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
+            entities:
+              - entity: sensor.sber_th_temperatura
+                name: t°
+                color: "#f97316"
+              - entity: sensor.sber_th_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
+          - type: custom:mini-graph-card
+            name: Балкон
+            icon: mdi:balcony
+            hours_to_show: 48
+            line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
+            entities:
+              - entity: sensor.balkon_temperatura
+                name: t°
+                color: "#ef4444"
+              - entity: sensor.balkon_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
+          - type: custom:mini-graph-card
+            name: Спальня — 48 ч
+            icon: mdi:bed
+            hours_to_show: 48
+            line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
+            entities:
+              - entity: sensor.spalnya_temperatura
+                name: комната
+                color: "#818cf8"
+              - entity: sensor.spalnya_temperatura_ulica
+                name: улица
+                color: "#64748b"
+              - entity: sensor.spalnya_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
+          - type: custom:mini-graph-card
+            name: Комната Семёна
+            hours_to_show: 48
+            line_width: 2
+            entities:
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                name: t°
+                color: "#00d4aa"
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
+          - type: custom:mini-graph-card
+            name: Комната Макса
+            hours_to_show: 48
+            line_width: 2
+            entities:
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
+                name: t°
+                color: "#a78bfa"
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost_2
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary

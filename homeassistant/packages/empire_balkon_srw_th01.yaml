@@ -1,5 +1,8 @@
-# SRW-TH01 — батарейный Tuya Wi‑Fi датчик (балкон).
-# В LAN не виден; опрос через Tuya Open API (credentials: scripts/.tuya_cloud.json на сервере).
+# SRW-TH01 балкон: облачный опрос (батарейный датчик) + LocalTuya raw (когда проснётся в LAN).
+# Ключ: /config/scripts/.srw_local.json (fetch: shell_command.balkon_srw_fetch_key)
+
+shell_command:
+  balkon_srw_fetch_key: "python3 /config/scripts/tuya_srw_fetch_key.py"
 
 command_line:
   - sensor:

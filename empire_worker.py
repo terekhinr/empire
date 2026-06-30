@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from analytics_db import init_analytics_db, log_event
 from empire_flags import load_empire_flags
-from main import Job, async_session, init_db
+from empire_db import Job, async_session, init_db
 
 logger = logging.getLogger("empire.worker")
 POLL_SEC = float(os.getenv("EMPIRE_WORKER_POLL_SEC", "12"))
@@ -89,10 +89,25 @@ async def _process_job(job: Job) -> None:
         stats = fetch_yt_trends_stub(persona=persona)
         job.result_json = json.dumps({"items": len(stats.get("items", []))})
     elif jt == "weekly_insights":
-        from metrics import save_weekly_insights_file
+        from planning_insights import save_empire_insights_file
 
-        path = save_weekly_insights_file()
+        path = save_empire_insights_file(use_llm=bool(os.getenv("OPENROUTER_API_KEY", "").strip()))
         job.result_json = json.dumps({"path": path})
+    elif jt == "daily_insights":
+        from planning_insights import run_daily_briefing
+
+        result = run_daily_briefing(
+            use_llm=True,
+            notify_telegram=bool(os.getenv("EMPIRE_DAILY_TELEGRAM", "1").strip() not in ("0", "false")),
+        )
+        job.result_json = json.dumps(
+            {
+                "day": result.get("day"),
+                "checklist_id": result.get("checklist_id"),
+                "telegram_sent": result.get("telegram_sent"),
+                "file_path": result.get("file_path"),
+            }
+        )
     elif jt == "noop":
         job.result_json = json.dumps({"ok": True})
     else:

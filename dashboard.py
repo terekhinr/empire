@@ -141,8 +141,20 @@ st.sidebar.caption(
     "Вход: `docs/dashboard_access.md` · "
     "[neverretire.ru/hub/](https://neverretire.ru/hub/) · туннель :8501"
 )
-section = st.sidebar.radio("Раздел", ["Инвестиции", "Личное", "Контент и постинг"], index=0)
-if section == "Инвестиции":
+section = st.sidebar.radio(
+    "Раздел",
+    ["Система", "Инвестиции", "Личное", "Контент и постинг"],
+    index=0,
+)
+if section == "Система":
+    menu = st.sidebar.radio(
+        "Система",
+        [
+            "Мониторинг",
+            "Стоп-переключатели",
+        ],
+    )
+elif section == "Инвестиции":
     menu = st.sidebar.radio(
         "Инвестиции",
         [
@@ -174,8 +186,6 @@ else:
             "Нейрокомментинг (TG)",
             "Аналитика",
             "AI Insights",
-            "Мониторинг",
-            "Стоп-переключатели",
         ],
     )
 

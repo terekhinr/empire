@@ -1,0 +1,82 @@
+# ЗАДАНИЕ: gdepar_images_part09
+
+Сгенерируй **ровно** картинок: **6**.
+
+CHANNEL: gdepar (Где Пар? / Михалыч ↔ Кириллыч)
+MODEL: Gemini Nano Banana (flash image)
+
+Правила:
+- Одна картинка на блок `topic_id:`
+- Без текста на изображении, без водяных знаков
+- Сохрани файлы с именами из `filename:`
+- Формат ответа: приложи каждую картинку сразу после её блока
+
+Блок одной картинки:
+```
+topic_id: GDP-PR-049
+filename: GDP-PR-049.jpg
+aspect: 4:3
+
+PROMPT:
+{полный промпт EN}
+```
+
+---
+
+topic_id: GDP-PR-049
+filename: GDP-PR-049.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-PR-050
+filename: GDP-PR-050.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-PR-051
+filename: GDP-PR-051.jpg
+aspect: 4:3
+
+PROMPT:
+A traditional birch sauna whisk (banya venik), made of fresh green birch branches and leaves tied together at the handle with natural twine. The whisk is lying on a wet wooden sauna bench. Rising steam, warm rustic wooden background, water droplets on the leaves. Hyper-realistic, macro photography, cinematic lighting, highly detailed, 8k.
+
+---
+
+topic_id: GDP-PR-052
+filename: GDP-PR-052.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-PR-053
+filename: GDP-PR-053.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+topic_id: GDP-PR-054
+filename: GDP-PR-054.jpg
+aspect: 4:3
+
+PROMPT:
+Interior of a traditional Russian wooden banya: steam-filled room, wooden benches, copper water bucket and ladle, soft warm light through small window, no people, no brooms, photorealistic, cinematic, 8k.
+
+---
+
+## CHECKLIST
+IMAGE_COUNT: 6
+IDS: GDP-PR-049, GDP-PR-050, GDP-PR-051, GDP-PR-052, GDP-PR-053, GDP-PR-054

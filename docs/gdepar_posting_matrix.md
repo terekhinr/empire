@@ -1,5 +1,8 @@
 # Гдепар — матрица постинга и анти-повторы
 
+> **Июнь 2026:** слоты 11:00 / 21:00 — ручной дуэт (`duo_curated`), не LLM.  
+> Темы и промпты Gemini: `docs/content_factory/`.
+
 Источник: `content_config.json` · код: `gdepar_content.py`, `main.py` (`_pick_least_similar_variant`).
 
 ## Расписание (МСК)

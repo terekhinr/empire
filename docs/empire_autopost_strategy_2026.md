@@ -17,6 +17,8 @@
 
 **Действие:** включить логирование `tg_post_published` с `views_24h` при появлении API/ручного ввода в дашборде — тогда пересчитаем частоту постов по данным.
 
+**R5 (29.06):** еженедельные KPI `tg_posts_published`, `autopost_failures`, `gift_emails` — см. `docs/audit/14_PIPELINE_R5_AUTOPOST.md` §3.
+
 ---
 
 ## 2. Отраслевые ориентиры (TG, РФ, ниши)

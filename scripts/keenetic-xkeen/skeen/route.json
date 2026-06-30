@@ -2,9 +2,8 @@
   "route": {
     "final": "direct",
     "auto_detect_interface": true,
+    "default_domain_resolver": "local-dns",
     "rules": [
-      { "action": "sniff", "timeout": "300ms" },
-      { "protocol": "dns", "action": "hijack-dns" },
       { "ip_is_private": true, "outbound": "direct" },
       { "protocol": "bittorrent", "outbound": "direct" },
       {
@@ -13,55 +12,52 @@
         "outbound": "direct"
       },
       {
-        "network": "udp",
-        "port": [443],
-        "domain_suffix": [
-          "google.com",
-          "youtube.com",
-          "googlevideo.com",
-          "googleapis.com",
-          "gstatic.com",
-          "youtu.be",
-          "ytimg.com"
-        ],
+        "ip_cidr": ["18.198.62.99/32", "3.67.116.46/32"],
         "action": "reject"
       },
       {
-        "domain_suffix": [
-          "google.com",
-          "google.ru",
-          "google.co.uk",
-          "gmail.com",
-          "googlemail.com",
-          "googlevideo.com",
-          "redirector.googlevideo.com",
-          "youtube.com",
-          "youtube.tv",
-          "youtube-nocookie.com",
-          "youtu.be",
-          "ytimg.com",
-          "i.ytimg.com",
-          "ggpht.com",
-          "gstatic.com",
-          "googleapis.com",
-          "youtubei.googleapis.com",
-          "googleusercontent.com",
-          "s.youtube.com",
-          "withgoogle.com",
-          "gvt1.com",
-          "gvt2.com",
-          "googleadservices.com",
-          "googlesyndication.com",
-          "google-analytics.com",
-          "clients1.google.com",
-          "play.googleapis.com",
-          "android.googleapis.com",
-          "gemini.google.com"
+        "ip_cidr": [
+          "142.250.0.0/15", "142.251.0.0/16", "172.217.0.0/16",
+          "172.253.0.0/16", "216.239.32.0/19", "216.239.38.0/24",
+          "64.233.160.0/19", "74.125.0.0/16", "108.177.0.0/17",
+          "209.85.128.0/17", "192.178.0.0/15"
         ],
         "outbound": "vless-vps"
       },
       {
-        "domain_keyword": ["googlevideo", "youtube", "ytimg", "ggpht", "gstatic", "gvt"],
+        "network": "udp",
+        "port": [443],
+        "domain_suffix": [
+          "google.com", "youtube.com", "googlevideo.com", "googleapis.com",
+          "gstatic.com", "youtu.be", "ytimg.com", "doubleclick.net"
+        ],
+        "action": "reject"
+      },
+      {
+        "domain_suffix": ["viewstats.com"],
+        "action": "reject"
+      },
+      {
+        "domain_suffix": [
+          "google.com", "google.ru", "googlemail.com", "googlevideo.com",
+          "redirector.googlevideo.com", "youtube.com", "youtube.tv",
+          "youtube-nocookie.com", "youtu.be", "ytimg.com", "i.ytimg.com",
+          "ggpht.com", "gstatic.com", "googleapis.com",
+          "youtubei.googleapis.com", "googleusercontent.com",
+          "s.youtube.com", "withgoogle.com", "gvt1.com", "gvt2.com", "gvt3.com",
+          "googleadservices.com", "googlesyndication.com", "doubleclick.net",
+          "google-analytics.com", "googletagmanager.com", "2mdn.net",
+          "clients1.google.com", "clients2.google.com", "clients3.google.com",
+          "clients4.google.com", "clients5.google.com", "clients6.google.com",
+          "play.googleapis.com", "android.googleapis.com", "gemini.google.com",
+          "gmail.com", "googleplex.com"
+        ],
+        "outbound": "vless-vps"
+      },
+      {
+        "domain_keyword": [
+          "googlevideo", "youtube", "ytimg", "ggpht", "gstatic", "gvt", "google"
+        ],
         "outbound": "vless-vps"
       }
     ]

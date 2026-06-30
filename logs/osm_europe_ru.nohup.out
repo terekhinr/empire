@@ -1,0 +1,141 @@
+=== 2026-06-21T21:06:20+00:00 OSM EUROPE_RU start ===
+OK: MVP-схема применена к /root/projects/empire/empire.db
+/root/projects/empire/tools/parsers/osm_banyas.py:219: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow().isoformat(timespec="seconds")
+  Overpass упал: HTTP Error 429: Too Many Requests
+  Overpass упал: HTTP Error 429: Too Many Requests
+  Overpass упал: HTTP Error 429: Too Many Requests
+Terminated
+=== 2026-06-21T21:12:54+00:00 OSM EUROPE_RU start ===
+OK: MVP-схема применена к /root/projects/empire/empire.db
+
+=== Санкт-Петербург  (ISO RU-SPE) ===
+/root/projects/empire/tools/parsers/osm_banyas.py:253: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow().isoformat(timespec="seconds")
+
+=== Ленинградская область  (ISO RU-LEN) ===
+
+=== Калининградская область  (ISO RU-KGD) ===
+
+=== Псковская область  (ISO RU-PSK) ===
+
+=== Новгородская область  (ISO RU-NGR) ===
+
+=== Архангельская область  (ISO RU-ARK) ===
+
+=== Вологодская область  (ISO RU-VLG) ===
+
+=== Мурманская область  (ISO RU-MUR) ===
+
+=== Республика Карелия  (ISO RU-KR) ===
+
+=== Ненецкий АО  (ISO RU-NEN) ===
+
+=== Белгородская область  (ISO RU-BEL) ===
+
+=== Брянская область  (ISO RU-BRY) ===
+
+=== Владимирская область  (ISO RU-VLA) ===
+
+=== Воронежская область  (ISO RU-VOR) ===
+
+=== Ивановская область  (ISO RU-IVA) ===
+
+=== Калужская область  (ISO RU-KLU) ===
+
+=== Костромская область  (ISO RU-KOS) ===
+
+=== Курская область  (ISO RU-KUR) ===
+
+=== Липецкая область  (ISO RU-LIP) ===
+
+=== Московская область  (ISO RU-MOS) ===
+
+=== Москва  (ISO RU-MOW) ===
+
+=== Орловская область  (ISO RU-ORL) ===
+
+=== Рязанская область  (ISO RU-RYA) ===
+
+=== Смоленская область  (ISO RU-SMO) ===
+
+=== Тамбовская область  (ISO RU-TAM) ===
+  Overpass 429 (https://overpass-api.de/api/interpreter), пауза 20 с…
+
+=== Тверская область  (ISO RU-TVE) ===
+
+=== Тульская область  (ISO RU-TUL) ===
+
+=== Ярославская область  (ISO RU-YAR) ===
+
+=== Нижегородская область  (ISO RU-NIZ) ===
+
+=== Республика Марий Эл  (ISO RU-ME) ===
+
+=== Чувашская Республика  (ISO RU-CU) ===
+
+=== Республика Татарстан  (ISO RU-TA) ===
+
+=== Удмуртская Республика  (ISO RU-UD) ===
+
+=== Пермский край  (ISO RU-PER) ===
+  Overpass 429 (https://overpass-api.de/api/interpreter), пауза 20 с…
+  Overpass 504 (https://overpass.kumi.systems/api/interpreter), пауза 45 с…
+
+=== Кировская область  (ISO RU-KIR) ===
+
+=== Самарская область  (ISO RU-SAM) ===
+
+=== Оренбургская область  (ISO RU-ORE) ===
+
+=== Пензенская область  (ISO RU-PNZ) ===
+
+=== Саратовская область  (ISO RU-SAR) ===
+
+=== Ульяновская область  (ISO RU-ULY) ===
+
+=== Республика Башкортостан  (ISO RU-BA) ===
+
+=== Республика Мордовия  (ISO RU-MO) ===
+
+=== Республика Адыгея  (ISO RU-AD) ===
+
+=== Астраханская область  (ISO RU-AST) ===
+
+=== Волгоградская область  (ISO RU-VGG) ===
+
+=== Краснодарский край  (ISO RU-KDA) ===
+  Overpass 429 (https://overpass-api.de/api/interpreter), пауза 20 с…
+  Overpass упал: The read operation timed out
+
+=== Республика Калмыкия  (ISO RU-KL) ===
+
+=== Ростовская область  (ISO RU-ROS) ===
+
+=== Республика Крым  (ISO RU-CR) ===
+
+=== Севастополь  (ISO RU-SEV) ===
+
+=== Республика Дагестан  (ISO RU-DA) ===
+
+=== Республика Ингушетия  (ISO RU-IN) ===
+
+=== Кабардино-Балкарская Республика  (ISO RU-KB) ===
+
+=== Карачаево-Черкесская Республика  (ISO RU-KC) ===
+
+=== Ставропольский край  (ISO RU-STA) ===
+
+=== Чеченская Республика  (ISO RU-CE) ===
+
+--- Пропущенные регионы (1): KDA ---
+  Повтор: python tools/parsers/osm_banyas.py --regions KDA
+
+--- ИТОГ ---
+  Overpass отдал:  3567
+  Подошло:         2108
+  Пропущено:       1459
+  Новых записей:   1416
+  Обновлено:       692
+  Регионов с ошибкой: 1
+=== 2026-06-21T21:29:18+00:00 OSM EUROPE_RU done ===

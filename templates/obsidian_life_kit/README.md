@@ -12,6 +12,7 @@ F:\YandexDisk\obsidian (2)\Life\tools\
 Life/tools/ticktick_csv_to_obsidian.py
 Life/tools/voice_to_obsidian.py
 Life/tools/sync_evrec_to_life.ps1
+Life/tools/empire-vps/          ← Cursor + Tailscale (УСТАНОВИТЬ_TAILSCALE.bat)
 Life/tools/README.md
 ```
 

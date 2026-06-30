@@ -41,6 +41,16 @@ views:
             icon: mdi:home-thermometer-outline
             layout: vertical
           - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_temperatura
+            name: Спальня
+            icon: mdi:bed
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_temperatura_ulica
+            name: Улица (спальня)
+            icon: mdi:home-export-outline
+            layout: vertical
+          - type: custom:mushroom-entity-card
             entity: sensor.balkon_vlazhnost
             name: Влажность
             icon: mdi:water-percent
@@ -270,7 +280,46 @@ views:
     cards:
       - type: custom:mushroom-title-card
         title: Спальня родителей
-        subtitle: W602 LocalTuya
+        subtitle: Tuya TH · комната + улица
+      - type: custom:mini-graph-card
+        name: Температура и влажность
+        hours_to_show: 48
+        line_width: 2
+        show:
+          legend: true
+        entities:
+          - entity: sensor.spalnya_temperatura
+            name: комната
+            color: "#818cf8"
+          - entity: sensor.spalnya_temperatura_ulica
+            name: улица
+            color: "#64748b"
+          - entity: sensor.spalnya_vlazhnost
+            name: влажность
+            color: "#38bdf8"
+            y_axis: secondary
+      - type: horizontal-stack
+        cards:
+          - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_temperatura
+            name: Комната
+            icon: mdi:thermometer
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_temperatura_ulica
+            name: Улица
+            icon: mdi:home-export-outline
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_vlazhnost
+            name: Влажность
+            icon: mdi:water-percent
+            layout: vertical
+          - type: custom:mushroom-entity-card
+            entity: sensor.spalnya_batareia
+            name: Батарея
+            icon: mdi:battery
+            layout: vertical
       - type: grid
         columns: 2
         square: false
@@ -294,7 +343,7 @@ views:
     cards:
       - type: custom:mushroom-title-card
         title: Балкон
-        subtitle: SRW-TH01 · облачный опрос
+        subtitle: SRW-TH01 · LocalTuya
       - type: custom:mini-graph-card
         name: Температура и влажность
         hours_to_show: 48

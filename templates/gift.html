@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}5 принципов анти-пенсии — бесплатный PDF{% endblock %}
+{% block meta_description %}Скачайте бесплатно: 5 принципов, почему пенсия — ловушка, а не цель. Манифест «На пенсию НИКОГДА» от Иосифа Бороды.{% endblock %}
+
+{% block content %}
+<section class="section gift-page">
+    <span class="hero-eyebrow">Бесплатно</span>
+    <h1 class="section-header" style="margin-top: 12px;">5 принципов: почему пенсия — ловушка, а не цель</h1>
+    <p class="section-lead">Короткая выжимка из манифеста «На пенсию НИКОГДА». Без воды: кэшфлоу, тело, антихрупкость и почему «дождаться пенсии» — стратегия проигравших.</p>
+
+    <div class="gift-preview">
+        <div class="gift-preview-cover">
+            <div class="book-cover-mark">
+                <img src="/static/logo3.png" alt="F.I.R.E." width="64" height="64" loading="lazy">
+            </div>
+            <div class="gift-preview-title">5 принципов<br>анти-пенсии</div>
+            <div class="gift-preview-sub">PDF · 5 страниц · Иосиф Борода</div>
+        </div>
+        <ul class="gift-bullets">
+            <li>Почему государственная пенсия похожа на финансовую пирамиду</li>
+            <li>Кэшфлоу важнее «накопить на старость»</li>
+            <li>Тело — единственный актив без девальвации</li>
+            <li>ИИ как рычаг, а не замена мозга</li>
+            <li>Земля и автономия как страховка</li>
+        </ul>
+    </div>
+
+    <div id="gift-form-wrap">
+        <form class="waitlist-form gift-form" id="gift-form" novalidate>
+            <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" aria-label="Email">
+            <button type="submit" class="btn btn-primary" data-pension-goal="gift_submit">Скачать бесплатно</button>
+        </form>
+        <label class="gift-consent">
+            <input type="checkbox" name="consent" required>
+            <span>Согласен на обработку email и рассылку о выходе книги. Отписаться можно в любой момент.</span>
+        </label>
+        <p id="gift-msg" class="waitlist-msg muted" hidden></p>
+    </div>
+
+    <div id="gift-success" class="gift-success" hidden>
+        <p class="gift-success-lead">Готово. Сохраните PDF или откройте для печати:</p>
+        <a class="btn btn-primary" id="gift-download" href="{{ gift_pdf_url }}" target="_blank" rel="noopener" data-pension-goal="gift_download">
+            Открыть «5 принципов» →
+        </a>
+        <p class="muted" style="margin-top: 16px; font-size: 0.9rem;">
+            Полная книга выходит <strong>15 сентября 2026</strong> — напишем на email.
+            Пока — <a href="/book/introduction">читайте введение бесплатно</a>.
+        </p>
+    </div>
+
+    <p class="muted" style="margin-top: 40px; font-size: 0.85rem;">
+        Не является индивидуальной инвестиционной рекомендацией.
+    </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var form = document.getElementById("gift-form");
+    var msg = document.getElementById("gift-msg");
+    var formWrap = document.getElementById("gift-form-wrap");
+    var success = document.getElementById("gift-success");
+    var download = document.getElementById("gift-download");
+    if (!form) return;
+
+    var params = new URLSearchParams(window.location.search);
+    var utm = {
+        utm_source: params.get("utm_source") || "",
+        utm_medium: params.get("utm_medium") || "",
+        utm_campaign: params.get("utm_campaign") || ""
+    };
+
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var email = (form.querySelector('input[name="email"]') || {}).value || "";
+        var consentEl = form.querySelector('input[name="consent"]');
+        if (!consentEl || !consentEl.checked) {
+            msg.hidden = false;
+            msg.textContent = "Нужно согласие на обработку email.";
+            msg.style.color = "var(--accent)";
+            return;
+        }
+        var payload = { email: email.trim(), consent: true };
+        if (utm.utm_source) payload.utm_source = utm.utm_source;
+        if (utm.utm_medium) payload.utm_medium = utm.utm_medium;
+        if (utm.utm_campaign) payload.utm_campaign = utm.utm_campaign;
+
+        fetch("/api/pension/gift", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            if (res.ok) {
+                if (typeof window.pensionMetrikaReach === "function") {
+                    window.pensionMetrikaReach("gift_submit", { ok: true });
+                }
+                formWrap.hidden = true;
+                success.hidden = false;
+                if (res.j.download_url && download) {
+                    download.href = res.j.download_url;
+                }
+            } else {
+                msg.hidden = false;
+                var detail = (res.j && res.j.detail) || "";
+                if (detail === "consent_required") {
+                    msg.textContent = "Нужно согласие на обработку email.";
+                } else {
+                    msg.textContent = "Не удалось сохранить. Проверьте email.";
+                }
+                msg.style.color = "var(--accent)";
+            }
+          }).catch(function () {
+            msg.hidden = false;
+            msg.textContent = "Ошибка сети. Попробуйте позже.";
+          });
+    });
+})();
+</script>
+{% endblock %}

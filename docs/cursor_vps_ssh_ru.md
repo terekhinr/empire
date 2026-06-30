@@ -1,7 +1,14 @@
 # Cursor ↔ VPS: SSH без пароля и восстановление после обрыва
 
+> **Полный гайд Tailscale:** [`docs/cursor_vps_tailscale_ru.md`](cursor_vps_tailscale_ru.md) — пошаговое подключение, самодиагностика, помощь агента.
+
 Рабочая папка на VPS: `/root/projects/empire`  
-Хост: `193.233.232.48` · пользователь: `root`
+**Рекомендуемый хост Cursor:** `empire-vps-ts` (Tailscale `100.84.19.35`) — минует VPN/xray и NAT Keenetic.  
+Запасной: `empire-vps` (`193.233.232.48`).
+
+На VPS уже включено (2026-06-20): `ClientAliveInterval 10`, очистка зомби Cursor каждые 3 мин, xray healthcheck без агрессивных рестартов, Tailscale SSH (`tailscale set --ssh`).
+
+**Cursor на ПК:** в репозитории есть `.vscode/settings.json` — keepalive и `deploy/cursor_ssh_config_pc.example` подхватываются при открытии папки empire локально.
 
 ## Что может и не может агент
 
@@ -58,12 +65,41 @@ Host empire-vps
     HostName 193.233.232.48
     User root
     IdentityFile ~/.ssh/id_ed25519
-    ServerAliveInterval 30
-    ServerAliveCountMax 6
+    ServerAliveInterval 15
+    ServerAliveCountMax 10
     TCPKeepAlive yes
+    ConnectTimeout 30
+
+# Если публичный IP дёргается — через Tailscale (на ПК Tailscale включён):
+Host empire-vps-ts
+    HostName 100.84.19.35
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 15
+    ServerAliveCountMax 10
+    TCPKeepAlive yes
+    ConnectTimeout 30
 ```
 
-В Cursor: **Remote-SSH: Connect to Host…** → `empire-vps`.
+В Cursor: **Remote-SSH: Connect to Host…** → **`empire-vps-ts`** (предпочтительно) или `empire-vps`.
+
+### Cursor — settings.json (уже в репо)
+
+Файл `.vscode/settings.json` в empire задаёт keepalive и путь к SSH config. Если открываете проект локально — достаточно переподключиться. Иначе добавьте в User settings на ПК:
+
+```json
+"remote.SSH.configFile": "${workspaceFolder}/deploy/cursor_ssh_config_pc.example",
+"remote.SSH.serverAliveInterval": 30,
+"remote.SSH.serverAliveCountMax": 20,
+"remote.SSH.connectTimeout": 60
+```
+
+### Отваливается SSH
+
+| Лог VPS | Причина | Действие |
+|---------|---------|----------|
+| `Connection reset by peer` | Обрыв VPN/xray или NAT ~4 мин | **`empire-vps-ts`**; Tailscale на ПК; не гонять SSH через Keenetic VPN |
+| `kex_protocol_error` | Нестабильный канал | `ping 193.233.232.48 -t` с ПК |
 
 ### Если без ключа — только на ПК
 
@@ -96,6 +132,8 @@ tmux attach -t empire
 
 | Документ | Зачем |
 |----------|--------|
+| `docs/cursor_vps_tailscale_ru.md` | **Полный гайд Tailscale + Cursor + самопочинка + агент** |
+| `Life/tools/cursor_vps_tailscale_ru.md` (Obsidian) | То же в vault на Яндекс.Диске |
 | `docs/obsidian_vps_workflow_ru.md` | Агент на VPS ↔ Obsidian |
 | `docs/gdepar_checkpoints.md` | Статус выката gdepar |
 | `docs/YANDEX_RCLONE_START.md` | Бэкап VPS, rclone (секреты в `/etc/empire/rclone.env`) |
@@ -103,4 +141,4 @@ tmux attach -t empire
 
 ---
 
-*Обновлено: 2026-06-19*
+*Обновлено: 2026-06-21*

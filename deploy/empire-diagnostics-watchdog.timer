@@ -1,0 +1,11 @@
+[Unit]
+Description=Empire diagnostics watchdog every 2h + boot check
+
+[Timer]
+OnBootSec=8min
+OnUnitActiveSec=2h
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

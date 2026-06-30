@@ -22,6 +22,7 @@ import sqlite3
 import sys
 import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -33,10 +34,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.banya_regions import REGIONS, REGION_FALLBACK_CITY, expand_region_tokens
+from tools.banya_schema_mvp import ensure_banya_mvp_schema
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_URLS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+)
 UA = "GdeParBot/1.0 (+https://gdepar.ru; info@gdepar.ru)"
 TIMEOUT = 90
+OVERPASS_RETRY_WAITS = (20, 45, 90, 120, 180, 240)
 
 # Что считаем «баней» в OSM:
 #   leisure=sauna             — финские/русские сауны и бани (основной тег)
@@ -79,12 +85,41 @@ def slugify_ru(title: str, city: str | None, osm_id: int) -> str:
     return f"{base}-{osm_id % 1_000_000:06d}"
 
 
+def _overpass_http_error(exc: urllib.error.HTTPError) -> bool:
+    return exc.code in (429, 502, 503, 504)
+
+
 def query_overpass(iso: str) -> list[dict]:
     q = OVERPASS_QUERY_TEMPLATE.format(iso=iso, timeout=TIMEOUT)
     body = urllib.parse.urlencode({"data": q}).encode()
-    req = urllib.request.Request(OVERPASS_URL, data=body, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=TIMEOUT + 10) as r:
-        return json.loads(r.read()).get("elements", [])
+    last_err: Exception | None = None
+    for attempt, wait in enumerate(OVERPASS_RETRY_WAITS):
+        url = OVERPASS_URLS[attempt % len(OVERPASS_URLS)]
+        req = urllib.request.Request(url, data=body, headers={"User-Agent": UA})
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT + 10) as r:
+                return json.loads(r.read()).get("elements", [])
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if _overpass_http_error(e) and attempt + 1 < len(OVERPASS_RETRY_WAITS):
+                print(
+                    f"  Overpass {e.code} ({url}), пауза {wait} с…",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                time.sleep(wait)
+                continue
+            raise
+        except urllib.error.URLError as e:
+            last_err = e
+            if attempt + 1 < len(OVERPASS_RETRY_WAITS):
+                print(f"  Overpass сеть ({e}), пауза {wait} с…", file=sys.stderr, flush=True)
+                time.sleep(wait)
+                continue
+            raise
+    if last_err:
+        raise last_err
+    return []
 
 
 def osm_to_spot(el: dict, fallback_city: str | None, region_code: str) -> dict | None:
@@ -280,7 +315,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="OSM-парсер общественных бань.")
     parser.add_argument(
         "--regions", default="MO,SPB",
-        help="через запятую: MO,SPB,MSK,LO,CFO,GDEPAR или код области (по умолчанию MO,SPB)",
+        help="через запятую: MO,SPB, EUROPE_RU, CFO, NW, VOLGA или код области (по умолчанию MO,SPB)",
     )
     parser.add_argument("--dry", action="store_true", help="только показать, не писать в БД")
     parser.add_argument("--limit", type=int, default=0, help="ограничить число объектов на регион (для отладки)")
@@ -297,16 +332,20 @@ def main(argv: list[str]) -> int:
     con.execute("PRAGMA busy_timeout=30000")
     if not args.dry:
         ensure_schema(con)
+        ensure_banya_mvp_schema(con)
 
-    total = {"queried": 0, "kept": 0, "created": 0, "updated": 0, "skipped": 0}
+    total = {"queried": 0, "kept": 0, "created": 0, "updated": 0, "skipped": 0, "failed_regions": 0}
+    failed: list[str] = []
     for rcode in regs:
         iso, label = REGIONS[rcode]
         fallback_city = REGION_FALLBACK_CITY.get(rcode)
-        print(f"\n=== {label}  (ISO {iso}) ===")
+        print(f"\n=== {label}  (ISO {iso}) ===", flush=True)
         try:
             elements = query_overpass(iso)
         except Exception as e:
-            print(f"  Overpass упал: {e}", file=sys.stderr)
+            print(f"  Overpass упал: {e}", file=sys.stderr, flush=True)
+            total["failed_regions"] += 1
+            failed.append(rcode)
             continue
         total["queried"] += len(elements)
         if args.limit:
@@ -322,21 +361,26 @@ def main(argv: list[str]) -> int:
                 continue
             outcome = upsert(con, spot)
             total[outcome] += 1
-        time.sleep(3.0)  # Пауза между областями (Overpass 429/504)
+        time.sleep(8.0)  # Пауза между областями (Overpass 429/504)
+
+    if failed:
+        print(f"\n--- Пропущенные регионы ({len(failed)}): {','.join(failed)} ---", flush=True)
+        print("  Повтор: python tools/parsers/osm_banyas.py --regions " + ",".join(failed), flush=True)
 
     if not args.dry:
         con.commit()
     con.close()
 
-    print("\n--- ИТОГ ---")
-    print(f"  Overpass отдал:  {total['queried']}")
-    print(f"  Подошло:         {total['kept']}")
-    print(f"  Пропущено:       {total['skipped']}")
+    print("\n--- ИТОГ ---", flush=True)
+    print(f"  Overpass отдал:  {total['queried']}", flush=True)
+    print(f"  Подошло:         {total['kept']}", flush=True)
+    print(f"  Пропущено:       {total['skipped']}", flush=True)
     if not args.dry:
-        print(f"  Новых записей:   {total['created']}")
-        print(f"  Обновлено:       {total['updated']}")
+        print(f"  Новых записей:   {total['created']}", flush=True)
+        print(f"  Обновлено:       {total['updated']}", flush=True)
+        print(f"  Регионов с ошибкой: {total['failed_regions']}", flush=True)
     else:
-        print("  (dry-run: ничего не писали в БД)")
+        print("  (dry-run: ничего не писали в БД)", flush=True)
     return 0
 
 

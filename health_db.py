@@ -22,12 +22,28 @@ WEIGHT_MIN_KG = 90.0
 WEIGHT_MAX_KG = 120.0
 
 STRENGTH_EXERCISES = {
-    "bench_press": "Жим лёжа",
+    # Программа 2026 (ключи как в шаблоне)
+    "жим_штанги_лежа": "Жим штанги лёжа",
+    "тяга_гантели_с_упором_на_скамью": "Тяга гантели с упором на скамью",
+    "жим_ногами": "Жим ногами",
+    "сведение_рук_в_тренажере": "Сведение рук в тренажёре",
+    "разведение_рук_в_тренажере_на_плечи": "Разведение рук в тренажёре на плечи",
+    "трицепс_стоя_в_тренажере": "Трицепс стоя в тренажёре",
+    "тяга_в_тренажере_сидя": "Тяга в тренажёре сидя",
+    "сгибание_ног_в_тренажере": "Сгибание ног в тренажере",
+    "разведение_гантелей_на_наклонной_скамье": "Разведение гантелей на наклонной скамье",
+    "бицепс_сидя_на_наклонной_скамье": "Бицепс сидя на наклонной скамье",
+    "отдых": "Отдых",
+    # Совместимость со старым дневником
+    "bench_press": "Жим штанги лёжа",
     "leg_press": "Жим ногами",
     "row": "Тяга в наклоне",
     "biceps": "Бицепс",
     "triceps": "Трицепс",
+    "leg_curl": "Сгибание ног в тренажере",
 }
+
+HEALTH_SETTING_KEYS = ("remind_measure_sunday", "remind_measure_hour")
 
 
 def get_connection() -> sqlite3.Connection:
@@ -107,11 +123,26 @@ def init_db() -> None:
             value TEXT,
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS health_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
         """
     )
+    _ensure_health_settings_defaults(conn)
     _ensure_activities_external_id(conn)
     conn.commit()
     conn.close()
+
+
+def _ensure_health_settings_defaults(conn: sqlite3.Connection) -> None:
+    defaults = {"remind_measure_sunday": "1", "remind_measure_hour": "10"}
+    for key, val in defaults.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO health_settings (key, value) VALUES (?, ?)",
+            (key, val),
+        )
 
 
 def _ensure_activities_external_id(conn: sqlite3.Connection) -> None:
@@ -386,6 +417,239 @@ def add_strength_log(
     row_id = cur.lastrowid
     conn.close()
     return int(row_id)
+
+
+def _measurement_dict(row: sqlite3.Row) -> dict[str, Any]:
+    return dict(row)
+
+
+def _strength_dict(row: sqlite3.Row) -> dict[str, Any]:
+    d = dict(row)
+    d["exercise_label"] = STRENGTH_EXERCISES.get(d.get("exercise_key", ""), d.get("exercise_key"))
+    return d
+
+
+def list_measurements(*, limit: int = 100) -> list[dict[str, Any]]:
+    init_db()
+    seed_measurements_if_empty()
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM measurements ORDER BY measured_on DESC, id DESC LIMIT ?",
+        (max(1, min(limit, 500)),),
+    ).fetchall()
+    conn.close()
+    return [_measurement_dict(r) for r in rows]
+
+
+def get_measurement(measurement_id: int) -> dict[str, Any] | None:
+    init_db()
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM measurements WHERE id=?", (measurement_id,)).fetchone()
+    conn.close()
+    return _measurement_dict(row) if row else None
+
+
+def update_measurement(measurement_id: int, **fields: Any) -> None:
+    allowed = {"measured_on", "weight_kg", "waist_cm", "biceps_r_cm", "biceps_l_cm", "legs_cm", "note"}
+    parts = {k: v for k, v in fields.items() if k in allowed and v is not None}
+    if not parts:
+        return
+    init_db()
+    conn = get_connection()
+    cols = ", ".join(f"{k}=?" for k in parts)
+    conn.execute(
+        f"UPDATE measurements SET {cols} WHERE id=?",
+        (*parts.values(), measurement_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_measurement(measurement_id: int) -> bool:
+    init_db()
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM measurements WHERE id=?", (measurement_id,))
+    conn.commit()
+    deleted = cur.rowcount > 0
+    conn.close()
+    return deleted
+
+
+def list_strength_logs(
+    *,
+    limit: int = 100,
+    logged_on: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[dict[str, Any]]:
+    init_db()
+    conn = get_connection()
+    if logged_on:
+        rows = conn.execute(
+            "SELECT * FROM strength_logs WHERE logged_on=? ORDER BY id",
+            (logged_on,),
+        ).fetchall()
+    elif from_date and to_date:
+        rows = conn.execute(
+            "SELECT * FROM strength_logs WHERE logged_on BETWEEN ? AND ? ORDER BY logged_on DESC, id DESC LIMIT ?",
+            (from_date, to_date, max(1, min(limit, 500))),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM strength_logs ORDER BY logged_on DESC, id DESC LIMIT ?",
+            (max(1, min(limit, 500)),),
+        ).fetchall()
+    conn.close()
+    return [_strength_dict(r) for r in rows]
+
+
+def delete_program_logs_for_date(logged_on: str) -> int:
+    """Remove auto-saved program sets for a date (note: 'подход N/M')."""
+    init_db()
+    conn = get_connection()
+    cur = conn.execute(
+        "DELETE FROM strength_logs WHERE logged_on=? AND note LIKE 'подход %'",
+        (logged_on,),
+    )
+    conn.commit()
+    n = cur.rowcount
+    conn.close()
+    return n
+
+
+def get_strength_log(workout_id: int) -> dict[str, Any] | None:
+    init_db()
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM strength_logs WHERE id=?", (workout_id,)).fetchone()
+    conn.close()
+    return _strength_dict(row) if row else None
+
+
+def update_strength_log(workout_id: int, **fields: Any) -> None:
+    allowed = {"logged_on", "exercise_key", "weight_kg", "reps", "sets", "note"}
+    parts = {k: v for k, v in fields.items() if k in allowed and v is not None}
+    if "exercise_key" in parts and parts["exercise_key"] not in STRENGTH_EXERCISES:
+        raise ValueError(f"Unknown exercise: {parts['exercise_key']}")
+    if not parts:
+        return
+    init_db()
+    conn = get_connection()
+    cols = ", ".join(f"{k}=?" for k in parts)
+    conn.execute(f"UPDATE strength_logs SET {cols} WHERE id=?", (*parts.values(), workout_id))
+    conn.commit()
+    conn.close()
+
+
+def delete_strength_log(workout_id: int) -> bool:
+    init_db()
+    conn = get_connection()
+    cur = conn.execute("DELETE FROM strength_logs WHERE id=?", (workout_id,))
+    conn.commit()
+    deleted = cur.rowcount > 0
+    conn.close()
+    return deleted
+
+
+def get_health_settings() -> dict[str, Any]:
+    init_db()
+    conn = get_connection()
+    rows = conn.execute("SELECT key, value FROM health_settings").fetchall()
+    conn.close()
+    out: dict[str, Any] = {}
+    for r in rows:
+        key, val = r["key"], r["value"]
+        if key == "remind_measure_sunday":
+            out[key] = val in ("1", "true", "True")
+        elif key == "remind_measure_hour":
+            out[key] = int(val)
+        else:
+            out[key] = val
+    return out
+
+
+def update_health_settings(**fields: Any) -> dict[str, Any]:
+    init_db()
+    conn = get_connection()
+    for key in HEALTH_SETTING_KEYS:
+        if key not in fields or fields[key] is None:
+            continue
+        val = fields[key]
+        if key == "remind_measure_sunday":
+            val = "1" if val else "0"
+        else:
+            val = str(int(val))
+        conn.execute(
+            "INSERT INTO health_settings (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, val),
+        )
+    conn.commit()
+    conn.close()
+    return get_health_settings()
+
+
+def health_summary() -> dict[str, Any]:
+    init_db()
+    conn = get_connection()
+    m_count = conn.execute("SELECT COUNT(*) FROM measurements").fetchone()[0]
+    w_count = conn.execute("SELECT COUNT(*) FROM strength_logs").fetchone()[0]
+    latest = conn.execute(
+        "SELECT measured_on, weight_kg, waist_cm FROM measurements ORDER BY measured_on DESC, id DESC LIMIT 1"
+    ).fetchone()
+    conn.close()
+    summary = latest_measurement_summary()
+    out = {
+        "measurements_count": int(m_count),
+        "workouts_count": int(w_count),
+        "exercises": STRENGTH_EXERCISES,
+        "latest": dict(latest) if latest else None,
+        "summary": summary,
+    }
+    out.update(get_health_settings())
+    return out
+
+
+def health_stats(period: str = "month") -> dict[str, Any]:
+    from datetime import timedelta
+
+    init_db()
+    days = {"week": 7, "month": 31, "quarter": 92}.get(period, 31)
+    since = (date.today() - timedelta(days=days)).isoformat()
+    conn = get_connection()
+    workouts = conn.execute(
+        "SELECT COUNT(*) FROM strength_logs WHERE logged_on >= ?", (since,)
+    ).fetchone()[0]
+    measurements = conn.execute(
+        "SELECT COUNT(*) FROM measurements WHERE measured_on >= ?", (since,)
+    ).fetchone()[0]
+    conn.close()
+    return {
+        "period": period,
+        "since": since,
+        "workouts": int(workouts),
+        "measurements": int(measurements),
+    }
+
+
+def workout_exercise_progress(exercise_key: str, *, limit: int = 20) -> list[dict[str, Any]]:
+    if exercise_key not in STRENGTH_EXERCISES:
+        raise ValueError(f"Unknown exercise: {exercise_key}")
+    init_db()
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT logged_on, weight_kg, reps, sets
+        FROM strength_logs
+        WHERE exercise_key=?
+        ORDER BY logged_on DESC, id DESC
+        LIMIT ?
+        """,
+        (exercise_key, max(1, min(limit, 200))),
+    ).fetchall()
+    conn.close()
+    points = [dict(r) for r in rows]
+    points.reverse()
+    return points
 
 
 def load_measurements_df() -> pd.DataFrame:

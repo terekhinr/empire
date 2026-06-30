@@ -63,6 +63,49 @@ def test_metrika_stub_without_id(client):
     assert "pensionMetrikaReach" in r.text
 
 
+def test_gift_page_and_api(client):
+    r = client.get("/gift")
+    assert r.status_code == 200
+    assert "gift-form" in r.text
+    assert "5 принципов" in r.text
+
+    r_bad = client.post(
+        "/api/pension/gift",
+        json={"email": "not-an-email", "consent": True},
+    )
+    assert r_bad.status_code in (400, 422)
+
+    r_no_consent = client.post(
+        "/api/pension/gift",
+        json={"email": "gift@example.com", "consent": False},
+    )
+    assert r_no_consent.status_code == 400
+
+    r_ok = client.post(
+        "/api/pension/gift",
+        json={
+            "email": "gift@example.com",
+            "consent": True,
+            "utm_source": "tg_seed",
+            "utm_campaign": "aug26_gift",
+        },
+    )
+    assert r_ok.status_code == 200
+    data = r_ok.json()
+    assert data["ok"] is True
+    assert "download_url" in data
+    assert data["waitlist_count"] == 1
+
+
+def test_sitemap_includes_gift(client):
+    book = Path(__file__).resolve().parents[1] / "data" / "book" / "napensiyu_nikogda.json"
+    if not book.is_file():
+        pytest.skip("book json missing")
+    r = client.get("/sitemap.xml")
+    assert r.status_code == 200
+    assert "/gift" in r.text
+
+
 def test_about_telegram_link_when_env_empty(tmp_path, monkeypatch):
     """Пустой PENSION_TG_URL в .env не должен давать href=\"\"."""
     db = tmp_path / "empire.db"

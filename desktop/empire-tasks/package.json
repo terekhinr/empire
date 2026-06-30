@@ -1,0 +1,20 @@
+{
+  "name": "empire-tasks",
+  "version": "1.0.0",
+  "description": "Empire — задачи, здоровье, программа тренировок",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "ru.neverretire.empire",
+    "productName": "Empire",
+    "directories": { "output": "dist" },
+    "win": { "target": ["portable"] }
+  }
+}

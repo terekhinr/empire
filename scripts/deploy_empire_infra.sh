@@ -13,14 +13,19 @@ echo "==> pytest (empire core)"
 
 echo "==> systemd units"
 for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot \
-  empire-vps-backup-yandex empire-main-py-guard; do
+  empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline; do
   sudo cp "deploy/${u}.service" "/etc/systemd/system/${u}.service"
 done
-for t in empire-vps-backup-yandex empire-main-py-guard; do
+for t in empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline; do
   sudo cp "deploy/${t}.timer" "/etc/systemd/system/${t}.timer"
 done
 sudo systemctl daemon-reload
-sudo systemctl enable empire-vps-backup-yandex.timer empire-main-py-guard.timer 2>/dev/null || true
+sudo systemctl enable empire-vps-backup-yandex.timer empire-main-py-guard.timer empire-daily-audit.timer empire-night-pipeline.timer 2>/dev/null || true
+sudo systemctl disable empire-disk-cleanup-night.timer empire-vps-backup-yandex.timer 2>/dev/null || true
+if [[ -x ./venv/bin/pip ]]; then
+  ./venv/bin/pip install -q pip-audit || true
+fi
+chmod +x scripts/empire_daily_audit.sh 2>/dev/null || true
 
 echo "==> backup cron snippet (manual merge if duplicate)"
 CRON_LINE="15 3 * * * root $ROOT/scripts/backup_empire_db.sh"

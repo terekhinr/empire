@@ -2,19 +2,11 @@
   "dns": {
     "servers": [
       {
-        "type": "udp",
-        "tag": "dns-yandex",
-        "server": "77.88.8.8"
-      },
-      {
-        "type": "udp",
-        "tag": "dns-cloudflare",
-        "server": "1.1.1.1"
+        "type": "local",
+        "tag": "local-dns"
       }
     ],
-    "final": "dns-yandex",
-    "strategy": "ipv4_only",
-    "disable_cache": false,
-    "disable_expire": false
+    "final": "local-dns",
+    "strategy": "ipv4_only"
   }
 }

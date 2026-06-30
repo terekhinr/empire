@@ -1,10 +1,37 @@
-# Скопируйте в C:\Users\<вы>\.ssh\config (или допишите блок Host).
-# Cursor: Remote-SSH → Connect to Host → empire-vps
+# Cursor Remote SSH — подключение к Empire VPS
+# Файл подхватывается из .vscode/settings.json (remote.SSH.configFile).
+#
+# Рекомендуется: empire-vps-ts (Tailscale, минует VPN/xray и NAT Keenetic).
+# Cursor: Remote-SSH → Connect to Host → empire-vps-ts
 
+# --- Рекомендуется: Tailscale (стабильнее) ---
+Host empire-vps-ts
+    HostName 100.84.19.35
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 30
+    ServerAliveCountMax 20
+    TCPKeepAlive yes
+    ConnectTimeout 60
+    Compression yes
+
+# --- Прямой IP (если Tailscale недоступен) ---
 Host empire-vps
     HostName 193.233.232.48
     User root
     IdentityFile ~/.ssh/id_ed25519
     ServerAliveInterval 30
-    ServerAliveCountMax 6
+    ServerAliveCountMax 20
     TCPKeepAlive yes
+    ConnectTimeout 60
+    Compression yes
+
+# MagicDNS (если Tailscale включён на ПК)
+Host moderate-amethys
+    HostName moderate-amethys.tailed4746.ts.net
+    User root
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 30
+    ServerAliveCountMax 20
+    TCPKeepAlive yes
+    ConnectTimeout 60

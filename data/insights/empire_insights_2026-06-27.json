@@ -1,0 +1,63 @@
+{
+  "generated_at": "2026-06-27T22:10:10",
+  "tasks": {
+    "tasks_todo": 351,
+    "tasks_doing": 0,
+    "tasks_done": 17,
+    "goals_active": 1,
+    "projects_active": 27,
+    "checklists_active": 40,
+    "overdue_count": 12,
+    "overdue_sample": [
+      {
+        "title": "ТГ партизанщина Зарегистрировать новый ТГ на другую симку",
+        "due_date": "2026-05-17"
+      },
+      {
+        "title": "Нужно купить футболок как уже куплены ТВОЕ черные с пуговицами полусинтетика",
+        "due_date": "2026-05-17"
+      },
+      {
+        "title": "ХА перешить планшет",
+        "due_date": "2026-05-17"
+      },
+      {
+        "title": "Разобрать с нейросетью вопрос с возвратом кроссовок",
+        "due_date": "2026-05-17"
+      },
+      {
+        "title": "Таскать у конкурентов ТГ видео годовалой давности и постить у себя",
+        "due_date": "2026-05-17"
+      }
+    ]
+  },
+  "health": {
+    "latest_weight_kg": 111.1,
+    "weight_change_kg": null,
+    "measurements_count": 62,
+    "workouts_total": 21,
+    "workouts_last_31d": null
+  },
+  "pipeline": {
+    "title": "Empire Pipeline 2026 · Итоговый %",
+    "items_done": 0,
+    "items_total": 24,
+    "percent_simple": 0,
+    "percent_weighted": 0
+  },
+  "checklists_active": 40,
+  "empire_events_7d": {
+    "daily_snapshot": 96,
+    "garden_bot_promo_draft": 1,
+    "gdepar_topic_family_penalty": 5,
+    "neurocomment_planned": 205,
+    "pension_waitlist_signup": 3,
+    "tg_promo_map_draft": 1
+  },
+  "conclusions": [
+    "Просрочено 12 задач — перенесите даты или закройте неактуальные.",
+    "Пайплайн Empire 0% по весам — фокус на ближайшую веху (см. чеклист Pipeline 2026).",
+    "За месяц нет силовых — откройте «Программа» и сохраните хотя бы одну тренировку."
+  ],
+  "llm_used": false
+}

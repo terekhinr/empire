@@ -1,0 +1,82 @@
+{
+  "_comment": "Стили Nano Banana (gemini-2.5-flash-image) для курированных постов. Сцена + style_suffix + negative.",
+  "defaults": {
+    "model": "gemini-2.5-flash-image",
+    "image_size": "1K",
+    "format": "jpeg",
+    "jpeg_quality": 92
+  },
+  "channels": {
+    "stern": {
+      "label": "Снегири / Ян Штерн",
+      "aspect_ratio": "4:3",
+      "media_dir": "media/stern/topics",
+      "style_suffix": "muted natural colors, soft window light, minimalist modern apartment or home office, documentary lifestyle photography, shallow depth of field, calm mood, no neon, no gym bro aesthetic",
+      "negative": "text, watermark, logo, caption, neon colors, bodybuilder, crossfit poster, smiling influencer, stock photo cliché, oversaturated, cartoon, anime, visible face, portrait, selfie",
+      "scene_rules": "cast iron kettlebell 16kg may appear as prop; never show faces; office chair, laptop, wooden floor acceptable",
+      "evening_bind": "canonical",
+      "morning_bind": "post",
+      "image_provider": "fal"
+    },
+    "gdepar": {
+      "label": "Где Пар? / Михалыч ↔ Кириллыч",
+      "aspect_ratio": "4:3",
+      "media_dir": "media/gdepar/topics",
+      "style_suffix": "authentic Russian wooden banya interior, soft steam haze, warm amber tungsten light, documentary still life, tactile wood grain, humble not luxury spa",
+      "negative": "text, watermark, logo, neon, modern gym, swimming pool, Finnish sauna brand, faces close-up, shirtless people, cartoon",
+      "scene_rules": "no faces; focus on objects: venik, stove, stones, bucket, wooden bench, tea glass",
+      "bind": "topic_id",
+      "image_provider": "fal-nb"
+    },
+    "garden": {
+      "label": "Сад / огород",
+      "aspect_ratio": "4:3",
+      "media_dir": "media/garden/topics",
+      "style_suffix": "Central Russia dacha garden, overcast or golden hour, practical gardener aesthetic, soil and plants, documentary photo",
+      "negative": "text, watermark, tropical paradise, fantasy garden, faces, cartoon",
+      "scene_rules": "no faces; tools, seedlings, greenhouse, moon chart on paper ok",
+      "bind": "topic_id",
+      "_phase": 2
+    },
+    "lenin": {
+      "label": "Ленин / революционный календарь",
+      "aspect_ratio": "4:3",
+      "media_dir": "media/lenin/topics",
+      "style_suffix": "historical documentary, sepia or muted archival tone, 1900s Russia context, museum quality, respectful not propaganda poster",
+      "negative": "text, watermark, modern objects, meme, cartoon, caricature, faces identifiable",
+      "scene_rules": "prefer objects and wide scenes; Commons-like editorial",
+      "bind": "topic_id",
+      "_phase": 2
+    },
+    "pension": {
+      "label": "Пенсия / длинные тексты",
+      "aspect_ratio": "16:9",
+      "media_dir": "media/pension/topics",
+      "style_suffix": "quiet Russian provincial life, contemplative, soft overcast light, literary mood, 35mm film grain subtle",
+      "negative": "text, watermark, stock smile, neon, cartoon",
+      "scene_rules": "no faces; bench, tea, old books, window light",
+      "bind": "topic_id",
+      "_phase": 2
+    },
+    "gdepar_classic_banya": {
+      "label": "Где Пар? / Классическая баня (15:00)",
+      "aspect_ratio": "4:3",
+      "media_dir": "media/gdepar/classic",
+      "image_source": "wikipedia_commons_portrait",
+      "skip_nanobanana": true,
+      "note": "160 цитат в gdepar_classic_banya.json; портреты уже скачаны; не генерировать AI"
+    }
+  },
+  "gdepar_dir_scenes": {
+    "TR": "birch or oak venik on worn wooden bench, towel nearby, steam in background",
+    "TE": "banya stove with smooth river stones, faint ember glow, wooden wall",
+    "NW": "empty wooden sauna bench, bucket and ladle, beginner-friendly calm atmosphere",
+    "BT": "banya dressing room bench, slippers, simple towel stack, everyday not spa",
+    "PS": "steamy sauna interior wide angle, no people, wooden walls",
+    "MP": "smartphone on wooden table showing blurred map app screen without readable text, tea glass",
+    "GN": "glass mug herbal tea and water bottle on bench, steam soft",
+    "FL": "old wooden banya exterior, snow or birch trees, folklore mood without people",
+    "RC": "kvass or herbal tea in glass on wooden tray, banya rest room",
+    "BW": "wooden bathhouse facade, weekend trip mood, car parked distant blurred"
+  }
+}

@@ -49,6 +49,11 @@ except ImportError:
     gdepar_content = None  # type: ignore[assignment]
 
 try:
+    import content_p0
+except ImportError:
+    content_p0 = None  # type: ignore[assignment]
+
+try:
     import lenin_content
 except ImportError:
     lenin_content = None  # type: ignore[assignment]
@@ -158,8 +163,31 @@ class BanyaSpot(Base):
     status = Column(String, default="draft", index=True)  # 'draft' | 'published' | 'hidden'
     rating_avg = Column(String, nullable=True)   # кэш среднего рейтинга по сайтам
     reviews_total = Column(Integer, default=0)
+    price_from = Column(Integer, nullable=True)
+    price_per_hour = Column(Integer, nullable=True)
+    capacity_max = Column(Integer, nullable=True)
+    has_pool = Column(Integer, default=0)
+    has_tub = Column(Integer, nullable=True)
+    own_venik_allowed = Column(Integer, nullable=True)
+    bath_style = Column(String, nullable=True)
+    district = Column(String, nullable=True)
+    partner_tier = Column(String, default="free")
+    owner_account_id = Column(Integer, nullable=True)
+    map_views = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BanyaLead(Base):
+    __tablename__ = "banya_leads"
+    id = Column(Integer, primary_key=True)
+    spot_id = Column(Integer, index=True, nullable=False)
+    lead_type = Column(String, index=True, nullable=False)
+    source = Column(String, default="site")
+    session_id = Column(String, nullable=True)
+    referrer = Column(String, nullable=True)
+    payload_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Publication(Base):
@@ -362,12 +390,12 @@ PERSONAS = {
     "gdepar": {
         "model": "deepseek/deepseek-chat",
         "role": (
-            "Михалыч — банщик с 30-летним стажем, рассказывает Кириллычу по делу. "
-            "Простой разговорный русский, без проповеди и патетики. "
+            "Дуэт банщиков: Михалыч (30 лет в бане) и Кириллыч (стройка, печи, цифры). "
+            "Михалыч — пар, веник, этикет, быт; Кириллыч — вентиляция, материалы, экономика. "
+            "Иногда короткий спор, всегда по делу. Простой русский, без проповеди. "
             "Не использует слова: 'священнодействие', 'братство', 'варварство', 'обновлённый', "
             "'загоняй поколения', 'крестись', 'выгоняй из себя'. "
-            "Не пишет про 'душу' и 'равенство'. Говорит про температуру, влажность, веник, "
-            "заходы, подготовку, типичные ошибки. Подначивает Кириллыча по-доброму, без морали."
+            "Не пишет про 'душу' и 'равенство'. TG дополняет gdepar.ru — карта и отзывы на сайте."
         ),
         # Жёстко фиксируем визуал русской бани и БАННЫЙ веник (venik из берёзы/дуба),
         # запрещаем хозяйственную метлу/щётку. Английский — для fal/flux.
@@ -591,6 +619,15 @@ def _hashtag_from_rubric(rubric_plain: str | None) -> str | None:
     return "#" + token
 
 
+_HASHTAG_LIMIT_BY_PERSONA = {
+    "stern": 3,
+    "gdepar": 4,
+    "lenin": 3,
+    "garden": 3,
+    "pension": 3,
+}
+
+
 def _merge_hashtag_line(
     peeled_tags: list[str],
     p_key: str,
@@ -622,7 +659,8 @@ def _merge_hashtag_line(
         push(t)
     for t in _default_hashtag_line(p_key, None).split():
         push(t)
-    return " ".join(ordered[:8])
+    limit = _HASHTAG_LIMIT_BY_PERSONA.get(p_key, 6)
+    return " ".join(ordered[:limit])
 
 
 def _default_hashtag_line(p_key: str, rubric_plain: str | None) -> str:
@@ -631,16 +669,17 @@ def _default_hashtag_line(p_key: str, rubric_plain: str | None) -> str:
     if rubric_tag:
         parts.append(rubric_tag)
     tail = {
-        "stern": ["#тренировки", "#спина", "#здоровье"],
-        "garden": ["#огород", "#дача", "#урожай"],
-        "gdepar": ["#баня", "#парение", "#здоровье"],
-        "lenin": ["#история", "#мысль", "#ленин"],
-        "pension": ["#финансы", "#мысль", "#экономика"],
+        "stern": ["#снегири"],
+        "garden": ["#огород", "#дача"],
+        "gdepar": ["#баня", "#гдепар"],
+        "lenin": ["#история", "#ленин"],
+        "pension": ["#финансы", "#мысль"],
     }.get(p_key, ["#контент"])
+    limit = _HASHTAG_LIMIT_BY_PERSONA.get(p_key, 6)
     for t in tail:
         if t.lower() not in [p.lower() for p in parts]:
             parts.append(t)
-    return " ".join(parts[:6])
+    return " ".join(parts[:limit])
 
 
 def build_pension_video_crosspost_block() -> str:
@@ -720,6 +759,8 @@ def finalize_public_post(
         video_block = build_pension_video_crosspost_block()
 
     body, peeled_tags = _peel_hashtag_suffix_lines(t)
+    if p_key == "gdepar" and gdepar_content:
+        body = gdepar_content.strip_kirilych_opening(body)
     tag_line = _merge_hashtag_line(
         peeled_tags, p_key, rubric_plain, topic_raw=topic_raw or rubric_plain
     )
@@ -983,6 +1024,41 @@ async def fetch_wikipedia_image(query, d_id):
             logger.warning(f"[lenin] wiki image download error: {e}")
 
     return _pick_random_lenin_from_pool(d_id)
+
+
+async def _lenin_wikipedia_image(
+    *,
+    prompt: str,
+    d_id: int,
+    topic_raw: str | None = None,
+    topic_hint: str | None = None,
+) -> str | None:
+    """Wikimedia для Ленина: факт из слота → LLM-промпт → портрет Ленина."""
+    style_prefix = (PERSONAS.get("lenin") or {}).get("style", "") + "."
+    queries: list[str] = []
+
+    if topic_hint and topic_hint.strip():
+        queries.append(topic_hint.strip())
+    if topic_raw and "[#Вэтотдень]" in topic_raw:
+        headline = re.sub(r"^\[#\w+\]\s*", "", topic_raw).strip()
+        if headline:
+            queries.insert(0, headline)
+    art = (prompt or "").replace(style_prefix, "").strip()
+    if art and art.lower() not in {q.lower() for q in queries}:
+        queries.append(art)
+    queries.append("Ленин Владимир Ильич")
+
+    seen: set[str] = set()
+    for q in queries:
+        key = q.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        img = await fetch_wikipedia_image(q, d_id)
+        if img:
+            return img
+    return None
+
 
 async def fetch_llm_response(
     model,
@@ -1313,6 +1389,8 @@ def _selfcritique_findings(p_key: str, text: str) -> list[str]:
     if p_key == "gdepar" and gdepar_content:
         findings.extend(gdepar_content.cliche_findings(text))
 
+    findings.extend(content_p0.p0_findings(text, p_key) if content_p0 else [])
+
     # Сразу несколько «канцелярских» оборотов.
     for ph in ("в данной статье", "в этой статье", "в этом посте", "дорогие друзья", "уважаемые читатели"):
         if ph in low:
@@ -1589,7 +1667,13 @@ def _auto_publish_reason_blocked(
         return "no_tg_target"
     if not text or text.startswith("🛑") or "Ошибка ИИ" in text or text.startswith("Ошибка"):
         return "bad_text"
-    if rules.get("require_image", True) and (not img_f or not os.path.exists(img_f)):
+    p0 = content_p0.p0_findings(text, p_key) if content_p0 else []
+    if p0:
+        return f"p0:{p0[0][:60]}"
+    if rules.get("require_video"):
+        if not _is_video_path(img_f) or not os.path.exists(img_f):
+            return "no_video"
+    elif rules.get("require_image", True) and (not img_f or not os.path.exists(img_f)):
         return "no_image"
     if rules.get("require_zero_regen", True) and (draft.regen_count or 0) > 0:
         return "regen>0"
@@ -1640,6 +1724,12 @@ def _publish_error_hint(exc: Exception, *, persona_key: str, tg_target: str | No
     return "Повторите позже или проверьте логи empire_main на VPS."
 
 
+def _is_video_path(path: str | None) -> bool:
+    if not path:
+        return False
+    return path.lower().endswith((".mp4", ".mov", ".mkv", ".webm", ".m4v"))
+
+
 async def _send_draft_to_channel(draft: PostDraft) -> tuple[bool, str | None, int | None]:
     """Отправить черновик в целевой Telegram-канал. (ok, error_hint, message_id)."""
     targets = _platform_targets().get(draft.persona_key, {})
@@ -1657,7 +1747,15 @@ async def _send_draft_to_channel(draft: PostDraft) -> tuple[bool, str | None, in
     cap_limit = 1024 if draft.persona_key == "stern" else 1000
     try:
         message_id: int | None = None
-        if path and os.path.exists(path):
+        if path and os.path.exists(path) and _is_video_path(path):
+            caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
+            msg = await bot.send_video(
+                tg_id, video=FSInputFile(path), caption=caption, parse_mode="HTML"
+            )
+            message_id = msg.message_id
+            if continuation:
+                await bot.send_message(tg_id, continuation, parse_mode="HTML")
+        elif path and os.path.exists(path):
             caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
             msg = await bot.send_photo(
                 tg_id, photo=FSInputFile(path), caption=caption, parse_mode="HTML"
@@ -1708,6 +1806,8 @@ async def _try_auto_publish_scheduled(
             import stern_week_arc as swa
 
             swa.mark_post_published(d_id, msg_id)
+        _record_stern_technique_if_published(draft)
+        _record_stern_comic_if_published(draft)
     logger.info(f"[autopublish] published #{d_id} {p_key} to channel")
     return True
 
@@ -2063,6 +2163,7 @@ async def generate_draft_content(p_key, topic_raw, *, rubric_seed: dict | None =
             "'обновлённый', 'душа', 'загоняй поколения', 'крестись', 'выгоняй из себя', 'хрень'. "
             "Не делай морализаторских выводов и философских концовок. Никаких 'выходишь обновлённым'. "
             "Запрещены лекции: «не геройствуй», «пульс 140 — выходи», «слушай, Кириллыч».\n"
+            "НЕ начинай с шаблона «Кириллыч, слушай/смотри» — допустим диалог <b>Михалыч:</b> / <b>Кириллыч:</b>.\n"
             "АНТИ-КЛИШЕ (не повторяй, если тема не про это напрямую): «тишина в парилке» как главный тезис; "
             "совет «лезь на верхнюю полку»; «замочи веник на 15 минут»; связка алкоголь+давление+сердце в одном посте.\n"
             "Что должно быть в посте: конкретика по ТЕМЕ слота — инженерия, рецепт, история, литература и т.д. "
@@ -2082,6 +2183,12 @@ async def generate_draft_content(p_key, topic_raw, *, rubric_seed: dict | None =
             bayka_block = gdepar_content.bayka_prompt_block(topic_raw)
             if bayka_block:
                 topic_rules += bayka_block
+            duo_block = gdepar_content.duo_dialog_prompt_block(topic_raw)
+            if duo_block:
+                topic_rules += duo_block
+            banya_week_block = gdepar_content.banya_week_prompt_block(topic_raw)
+            if banya_week_block:
+                topic_rules += banya_week_block
 
     lenin_event = None
     book_chunk = None
@@ -2744,10 +2851,22 @@ async def generate_image(
     topic_hint: str | None = None,
     topic_raw: str | None = None,
 ):
-    if p_key == "pension": return None
+    if p_key == "pension":
+        return None
+    if (
+        p_key == "gdepar"
+        and gdepar_content
+        and gdepar_content.CLASSIC_RUBRIC_TAG in (topic_raw or "")
+    ):
+        logger.info("[gdepar] classic_banya: skip flux — только портрет автора")
+        return None
     if p_key == "lenin":
-        wiki_img = await fetch_wikipedia_image(prompt.replace(PERSONAS[p_key]['style']+".", ""), d_id)
-        return wiki_img
+        return await _lenin_wikipedia_image(
+            prompt=prompt,
+            d_id=d_id,
+            topic_raw=topic_raw,
+            topic_hint=topic_hint,
+        )
 
     venik_blob = _image_hints_for_venik(topic_raw, topic_hint or prompt)
     venik_canon = None
@@ -2901,15 +3020,59 @@ def _curated_rubric_requires_photo(p_key: str, topic_raw: str | None) -> bool:
     topic = topic_raw or ""
     if p_key == "gdepar" and gdepar_content and gdepar_content.CLASSIC_RUBRIC_TAG in topic:
         return True
+    if p_key == "gdepar" and "[Дуэт]" in topic:
+        return True
+    if p_key == "lenin" and "[#Вэтотдень]" in topic:
+        return True
     if p_key == "lenin" and lenin_content and lenin_content.requires_curated_photo(topic):
         return True
     if p_key == "stern" and stern_content and stern_content.is_curated_topic(topic):
+        return True
+    if p_key == "stern" and any(
+        tag in topic
+        for tag in (
+            "[Рутина]",
+            "[Психология]",
+            "[Восстановление]",
+            "[Питание]",
+            "[Срывы]",
+            "[Мотивация]",
+            "[Возрастной тренинг]",
+            "[Ответы]",
+        )
+    ):
         return True
     return False
 
 
 def _curated_has_photo(img_f: str | None) -> bool:
     return bool(img_f and os.path.exists(img_f))
+
+
+def _record_stern_technique_if_published(draft: PostDraft) -> None:
+    if draft.persona_key != "stern" or "[Техника гирь]" not in (draft.topic_raw or ""):
+        return
+    try:
+        import stern_technique as st
+
+        eid = st.entry_id_from_topic(draft.topic_raw)
+        if eid:
+            st.record_published(eid)
+    except Exception as exc:
+        logger.warning("[stern_technique] record_published: %s", exc)
+
+
+def _record_stern_comic_if_published(draft: PostDraft) -> None:
+    if draft.persona_key != "stern" or "[Комик техника]" not in (draft.topic_raw or ""):
+        return
+    try:
+        import stern_comic_video as scv
+
+        eid = scv.entry_id_from_topic(draft.topic_raw)
+        if eid:
+            scv.record_published(eid)
+    except Exception as exc:
+        logger.warning("[stern_comic_video] record_published: %s", exc)
 
 
 def _curated_body_too_short(text: str | None) -> bool:
@@ -2949,7 +3112,22 @@ async def notify_admin(d_id, p_key, text, img_f, *, topic_raw: str | None = None
     # Stern: всегда фото + caption (не разносить превью и текст без картинки).
     force_photo_caption = p_key == "stern"
 
-    if img_f and os.path.exists(img_f):
+    if img_f and os.path.exists(img_f) and _is_video_path(img_f):
+        cap_limit = 1024 if force_photo_caption else 1000
+        caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
+        if short_body:
+            from rubric_posts import MIN_CURATED_BODY_CHARS
+
+            warn = (
+                f"⚠️ Короткий пост (<{MIN_CURATED_BODY_CHARS} симв.) — проверьте цитату.\n\n"
+            )
+            caption = warn + caption
+        await bot.send_video(
+            ADMIN_ID, video=FSInputFile(img_f), caption=caption, reply_markup=kb, parse_mode="HTML"
+        )
+        if continuation:
+            await bot.send_message(ADMIN_ID, continuation, parse_mode="HTML")
+    elif img_f and os.path.exists(img_f):
         cap_limit = 1024 if force_photo_caption else 1000
         caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
         if short_body:
@@ -3293,6 +3471,44 @@ async def cmd_scout(message: types.Message):
             lines.append(f"  {n}")
 
     await message.answer("\n".join(lines), parse_mode="HTML")
+
+
+@dp.message(Command("diag"))
+async def cmd_diag(message: types.Message):
+    """Самодиагностика Empire: таймеры, аудит, бэкапы, автопочинка."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer("🩺 Запускаю самодиагностику…")
+    env = os.environ.copy()
+    env["EMPIRE_DIAG_NO_TELEGRAM"] = "1"
+    env["EMPIRE_DIAG_PRINT_REPORT"] = "1"
+    proc = await asyncio.create_subprocess_exec(
+        str(EMPIRE_ROOT / "venv/bin/python"),
+        str(EMPIRE_ROOT / "scripts/empire_diagnostics_watchdog.py"),
+        cwd=str(EMPIRE_ROOT),
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=180)
+    except asyncio.TimeoutError:
+        proc.kill()
+        await message.answer(
+            "⏱ Таймаут 3 мин — смотри /var/log/empire/diagnostics-watchdog.log"
+        )
+        return
+    text = (stdout.decode("utf-8", errors="replace") if stdout else "").strip()
+    if not text:
+        latest = Path("/var/log/empire/diagnostics-watchdog.log")
+        if latest.is_file():
+            text = latest.read_text(encoding="utf-8", errors="replace")[-3500:]
+        else:
+            text = "Отчёт пуст — watchdog ещё не запускался."
+    max_len = 3900
+    if len(text) > max_len:
+        text = "…\n" + text[-max_len:]
+    await message.answer(text)
 
 
 @dp.message(Command("autopublish"))
@@ -4305,6 +4521,16 @@ async def cb_send(callback: CallbackQuery):
                     "Рубрика: нужна картинка. Prefetch на сервере, затем approve.",
                     show_alert=True,
                 )
+            p0 = (
+                content_p0.p0_findings(draft.text_content or "", draft.persona_key)
+                if content_p0
+                else []
+            )
+            if p0:
+                return await callback.answer(
+                    f"P0 брак — не публиковать:\n{p0[0][:180]}",
+                    show_alert=True,
+                )
             ok, err_hint, msg_id = await _send_draft_to_channel(draft)
             if ok:
                 draft.status = "published"
@@ -4316,6 +4542,8 @@ async def cb_send(callback: CallbackQuery):
                     import stern_week_arc as swa
 
                     swa.mark_post_published(draft.id, msg_id)
+                _record_stern_technique_if_published(draft)
+                _record_stern_comic_if_published(draft)
                 await callback.answer("🚀 Опубликовано!")
                 await callback.message.edit_reply_markup(reply_markup=None)
             else:
@@ -4522,6 +4750,15 @@ async def check_scheduler():
                 continue
             topics_cfg = cfg.get("topics", {})
 
+            if p_key == "stern" and time_str == "15:00":
+                day_bucket = (
+                    topics_cfg.get(day_idx)
+                    if isinstance(topics_cfg.get(day_idx), dict)
+                    else {}
+                )
+                if time_str not in day_bucket:
+                    continue
+
             if day_idx in topics_cfg and isinstance(topics_cfg.get(day_idx), dict):
                 day_bucket = topics_cfg[day_idx]
                 if time_str in day_bucket:
@@ -4546,6 +4783,8 @@ async def check_scheduler():
 
             if prebuilt:
                 text, img_p = prebuilt, ""
+                if rubric_seed and rubric_seed.get("image_prompt_en"):
+                    img_p = str(rubric_seed["image_prompt_en"])
                 if p_key == "gdepar" and "[SPECIAL:promo_map]" in topic:
                     analytics_log_event(
                         "tg_promo_map_draft",
@@ -4575,16 +4814,27 @@ async def check_scheduler():
             )
             skip_image = (
                 (p_key == "pension" and prebuilt and "[RAW:" in (topic or ""))
+                or (p_key == "gdepar" and prebuilt and "[SPECIAL:promo_map]" in (topic or ""))
                 or (
                     p_key == "stern"
                     and (
                         (prebuilt and "[Разбор полетов]" in (topic or ""))
+                        or                         (prebuilt and "[Техника гирь]" in (topic or ""))
+                        or (prebuilt and "[Комик техника]" in (topic or ""))
                         or (stern_week_kind or "").startswith("stern_weekly")
                     )
                 )
             )
-            if prebuilt_img and os.path.exists(prebuilt_img):
-                img_f = prebuilt_img
+            if prebuilt_img:
+                _pip = (
+                    prebuilt_img
+                    if os.path.isabs(prebuilt_img)
+                    else str(EMPIRE_ROOT / prebuilt_img)
+                )
+                if os.path.exists(_pip):
+                    img_f = _pip
+                else:
+                    img_f = None
             elif skip_image:
                 img_f = None
             elif (
@@ -4601,13 +4851,34 @@ async def check_scheduler():
                     topic_raw=topic,
                 )
             else:
+                wiki_hint = img_p
+                if rubric_seed and rubric_seed.get("_kind") == "lenin_calendar":
+                    wiki_hint = (
+                        rubric_seed.get("rag_query")
+                        or rubric_seed.get("event_desc")
+                        or wiki_hint
+                    )
                 img_f = (
-                await generate_image(img_p, d_id, p_key, topic_hint=img_p, topic_raw=topic)
-                if img_p
-                else None
-            )
+                    await generate_image(
+                        img_p,
+                        d_id,
+                        p_key,
+                        topic_hint=wiki_hint,
+                        topic_raw=topic,
+                    )
+                    if img_p
+                    else None
+                )
+            if p_key == "lenin" and not img_f:
+                rag = (rubric_seed or {}).get("rag_query") if rubric_seed else None
+                if rag:
+                    img_f = await fetch_wikipedia_image(rag, d_id)
+                if not img_f:
+                    img_f = await fetch_wikipedia_image("Ленин Владимир Ильич", d_id)
             is_curated_prebuilt = (
                 (gdepar_content and gdepar_content.CLASSIC_RUBRIC_TAG in (topic or ""))
+                or "[Дуэт]" in (topic or "")
+                or (rubric_seed or {}).get("_kind") == "stern_curated"
                 or (lenin_content and lenin_content.requires_curated_photo(topic or ""))
                 or (garden_content and "[Лунный календарь]" in (topic or ""))
             )
@@ -4655,7 +4926,12 @@ async def check_scheduler():
             can_autopublish = bool(cfg_ap.get("enabled")) or bool(
                 isinstance(rubric_ap, dict) and rubric_ap.get("enabled")
             )
-            if curated:
+            persona_autopublish = bool(
+                ((cfg_ap.get("personas") or {}).get(p_key) or {}).get("enabled")
+            )
+            if curated and not persona_autopublish and not (
+                isinstance(rubric_ap, dict) and rubric_ap.get("enabled")
+            ):
                 await notify_admin(d_id, p_key, text, img_f, topic_raw=topic)
             elif cfg_ap.get("scheduled_only", True) and can_autopublish:
                 if await _try_auto_publish_scheduled(d_id, p_key, text, img_f, topic_raw=topic):
@@ -4706,6 +4982,15 @@ async def task_shorts_weekly():
 async def task_weekly_insights():
     """Воскресенье: файл AI Insights."""
     await enqueue_job("weekly_insights")
+
+
+async def task_daily_briefing():
+    """Ежедневно 08:00 MSK: фокус дня + чеклист + Telegram."""
+    from empire_flags import load_empire_flags
+
+    if load_empire_flags().get("stop_worker"):
+        return
+    await enqueue_job("daily_insights")
 
 
 _BANYA_DAILY_LOG = EMPIRE_ROOT / "logs" / "banya_daily_last.log"
@@ -4923,6 +5208,14 @@ async def main():
         hour=6,
         minute=0,
         id="shorts_weekly",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        task_daily_briefing,
+        "cron",
+        hour=8,
+        minute=0,
+        id="daily_briefing",
         replace_existing=True,
     )
     scheduler.add_job(

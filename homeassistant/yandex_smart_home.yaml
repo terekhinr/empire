@@ -31,6 +31,7 @@ filter:
     - script.svet_prihozhaya_vkl
     - script.svet_prihozhaya_vyk
     # --- Домофон (SmartIntercom ESPHome) ---
+    - switch.smartintercom_accept_call
     - script.empire_domofon_otkryt
     # --- Спальня (W602 LocalTuya, 2× свет) ---
     - switch.spalnya_svet
@@ -123,8 +124,12 @@ entity_config:
     name: Выключить свет прихожая
     room: Прихожая
     slow: true
+  switch.smartintercom_accept_call:
+    name: Домофон
+    room: Прихожая
+    type: devices.types.openable
   script.empire_domofon_otkryt:
-    name: Открыть домофон
+    name: Открыть дверь
     room: Прихожая
     slow: true
   switch.balkon_multivarka:

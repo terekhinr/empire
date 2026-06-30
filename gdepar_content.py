@@ -101,6 +101,10 @@ def topic_is_health_slot(topic_raw: str) -> bool:
 def preachy_findings(text: str, topic_raw: str = "") -> list[str]:
     """Нравоучительный тон — переписать в факты и цифры."""
     findings: list[str] = []
+    if kirilych_template_opening(text):
+        findings.append(
+            "шаблон «Кириллыч, слушай» в начале — начни с факта или реплики Михалыча, без обращения"
+        )
     low = (text or "").lower()
     hits = [ph for ph in GDEPAR_PREACHY_PHRASES if ph in low]
     if hits:
@@ -219,14 +223,171 @@ def literature_prompt_block(topic_raw: str) -> str:
     )
 
 
+
+
+def _empire_db_path() -> Path:
+    import os
+    import re
+
+    root = Path(__file__).resolve().parent
+    default = root / "empire.db"
+    if default.is_file():
+        return default
+    raw = os.getenv("DATABASE_URL", "").strip()
+    if raw.startswith("sqlite"):
+        m = re.search(r"sqlite(?:\+\w+)?:///(.+)$", raw)
+        if m:
+            rel = m.group(1).split("?")[0]
+            if rel and rel != ":memory:":
+                path = Path(rel)
+                if not path.is_absolute():
+                    path = root / rel
+                if path.is_file():
+                    return path
+    return default
+
+
+def pick_spot_for_tg_teaser() -> dict | None:
+    """Случайная опубликованная баня с отзывом для TG ↔ карта."""
+    import random
+    import sqlite3
+
+    db = _empire_db_path()
+    if not db.is_file():
+        return None
+    try:
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT s.id, s.slug, s.title, s.city, s.region, s.rating_avg, s.heating, s.kind,
+                   (SELECT r.text FROM banya_reviews r
+                    WHERE r.spot_id = s.id AND r.status = 'approved' AND r.text IS NOT NULL
+                    ORDER BY r.fetched_at DESC LIMIT 1) AS review_text,
+                   (SELECT r.rating FROM banya_reviews r
+                    WHERE r.spot_id = s.id AND r.status = 'approved' AND r.rating IS NOT NULL
+                    ORDER BY r.fetched_at DESC LIMIT 1) AS review_rating
+            FROM banya_spots s
+            WHERE s.status = 'published' AND s.slug IS NOT NULL
+              AND s.lat IS NOT NULL AND s.lon IS NOT NULL
+            ORDER BY RANDOM()
+            LIMIT 24
+            """
+        ).fetchall()
+        conn.close()
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).warning("pick_spot_for_tg_teaser: %s", exc)
+        return None
+    if not rows:
+        return None
+    pool = [dict(r) for r in rows]
+    with_review = [p for p in pool if (p.get("review_text") or "").strip()]
+    return random.choice(with_review or pool)
+
+
+def load_spot_by_slug(slug: str) -> dict | None:
+    import sqlite3
+
+    if not slug:
+        return None
+    db = _empire_db_path()
+    if not db.is_file():
+        return None
+    try:
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT s.id, s.slug, s.title, s.city, s.region, s.rating_avg, s.heating, s.kind,
+                   (SELECT r.text FROM banya_reviews r
+                    WHERE r.spot_id = s.id AND r.status = 'approved' AND r.text IS NOT NULL
+                    ORDER BY r.fetched_at DESC LIMIT 1) AS review_text,
+                   (SELECT r.rating FROM banya_reviews r
+                    WHERE r.spot_id = s.id AND r.status = 'approved' AND r.rating IS NOT NULL
+                    ORDER BY r.fetched_at DESC LIMIT 1) AS review_rating
+            FROM banya_spots s
+            WHERE s.status = 'published' AND s.slug = ?
+            LIMIT 1
+            """,
+            (slug,),
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+    except Exception:
+        return None
+
+
+def build_banya_week_topic() -> str:
+    spot = pick_spot_for_tg_teaser()
+    if not spot:
+        return "[Баня недели] Карта gdepar.ru (fallback)"
+    city = spot.get("city") or spot.get("region") or ""
+    return f"[Баня недели] {spot.get('title', 'Баня')} · {city} (spot:{spot.get('slug', '')})"
+
+
+def banya_week_prompt_block(topic_raw: str) -> str:
+    if "[баня недели]" not in (topic_raw or "").lower():
+        return ""
+    m = re.search(r"spot:([\w\-]+)", topic_raw or "")
+    spot = load_spot_by_slug(m.group(1)) if m else pick_spot_for_tg_teaser()
+    if not spot:
+        return (
+            "\nСЛОТ [Баня недели]: карточка не найдена — коротко расскажи про gdepar.ru/map "
+            "с UTM utm_campaign=banya_week.\n"
+        )
+    slug = spot.get("slug") or ""
+    url = (
+        f"https://gdepar.ru/banya/{slug}"
+        f"?utm_source=telegram&utm_medium=post&utm_campaign=banya_week"
+    )
+    review = (spot.get("review_text") or "").strip()
+    if review and len(review) > 220:
+        review = review[:217] + "…"
+    lines = [
+        "\nСЛОТ [Баня недели] — ДИАЛОГ Михалыч ↔ Кириллыч (обязательно):",
+        "• 2–4 коротких реплики: <b>Михалыч:</b> … <b>Кириллыч:</b> … (можно через тире, без «Кириллыч, слушай»).",
+        "• Михалыч — пар, атмосфера, отзыв гостя; Кириллыч — факты: отопление, тип, район, цифры с карты.",
+        "• Если есть цитата отзыва — в <blockquote>, не выдумывай отзыв.",
+        f"• В конце одна строка со ссылкой на карточку: {url}",
+        "ФАКТЫ С КАРТЫ (не выдумывать):",
+        f"  Название: {spot.get('title', '')}",
+        f"  Город/регион: {spot.get('city') or ''} / {spot.get('region') or ''}",
+        f"  Рейтинг: {spot.get('rating_avg') or '—'}",
+        f"  Отопление: {spot.get('heating') or '—'}, тип: {spot.get('kind') or '—'}",
+    ]
+    if review:
+        lines.append(f"  Отзыв ({spot.get('review_rating') or '?'}★): «{review}»")
+    lines.append("ЗАПРЕТ: не критикуй заведение без фактов; не выдумывай телефон и цены.\n")
+    return "\n".join(lines) + "\n"
+
+
+def duo_dialog_prompt_block(topic_raw: str) -> str:
+    """Диалог двух голосов для практических слотов (не байка, не классика)."""
+    low = (topic_raw or "").lower()
+    if topic_is_bayka_slot(topic_raw) or CLASSIC_RUBRIC_TAG.lower() in low:
+        return ""
+    if "[баня недели]" in low or "promo_map" in low or "[печь и баня]" in low:
+        return ""
+    return (
+        "\nФОРМАТ ДУЭТА Михалыч + Кириллыч (для этого поста):\n"
+        "• Михалыч — традиция, пар, веник, этикет, «как в жизни».\n"
+        "• Кириллыч — цифры, печь, вентиляция, материалы, «как устроено».\n"
+        "• 1–2 коротких обмена репликами ИЛИ тезис Михалыча + уточнение Кириллыча.\n"
+        "• НЕ начинай с шаблона «Кириллыч, слушай/смотри».\n"
+        "• Раз в 2–3 поста — нативно: «на карте gdepar.ru смотрели…» (без агрессивного CTA).\n"
+    )
+
+
 def build_promo_map_post() -> tuple[str, str]:
     """Возвращает (topic_raw, готовый текст поста) — без LLM."""
     data = _load_json(_PROMO_PATH)
     variants = data.get("variants", []) if isinstance(data, dict) else []
     if not variants:
         body = (
-            "🗺 <b>Карта бань на gdepar.ru</b>\n\n"
-            "Адрес, отзывы, фильтр по региону — без гадания наугад.\n\n"
+            "🗺 <b>Где попариться рядом?</b>\n\n"
+            "Карта бань на gdepar.ru — адрес, отзывы, район. Без суты с поиском.\n\n"
             "https://gdepar.ru/map?utm_source=telegram&utm_medium=post&utm_campaign=weekly_map"
         )
         return "[SPECIAL:promo_map]", body
@@ -245,6 +406,42 @@ def is_special_slot(slot_value) -> str | None:
     if isinstance(slot_value, str) and slot_value.startswith("[SPECIAL:"):
         return slot_value
     return None
+
+
+
+_KIRILYCH_LEAD_RE = re.compile(
+    r"(?is)^"
+    r"(\s*(?:<[^>]+>\s*)*|(?:[^\wа-яА-ЯёЁ]+\s*)?)"
+    r"(?:кириллыч|михалыч)\s*[,—:\-–]\s*"
+)
+
+
+def kirilych_template_opening(text: str) -> bool:
+    """Шаблонное обращение «Кириллыч, …» в начале — не диалог «Кириллыч: реплика»."""
+    plain = re.sub(r"<[^>]+>", "", text or "").strip()
+    if not plain:
+        return False
+    if re.match(r"^(?:кириллыч|михалыч)\s*:\s", plain, re.I):
+        return False
+    if re.match(r"^(?:кириллыч|михалыч)\s*[,—:\-–]", plain, re.I):
+        return True
+    return kirilych_in_opening(text)
+
+
+def kirilych_in_opening(text: str, *, window: int = 80) -> bool:
+    plain = re.sub(r"<[^>]+>", "", text or "")
+    return "кириллыч" in plain[:window].lower()
+
+
+def strip_kirilych_opening(text: str) -> str:
+    """Убирает обращение к Кириллычу/Михалычу в начале поста."""
+    if not text:
+        return text
+    lines = text.strip().split("\n", 1)
+    head = _KIRILYCH_LEAD_RE.sub(r"\1", lines[0], count=1)
+    if len(lines) > 1:
+        return f"{head}\n{lines[1]}".strip()
+    return head.strip()
 
 
 def normalize_body(text: str) -> str:
@@ -364,9 +561,48 @@ _WIKI_UA = (
     "Python-httpx; classic-banya-rubric"
 )
 
+# URL/имя файла — отбраковка «баня вместо автора».
+_PORTRAIT_REJECT_IN_URL = (
+    "banya", "banja", "sauna", "bath", "steam", "paril", "парил", "бан",
+    "wooden_architecture", "museum_of_wooden", "engraving", "гравюр",
+    "interior", "интерьер",
+)
+
+
+def _portrait_url_ok(url: str) -> bool:
+    low = (url or "").lower()
+    if not low or not low.startswith("http"):
+        return False
+    return not any(x in low for x in _PORTRAIT_REJECT_IN_URL)
+
+
+def _author_search_queries(author: str) -> list[str]:
+    """Запросы: сначала фамилия + portrait, потом полное имя."""
+    a = (author or "").strip()
+    if not a:
+        return []
+    # «Ф.М. Достоевский» → «Достоевский»
+    bare = re.sub(r"^[А-ЯA-Z](?:\.[А-ЯA-Z])*\s*", "", a).strip()
+    parts = bare.split() if bare else a.split()
+    surname = parts[-1] if parts else a
+    out: list[str] = []
+    seen: set[str] = set()
+
+    def add(q: str) -> None:
+        q = q.strip()
+        if q and q not in seen:
+            seen.add(q)
+            out.append(q)
+
+    add(f"{surname} portrait")
+    add(f"{surname} портрет")
+    add(f"{bare} portrait" if bare else f"{a} portrait")
+    add(a)
+    return out
+
 
 def _classic_image_candidate_urls(entry: dict) -> list[str]:
-    """Несколько URL на случай 403 от upload.wikimedia.org."""
+    """Commons FilePath из image_file / image_url (курированные портреты)."""
     from urllib.parse import quote
 
     out: list[str] = []
@@ -374,13 +610,12 @@ def _classic_image_candidate_urls(entry: dict) -> list[str]:
 
     def add(u: str) -> None:
         u = (u or "").strip()
-        if u and u not in seen:
+        if u and u not in seen and _portrait_url_ok(u):
             seen.add(u)
             out.append(u)
 
     raw_file = (entry.get("image_file") or "").strip()
     if not raw_file and entry.get("image_url"):
-        # .../440px-Ivan_Goncharov.jpg → Ivan_Goncharov.jpg
         tail = str(entry["image_url"]).rsplit("/", 1)[-1]
         if tail.startswith(("440px-", "640px-", "320px-")):
             raw_file = tail.split("-", 1)[-1]
@@ -415,22 +650,11 @@ def classic_image_rel_path(entry: dict) -> str:
 
 
 def _author_portrait_search_terms(author: str) -> list[str]:
-    """Имя автора → запросы для Commons (портрет)."""
-    a = (author or "").strip()
-    if not a:
-        return []
-    # «Ф.М. Достоевский» → «Достоевский портрет»
-    surname = re.sub(r"^[А-ЯA-Zа-яa-z\.\s]+", "", a).strip() or a
-    surname = surname.split()[-1] if surname.split() else a
-    return [
-        f"{surname} portrait",
-        f"{surname} портрет",
-        f"{a} portrait",
-    ]
+    return _author_search_queries(author)
 
 
-async def _commons_file_urls_for_search(query: str, *, limit: int = 6) -> list[str]:
-    """Поиск файлов на Wikimedia Commons по подписи."""
+async def _commons_file_urls_for_search(query: str, *, limit: int = 8) -> list[str]:
+    """Поиск файлов на Wikimedia Commons; только URL, прошедшие _portrait_url_ok."""
     import httpx
     from urllib.parse import quote
 
@@ -453,19 +677,71 @@ async def _commons_file_urls_for_search(query: str, *, limit: int = 6) -> list[s
                     continue
                 fname = title[5:].replace(" ", "_")
                 enc = quote(fname, safe="/")
-                out.append(f"https://commons.wikimedia.org/wiki/Special:FilePath/{enc}?width=800")
+                url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{enc}?width=800"
+                if _portrait_url_ok(url) and _portrait_url_ok(fname):
+                    out.append(url)
     except Exception as exc:
         logger.warning("commons search %r: %s", query, type(exc).__name__)
     return out
 
 
+async def fetch_wikipedia_author_portrait(author: str, dest: Path) -> bool:
+    """Портрет с ru.wikipedia (pageimages)."""
+    import httpx
+    from urllib.parse import quote
+
+    headers = {"User-Agent": _WIKI_UA}
+    a = (author or "").strip()
+    bare = re.sub(r"^[А-ЯA-Z](?:\.[А-ЯA-Z])*\s*", "", a).strip()
+    wiki_queries: list[str] = []
+    for q in (a, bare):
+        if q and q not in wiki_queries:
+            wiki_queries.append(q)
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=14.0) as client:
+            for q in wiki_queries:
+                search_url = (
+                    "https://ru.wikipedia.org/w/api.php?action=query&list=search"
+                    f"&srsearch={quote(q)}&utf8=&format=json&srlimit=6"
+                )
+                r = await client.get(search_url, headers=headers)
+                if r.status_code != 200:
+                    continue
+                for hit in (r.json().get("query") or {}).get("search", []):
+                    title = hit.get("title") or ""
+                    if "значения)" in title.lower():
+                        continue
+                    img_api = (
+                        "https://ru.wikipedia.org/w/api.php?action=query"
+                        f"&titles={quote(title)}&prop=pageimages&format=json"
+                        "&piprop=original|thumbnail&pithumbsize=800"
+                    )
+                    ir = await client.get(img_api, headers=headers)
+                    if ir.status_code != 200:
+                        continue
+                    pages = (ir.json().get("query") or {}).get("pages", {})
+                    for page in pages.values():
+                        src = (page.get("original") or {}).get("source") or (
+                            (page.get("thumbnail") or {}).get("source")
+                        )
+                        if not src or not _portrait_url_ok(src):
+                            continue
+                        if await _download_classic_image(src, dest):
+                            logger.info("classic wiki portrait %s <- %s", author, title)
+                            return True
+    except Exception as exc:
+        logger.warning("wiki portrait %r: %s", author, type(exc).__name__)
+    return False
+
+
 async def _author_portrait_urls(entry: dict) -> list[str]:
-    """Портрет автора с Commons, если в JSON нет рабочего image_file."""
+    """Портрет автора с Commons (только portrait-запросы, без «баня»)."""
     author = (entry.get("author") or "").strip()
     urls: list[str] = []
     seen: set[str] = set()
-    for q in _author_portrait_search_terms(author):
-        for u in await _commons_file_urls_for_search(q):
+    for q in _author_search_queries(author):
+        for u in await _commons_file_urls_for_search(f'"{q}"', limit=6):
             if u not in seen:
                 seen.add(u)
                 urls.append(u)
@@ -474,27 +750,49 @@ async def _author_portrait_urls(entry: dict) -> list[str]:
     return urls
 
 
+def classic_image_abs_path(entry: dict) -> Path:
+    eid = (entry.get("id") or "classic").strip()
+    return _CLASSIC_MEDIA_DIR / f"{eid}.jpg"
+
+
 async def ensure_classic_image(entry: dict) -> str | None:
-    """Скачивает портрет автора в media/gdepar/classic/."""
+    """Скачивает портрет автора. Только фото человека — не баня, не Flux."""
     eid = (entry.get("id") or "classic").strip()
     rel = classic_image_rel_path(entry)
     _CLASSIC_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-    dest = _CLASSIC_MEDIA_DIR / f"{eid}.jpg"
+    dest = classic_image_abs_path(entry)
     if dest.is_file() and dest.stat().st_size > 2048:
         return rel
-    candidate_urls = _classic_image_candidate_urls(entry)
-    if (entry.get("image_kind") or "") == "author_portrait":
-        candidate_urls = candidate_urls + await _author_portrait_urls(entry)
-    for url in candidate_urls:
-        try:
-            if await _download_classic_image(url, dest):
-                return rel
-        except Exception as exc:
-            logger.warning("classic image %s url fail: %s", eid, type(exc).__name__)
-    default = _CLASSIC_MEDIA_DIR / "_default_banya.jpg"
-    if default.is_file():
-        return rel if dest.is_file() else "media/gdepar/classic/_default_banya.jpg"
-    logger.warning("classic image missing for %s (all urls failed)", eid)
+
+    tried: set[str] = set()
+
+    async def try_urls(urls: list[str]) -> bool:
+        for url in urls:
+            if not url or url in tried:
+                continue
+            tried.add(url)
+            try:
+                if await _download_classic_image(url, dest):
+                    return True
+            except Exception as exc:
+                logger.warning("classic image %s url fail: %s", eid, type(exc).__name__)
+        return False
+
+    # 1) Курированный image_file из JSON
+    if await try_urls(_classic_image_candidate_urls(entry)):
+        return rel
+
+    # 2) ru.wikipedia — портрет на странице автора
+    if await fetch_wikipedia_author_portrait(entry.get("author") or "", dest):
+        return rel
+
+    # 3) Commons: только portrait-запросы
+    if (entry.get("image_kind") or "author_portrait") == "author_portrait":
+        if await try_urls(await _author_portrait_urls(entry)):
+            return rel
+
+    # Не подставляем «русскую баню» вместо автора — лучше без фото.
+    logger.warning("classic portrait missing for %s (%s)", eid, entry.get("author"))
     return None
 
 
@@ -514,8 +812,6 @@ async def build_classic_banya_post() -> tuple[str, str, str | None]:
     )
     text = format_classic_banya_post(entry)
     img = await ensure_classic_image(entry)
-    if not img:
-        img = await ensure_classic_image(entry)
     return topic, text, img
 
 
@@ -538,6 +834,12 @@ async def resolve_gdepar_slot(slot_value, *, resolve_topic_fn) -> tuple[str, str
     if special in ("literature", "lit", "[SPECIAL:literature]"):
         topic = build_literature_topic()
         return topic, None, None
+    if special in ("banya_week", "[SPECIAL:banya_week]"):
+        return build_banya_week_topic(), None, None
+    import gdepar_duo_curated as gduo
+
+    if gduo.is_duo_curated_slot(slot_value):
+        return await gduo.build_duo_curated_slot(pool=gduo.pool_from_slot(slot_value))
     topic = await resolve_topic_fn("gdepar", slot_value)
     return topic, None, None
 

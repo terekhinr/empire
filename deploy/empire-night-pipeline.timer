@@ -1,0 +1,10 @@
+[Unit]
+Description=Empire night pipeline at 01:00 MSK (22:00 UTC)
+
+[Timer]
+OnCalendar=*-*-* 22:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,6 @@
 {
-  "_readme": "Curated-рубрики (gdepar/lenin/stern): слоты по расписанию → черновик в боте → обязательный approve. Автопост в канал выключен (enabled:false). Без фото публикация заблокирована; короткий текст (<260 симв.) — предупреждение.",
-  "enabled": false,
+  "_readme": "Июль 2026: автопост по расписанию для garden/lenin/gdepar/stern. Курированные дуэт/Stern matrix — с готовым image_file.",
+  "enabled": true,
   "scheduled_only": true,
   "notify_admin_compact": true,
   "defaults": {
@@ -11,17 +11,48 @@
     "max_selfcrit_issues": 0
   },
   "personas": {
-    "garden": { "enabled": false, "min_body_chars": 450 },
-    "gdepar": { "enabled": false, "min_body_chars": 500 },
-    "stern": { "enabled": false, "min_body_chars": 700 },
-    "lenin": { "enabled": false, "min_body_chars": 500 },
-    "pension": { "enabled": false }
+    "garden": {
+      "enabled": true,
+      "min_body_chars": 350,
+      "require_zero_regen": false,
+      "max_selfcrit_issues": 3
+    },
+    "gdepar": {
+      "enabled": true,
+      "min_body_chars": 260,
+      "skip_body_floor": true,
+      "max_selfcrit_issues": 99,
+      "require_zero_regen": true,
+      "require_zero_badimg": true
+    },
+    "stern": {
+      "enabled": true,
+      "min_body_chars": 240,
+      "skip_body_floor": true,
+      "max_selfcrit_issues": 5,
+      "require_zero_regen": false,
+      "require_zero_badimg": true
+    },
+    "lenin": {
+      "enabled": true,
+      "min_body_chars": 350,
+      "require_zero_regen": false,
+      "max_selfcrit_issues": 3
+    },
+    "pension": {
+      "enabled": false
+    }
   },
   "rubrics": {
     "gdepar_classic_banya": {
-      "enabled": false,
-      "personas": ["gdepar"],
-      "topic_markers": ["[Классическая баня]", "[SPECIAL:classic_banya]"],
+      "enabled": true,
+      "personas": [
+        "gdepar"
+      ],
+      "topic_markers": [
+        "[Классическая баня]",
+        "[SPECIAL:classic_banya]"
+      ],
       "min_body_chars": 260,
       "skip_body_floor": true,
       "require_image": true,
@@ -30,8 +61,10 @@
       "max_selfcrit_issues": 99
     },
     "lenin_curated": {
-      "enabled": false,
-      "personas": ["lenin"],
+      "enabled": true,
+      "personas": [
+        "lenin"
+      ],
       "topic_markers": [
         "[Ленин в литературе]",
         "[Ленин в искусстве]",
@@ -46,14 +79,17 @@
       "max_selfcrit_issues": 99
     },
     "stern_curated": {
-      "enabled": false,
-      "personas": ["stern"],
+      "enabled": true,
+      "personas": [
+        "stern"
+      ],
       "topic_markers": [
         "[История гирь]",
         "[Русские силачи]",
         "[Спортмед и реабилитация]",
         "[Экипировка и лайфхаки]",
-        "[Гиревой фитнес]"
+        "[Гиревой фитнес]",
+        "[Историческое наследие]"
       ],
       "min_body_chars": 550,
       "skip_body_floor": false,
@@ -64,7 +100,9 @@
     },
     "gdepar_book_rubrics": {
       "enabled": true,
-      "personas": ["gdepar"],
+      "personas": [
+        "gdepar"
+      ],
       "topic_markers": [
         "[Печь и баня]",
         "[История бани]",
@@ -77,9 +115,27 @@
       "require_zero_badimg": true,
       "max_selfcrit_issues": 99
     },
+    "garden_lunar": {
+      "enabled": true,
+      "personas": [
+        "garden"
+      ],
+      "topic_markers": [
+        "[Лунный календарь]",
+        "[SPECIAL:kizima_lunar]"
+      ],
+      "min_body_chars": 180,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
     "stern_week_arc": {
       "enabled": true,
-      "personas": ["stern"],
+      "personas": [
+        "stern"
+      ],
       "topic_markers": [
         "[План на неделю]",
         "[Тест недели]",
@@ -89,6 +145,75 @@
       "skip_body_floor": true,
       "require_image": false,
       "require_zero_regen": false,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "stern_technique_video": {
+      "enabled": true,
+      "personas": [
+        "stern"
+      ],
+      "topic_markers": [
+        "[Техника гирь]"
+      ],
+      "min_body_chars": 400,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_video": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "gdepar_duo_curated": {
+      "enabled": true,
+      "personas": [
+        "gdepar"
+      ],
+      "topic_markers": [
+        "[Дуэт]",
+        "[SPECIAL:duo_curated]"
+      ],
+      "min_body_chars": 280,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "stern_matrix_curated": {
+      "enabled": true,
+      "personas": [
+        "stern"
+      ],
+      "topic_markers": [
+        "[Рутина]",
+        "[Психология]",
+        "[Восстановление]",
+        "[Питание]",
+        "[Срывы]",
+        "[Мотивация]",
+        "[Возрастной тренинг]",
+        "[Ответы]"
+      ],
+      "min_body_chars": 220,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "gdepar_promo_map": {
+      "enabled": true,
+      "personas": [
+        "gdepar"
+      ],
+      "topic_markers": [
+        "[SPECIAL:promo_map]"
+      ],
+      "min_body_chars": 120,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
       "require_zero_badimg": true,
       "max_selfcrit_issues": 99
     }

@@ -1,0 +1,44 @@
+# Спальня: Tuya _TZE284_hodyryli TS0601 — комната + улица (ZHA quirk tze284_hodyryli_th.py)
+
+template:
+  - sensor:
+      - name: Спальня temperatura
+        unique_id: spalnya_temperatura
+        default_entity_id: sensor.spalnya_temperatura
+        icon: mdi:bed
+        state: >
+          {% set v = states('sensor.spalnia_roditelei_tze284_hodyryli_ts0601_temperatura') %}
+          {{ v if v not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: Спальня temperatura ulica
+        unique_id: spalnya_temperatura_ulica
+        default_entity_id: sensor.spalnya_temperatura_ulica
+        icon: mdi:home-export-outline
+        state: >
+          {% set v = states('sensor.spalnia_roditelei_tze284_hodyryli_ts0601_vneshniaia_temperatura') %}
+          {{ v if v not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: Спальня vlazhnost
+        unique_id: spalnya_vlazhnost
+        default_entity_id: sensor.spalnya_vlazhnost
+        icon: mdi:water-percent
+        state: >
+          {% set v = states('sensor.spalnia_roditelei_tze284_hodyryli_ts0601_vlazhnost') %}
+          {{ v if v not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: Спальня batareia
+        unique_id: spalnya_batareia
+        default_entity_id: sensor.spalnya_batareia
+        icon: mdi:battery
+        state: >
+          {% set v = states('sensor.spalnia_roditelei_tze284_hodyryli_ts0601_battery') %}
+          {{ v if v not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement

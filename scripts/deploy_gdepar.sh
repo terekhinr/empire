@@ -6,9 +6,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> guard critical files"
-./scripts/guard_critical_files.sh
-
 echo "==> pytest"
 ./venv/bin/pytest tests/ -q
 

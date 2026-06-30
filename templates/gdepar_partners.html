@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Партнёрам «Где Пар»: лиды — звонки и переходы в мессенджеры с карты бань.">
+    <title>Партнёрам — Где Пар</title>
+    {% if metrika_id %}
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    {% endif %}
+    <link rel="canonical" href="{{ canonical_page_url }}">
+    <link rel="icon" type="image/svg+xml" href="/static/gdepar/logos/03-drop.svg">
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
+</head>
+<body>
+{% include "gdepar_metrika.inc.html" %}
+{% include "gdepar_nav.inc.html" %}
+
+<section class="section">
+    <h1 class="section-header">Владельцам бань</h1>
+    <p class="section-lead">
+        «Где Пар» — не витрина ради витрины. Мы считаем <strong>лиды</strong>: показы телефона,
+        переходы в мессенджеры, интерес к вашей карточке.
+    </p>
+    <ul style="line-height:1.7; max-width:36rem;">
+        <li>На карте сейчас <strong>{{ published_count }}</strong> опубликованных бань.</li>
+        <li>За 30 дней зафиксировано <strong>{{ leads_month }}</strong> целевых действий (лидов).</li>
+        <li>Базовое размещение — бесплатно. Premium и «топ по району» — по мере запуска.</li>
+    </ul>
+    <p style="margin-top:1.5rem;">
+        <a class="btn" href="mailto:info@gdepar.ru?subject=Партнёрство%20Где%20Пар">Заявка на подключение →</a>
+    </p>
+    <p class="muted" style="margin-top:1rem;">
+        Уже в каталоге? Напишите slug бани — пришлём отчёт по лидам за месяц.
+    </p>
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">ГДЕ <span>ПАР</span></div>
+            <p class="footer-tagline">{{ site_tagline }}</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/map">Карта</a>
+            <a href="/">Главная</a>
+        </nav>
+    </div>
+</footer>
+</body>
+</html>

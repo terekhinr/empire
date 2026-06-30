@@ -9,7 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from dashboard_health import MOBILE_CSS, _inject_mobile_css
+from dashboard_health import MOBILE_CSS, _inject_mobile_css, _workout_banner
 from planning_db import (
     KIND_GOAL,
     KIND_PROJECT,
@@ -183,6 +183,8 @@ def page_planning() -> None:
     c3.metric("Готово", counts["tasks_done"])
     c4.metric("Цели", counts["goals_active"])
     c5.metric("Проекты", counts["projects_active"])
+
+    _workout_banner()
 
     tab_board, tab_add, tab_canvas, tab_obsidian, tab_lists = st.tabs(
         ["Доска", "Добавить", "Канвас", "Obsidian", "Списки"]

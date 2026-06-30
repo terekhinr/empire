@@ -6,7 +6,6 @@ import asyncio
 import json
 import os
 import sqlite3
-import subprocess
 import sys
 
 import pandas as pd
@@ -45,18 +44,7 @@ def get_db_connection():
     return conn
 
 
-def _systemctl_status(unit: str) -> str:
-    try:
-        r = subprocess.run(
-            ["systemctl", "is-active", unit],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return (r.stdout or r.stderr or "?").strip() or "unknown"
-    except Exception as exc:
-        return f"n/a ({exc})"
-
+from dashboard_ops import OPTIONAL_BOTS, service_row
 
 def page_sources():
     st.header("🔗 Источники трафика")
@@ -372,6 +360,11 @@ def page_finance():
         pen_sess = r2[1].number_input("Pension сессии", min_value=0, value=0)
         pen_toc = r2[2].number_input("Pension /book", min_value=0, value=0)
         pen_buy = r2[3].number_input("Pension buy clicks", min_value=0, value=0)
+        r2b = st.columns(4)
+        tg_posts = r2b[0].number_input("TG постов/нед", min_value=0, value=0)
+        ap_fail = r2b[1].number_input("Autopost failures", min_value=0, value=0)
+        gift_em = r2b[2].number_input("Gift emails (−)", min_value=0, value=0)
+        gd_phone = r2b[3].number_input("Gdepar phone reveals", min_value=0, value=0)
         r3 = st.columns(3)
         orders = r3[0].number_input("Заказы", min_value=0, value=0)
         rev = r3[1].number_input("Выручка ₽", min_value=0.0, value=0.0)
@@ -393,6 +386,10 @@ def page_finance():
                     "pension_site_sessions": pen_sess,
                     "pension_book_toc": pen_toc,
                     "pension_buy_clicks": pen_buy,
+                    "tg_posts_published": tg_posts,
+                    "autopost_failures": ap_fail,
+                    "gift_emails": gift_em,
+                    "gdepar_phone_reveals": gd_phone,
                     "orders": orders,
                     "revenue_rub": rev,
                     "expenses_rub": exp_w,
@@ -659,10 +656,38 @@ def page_neurocomment():
 
 def page_monitoring():
     st.header("⚙️ Мониторинг")
-    units = ["empire_main", "empire_worker", "empire_webapp", "empire_dashboard", "empire_gdepar"]
-    cols = st.columns(len(units))
-    for col, unit in zip(cols, units):
-        col.metric(unit, _systemctl_status(f"{unit}.service"))
+    st.caption(
+        "**empire_main** — один бот на все каналы (постинг по расписанию). "
+        "Боты ниже — **отдельные** @BotFather-аккаунты для лидов, PDF и донатов; "
+        "без своего токена они не стартуют — это нормально."
+    )
+
+    core_units = [
+        "empire_main",
+        "empire_worker",
+        "empire_webapp",
+        "empire_dashboard",
+        "empire_gdepar",
+        "empire_sales",
+        "empire_ha_notify",
+    ]
+    st.subheader("Ядро")
+    cols = st.columns(4)
+    for i, unit in enumerate(core_units):
+        row = service_row(unit)
+        cols[i % 4].metric(row["unit"], row["display"])
+
+    st.subheader("Отдельные боты (лиды / оплата / донаты)")
+    for unit, meta in OPTIONAL_BOTS.items():
+        row = service_row(unit)
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.metric(meta["label"], row["display"])
+        with col2:
+            st.caption(meta["note"])
+            if row["detail"]:
+                st.info(row["detail"])
+
     try:
         stv = os.statvfs("/")
         free = (stv.f_bavail * stv.f_frsize) / (1024**3)

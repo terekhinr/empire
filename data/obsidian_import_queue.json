@@ -9,7 +9,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.032955+00:00"
+    "imported_at": "2026-06-30T05:50:00.029624+00:00"
   },
   {
     "id": "pension-2026-06-10-slug",
@@ -21,7 +21,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033005+00:00"
+    "imported_at": "2026-06-30T05:50:00.029796+00:00"
   },
   {
     "id": "pension-2026-06-11-slug",
@@ -33,7 +33,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033231+00:00"
+    "imported_at": "2026-06-30T05:50:00.031760+00:00"
   },
   {
     "id": "pension-2026-06-16-slug",
@@ -45,7 +45,19 @@
     "status": "draft",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033139+00:00"
+    "imported_at": "2026-06-30T05:50:00.031084+00:00"
+  },
+  {
+    "id": "pension-2026-06-26-slug",
+    "source_path": "/root/projects/empire/data/obsidian_vault/Empire/pension/queue/Без названия 4.md",
+    "persona": "pension",
+    "title": "Заголовок для Telegram",
+    "body_markdown": "Что мы думаем когда видим \"Шнурки автоматические\"\n\n\n> Цитата из новости — строки с `>` в Obsidian станут blockquote в Telegram.\n\nОсновной текст. Ссылки: [подпись](https://example.com) или голый https://…\n\n**Жирный**, *курсив*, ~~зачёркнутое~~.\n\nКартинка: `image: attachments/имя.png` в шапке (файл в `queue/attachments/`).\n\nКогда готово → `status: ready`, файл остаётся в `queue/`.\n![[Pasted image 20260626140617.png]]",
+    "scheduled": "2026-06-26 11:00",
+    "status": "draft",
+    "image": null,
+    "image_prompt": null,
+    "imported_at": "2026-06-30T05:50:00.029073+00:00"
   },
   {
     "id": "pension-fondy-i-strojka-2026-05-25",
@@ -57,7 +69,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033310+00:00"
+    "imported_at": "2026-06-30T05:50:00.032585+00:00"
   },
   {
     "id": "pension-gori-gori-yasno-faire-2026-05-20",
@@ -69,7 +81,7 @@
     "status": "draft",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033042+00:00"
+    "imported_at": "2026-06-30T05:50:00.030092+00:00"
   },
   {
     "id": "pension-hotyat-li-russkie-vojny-2026-06-03",
@@ -81,7 +93,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033270+00:00"
+    "imported_at": "2026-06-30T05:50:00.032187+00:00"
   },
   {
     "id": "pension-kem-byt-2026-06-08",
@@ -93,7 +105,7 @@
     "status": "ready",
     "image": "attachments/Pasted image 20260530110821.png",
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033081+00:00"
+    "imported_at": "2026-06-30T05:50:00.030351+00:00"
   },
   {
     "id": "pension-na-palcah-1-2026-05-28",
@@ -105,7 +117,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033112+00:00"
+    "imported_at": "2026-06-30T05:50:00.030570+00:00"
   },
   {
     "id": "pension-norvegiya-tualet-2026-05-26",
@@ -117,7 +129,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033170+00:00"
+    "imported_at": "2026-06-30T05:50:00.031331+00:00"
   },
   {
     "id": "pension-pokupka-na-novostyah-2026-05-22",
@@ -129,7 +141,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.033200+00:00"
+    "imported_at": "2026-06-30T05:50:00.031546+00:00"
   },
   {
     "id": "Без названия",
@@ -141,7 +153,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.032917+00:00"
+    "imported_at": "2026-06-30T05:50:00.029160+00:00"
   },
   {
     "id": "Без названия 1",
@@ -153,7 +165,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.032691+00:00"
+    "imported_at": "2026-06-30T05:50:00.028530+00:00"
   },
   {
     "id": "Без названия 2",
@@ -165,7 +177,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.032800+00:00"
+    "imported_at": "2026-06-30T05:50:00.028615+00:00"
   },
   {
     "id": "Без названия 3",
@@ -177,6 +189,6 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-06-19T17:17:00.032856+00:00"
+    "imported_at": "2026-06-30T05:50:00.028671+00:00"
   }
 ]

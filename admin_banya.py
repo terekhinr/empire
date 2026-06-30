@@ -21,7 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from main import BanyaReview, BanyaSpot
+from empire_db import BanyaReview, BanyaSpot
 
 BASE_DIR = Path(__file__).parent
 _ADMIN_TOKEN = os.getenv("BANYA_ADMIN_TOKEN", "").strip()

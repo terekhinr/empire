@@ -1,0 +1,3363 @@
+const API_BASE = "/tasks/api/planning";
+const TOKEN_KEY = "empire_planning_token";
+const APP_VER = "39";
+const OFFLINE_SNAPSHOT_KEY = "empire_offline_snapshot";
+const REPEAT_MAP = {
+  daily: { freq: "daily", interval: 1 },
+  weekdays: { freq: "weekdays", interval: 1 },
+  weekly: { freq: "weekly", interval: 1 },
+  biweekly: { freq: "weekly", interval: 2 },
+  monthly: { freq: "monthly", interval: 1 },
+  yearly: { freq: "yearly", interval: 1 },
+};
+
+const state = {
+  tasks: [],
+  doneTasks: [],
+  checklists: [],
+  projects: [],
+  summary: {},
+  measurements: [],
+  workouts: [],
+  healthSummary: {},
+  healthSettings: { remind_measure_sunday: true, remind_measure_hour: 10 },
+  exercises: {},
+  taskStats: null,
+  healthStats: null,
+  statsPeriod: "month",
+  programDate: todayStr(),
+  workoutDiaryDate: todayStr(),
+  calendarMonth: todayStr().slice(0, 8) + "01",
+  calendarDay: null,
+  googleCalendarUrl: "",
+  settingsSection: "notifications",
+  settingsReturnView: "today",
+  programSession: null,
+  programLogsForDate: [],
+  programSaveTimer: null,
+  programSaving: false,
+  pendingTaskImage: null,
+  pendingTaskImageRemove: false,
+  workoutProgramSummary: null,
+  insights: null,
+  section: "tasks",
+  taskView: "today",
+  healthView: "measurements",
+  currentView: "today",
+  projectFilter: null,
+  editingId: null,
+  creatingTask: false,
+  reminded: new Set(JSON.parse(localStorage.getItem("empire_reminded") || "[]")),
+};
+
+const TITLES = {
+  today: "Сегодня",
+  week: "Следующие 7 дней",
+  calendar: "Календарь",
+  "cal-day": "День",
+  matrix: "Матрица Эйзенхауэра",
+  "all-tasks": "Все задачи",
+  search: "Поиск",
+  projects: "Проекты",
+  lists: "Чеклисты",
+  "finance-model": "Финмодель",
+  done: "Вся история",
+  "task-stats": "Статистика задач",
+  insights: "ИИ-выводы",
+  measurements: "Замеры",
+  workouts: "Тренировки",
+  program: "Программа",
+  "health-stats": "Статистика здоровья",
+  detail: "Чеклист",
+  "project-tasks": "Проект",
+  settings: "Настройки",
+};
+
+const SETTINGS_SECTIONS = [
+  { id: "notifications", icon: "bell", title: "Уведомления" },
+  { id: "calendar", icon: "calendar", title: "Подписка на календарь" },
+  { id: "appearance", icon: "insights", title: "Внешний вид" },
+  { id: "data", icon: "import", title: "Данные" },
+  { id: "about", icon: "stats", title: "О приложении" },
+];
+
+const TASK_VIEWS = new Set(["today", "week", "calendar", "cal-day", "matrix", "all-tasks", "search", "projects", "lists", "finance-model", "done", "task-stats", "insights", "detail", "project-tasks"]);
+const SPLIT_TASK_VIEWS = new Set(["today", "week", "cal-day", "search", "all-tasks", "project-tasks", "done"]);
+const HEALTH_VIEWS = new Set(["measurements", "workouts", "program", "health-stats"]);
+
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const PROJECT_COLORS = ["#f97316", "#ec4899", "#3b82f6", "#22c55e", "#a855f7", "#14b8a6", "#eab308"];
+const DISCLOSURE_CHEVRON = '<span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>';
+const MATRIX_META = {
+  q1: { title: "Срочно и важно", hint: "Сделать в первую очередь" },
+  q2: { title: "Важно, не срочно", hint: "Запланировать" },
+  q3: { title: "Срочно, не важно", hint: "Быстро закрыть или делегировать" },
+  q4: { title: "Не срочно и не важно", hint: "Потом или убрать" },
+};
+
+function projectColor(id) {
+  return PROJECT_COLORS[(Number(id) || 0) % PROJECT_COLORS.length];
+}
+
+function activeTasks() {
+  return state.tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
+}
+
+function taskNavCounts() {
+  const today = todayStr();
+  const weekEnd = addDays(7);
+  const active = activeTasks();
+  const overdue = active.filter((t) => t.due_date && t.due_date < today);
+  const todayTasks = active.filter((t) => t.due_date === today);
+  const weekTasks = active.filter((t) => t.due_date && t.due_date <= weekEnd);
+  const completedToday = state.doneTasks.filter((t) => (t.completed_at || "").slice(0, 10) === today);
+  return {
+    overdue,
+    today: todayTasks,
+    week: weekTasks,
+    all: active.length,
+    completedToday,
+    todayNav: overdue.length + todayTasks.length,
+    weekNav: weekTasks.length,
+  };
+}
+
+function formatTaskDateShort(iso) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+function quickAddHtml() {
+  return `<button type="button" class="quick-add" data-action="quick-add">+ Новая задача</button>`;
+}
+
+function renderTaskList(items, { compact = true } = {}) {
+  if (!items.length) return "";
+  return `<div class="task-list">${items.map((t) => taskRowHtml(t, { compact })).join("")}</div>`;
+}
+
+function renderCollapsibleGroup(title, items, { open = true, cls = "", footer = "" } = {}) {
+  if (!items.length && !footer) return "";
+  const body = items.length
+    ? renderTaskList(items)
+    : `<div class="task-group-empty">Пусто</div>`;
+  return `<details class="task-group ${cls}"${open ? " open" : ""}>
+    <summary class="disclosure-toggle">${DISCLOSURE_CHEVRON}<span class="task-group-title">${escapeHtml(title)}</span><span class="task-group-count">${items.length}</span></summary>
+    ${body}
+    ${footer ? `<div class="task-group-footer">${footer}</div>` : ""}
+  </details>`;
+}
+
+function hydrateNavIcons(root = document) {
+  if (!window.NavIcons) return;
+  const day = new Date().getDate();
+  root.querySelectorAll("[data-icon]").forEach((el) => {
+    const name = el.dataset.icon;
+    if (!name) return;
+    el.innerHTML = NavIcons.svg(name, { day });
+  });
+}
+
+const NAV_ICON_KEYS = {
+  today: "today",
+  week: "week",
+  matrix: "matrix",
+  "all-tasks": "inbox",
+  search: "search",
+  calendar: "calendar",
+  lists: "lists",
+  "finance-model": "finance",
+  insights: "insights",
+  "task-stats": "stats",
+  done: "history",
+  measurements: "measurements",
+  workouts: "workouts",
+  program: "program",
+  "health-stats": "health-stats",
+};
+
+function navRowHtml(view, label, count) {
+  const active =
+    state.currentView === view || (state.currentView === "cal-day" && view === "calendar")
+      ? " active"
+      : "";
+  const iconKey = NAV_ICON_KEYS[view] || view;
+  const iconHtml = window.NavIcons ? NavIcons.badge(iconKey) : "";
+  const countHtml = count != null && count !== "" ? `<span class="nav-row-count">${count}</span>` : "";
+  return `<button class="nav-row${active}" data-view="${view}" type="button">
+    ${iconHtml}
+    <span class="nav-row-label">${escapeHtml(label)}</span>${countHtml}
+  </button>`;
+}
+
+function renderSidebarNav() {
+  const c = taskNavCounts();
+  const main = document.getElementById("sidebar-nav-main");
+  if (main) {
+    main.innerHTML = [
+      navRowHtml("today", "Сегодня", c.todayNav || ""),
+      navRowHtml("week", "Следующие 7 дней", c.weekNav || ""),
+      navRowHtml("matrix", "Матрица", ""),
+      navRowHtml("all-tasks", "Все задачи", c.all || ""),
+      navRowHtml("search", "Поиск", ""),
+    ].join("");
+  }
+  const mobileMain = document.getElementById("more-menu-main");
+  if (mobileMain) {
+    mobileMain.innerHTML = [
+      navRowHtml("today", "Сегодня", c.todayNav || ""),
+      navRowHtml("week", "Следующие 7 дней", c.weekNav || ""),
+      navRowHtml("matrix", "Матрица", ""),
+      navRowHtml("all-tasks", "Все задачи", c.all || ""),
+      navRowHtml("search", "Поиск", ""),
+    ].join("");
+  }
+  const listsCount = document.getElementById("nav-count-lists");
+  if (listsCount) listsCount.textContent = String(state.checklists.length || 0);
+
+  const projEl = document.getElementById("sidebar-projects-list");
+  if (projEl) {
+    if (!state.projects.length) {
+      projEl.innerHTML = `<button class="nav-row nav-row-large" data-view="projects" type="button"><span class="nav-row-label">Все проекты</span></button>`;
+    } else {
+      projEl.innerHTML = state.projects
+        .map((p) => {
+          const isEmpire = (p.title || "").startsWith("Empire ·");
+          const pct = isEmpire ? projectProgress(p.id).pct : null;
+          const count = pct != null ? `${pct}%` : (p.open_tasks || 0);
+          return `<button class="nav-row nav-row-large" data-view="project-tasks" data-project-id="${p.id}" type="button">
+            <span class="nav-row-label"><span class="project-dot" style="background:${projectColor(p.id)}"></span> ${escapeHtml(p.title)}</span>
+            <span class="nav-row-count">${count}</span>
+          </button>`;
+        })
+        .join("");
+    }
+  }
+
+  document.querySelectorAll(".nav-row[data-view]").forEach((btn) => {
+    const match =
+      btn.dataset.view === state.currentView ||
+      (state.currentView === "cal-day" && btn.dataset.view === "calendar");
+    btn.classList.toggle("active", match);
+  });
+  document.querySelectorAll(".nav-item[data-view], .more-calendar-item[data-view]").forEach((btn) => {
+    const match =
+      btn.dataset.view === state.currentView ||
+      (state.currentView === "cal-day" && btn.dataset.view === "calendar");
+    btn.classList.toggle("active", match);
+  });
+  hydrateNavIcons(document.getElementById("sidebar"));
+}
+
+function token() {
+  return localStorage.getItem(TOKEN_KEY) || "";
+}
+
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 2400);
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function saveOfflineSnapshot() {
+  try {
+    localStorage.setItem(
+      OFFLINE_SNAPSHOT_KEY,
+      JSON.stringify({
+        saved_at: Date.now(),
+        tasks: state.tasks,
+        doneTasks: state.doneTasks,
+        checklists: state.checklists,
+        projects: state.projects,
+        summary: state.summary,
+        measurements: state.measurements,
+        workouts: state.workouts,
+        healthSummary: state.healthSummary,
+      })
+    );
+  } catch (_) {}
+}
+
+function applyOfflineSnapshot(snap) {
+  state.tasks = snap.tasks || [];
+  state.doneTasks = snap.doneTasks || [];
+  state.checklists = snap.checklists || [];
+  state.projects = snap.projects || [];
+  state.summary = snap.summary || {};
+  state.measurements = snap.measurements || [];
+  state.workouts = snap.workouts || [];
+  state.healthSummary = snap.healthSummary || {};
+}
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", "X-Planning-Token": token() };
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+  if (res.status === 401) {
+    document.getElementById("auth-screen").classList.remove("hidden");
+    throw new Error("auth");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || res.statusText);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function apiUpload(path, file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "X-Planning-Token": token() },
+    body: fd,
+  });
+  if (res.status === 401) {
+    document.getElementById("auth-screen").classList.remove("hidden");
+    throw new Error("auth");
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || res.statusText);
+  }
+  return res.json();
+}
+
+function taskImageSrc(task, pendingFile) {
+  if (pendingFile) return URL.createObjectURL(pendingFile);
+  if (task?.image_url) return `${task.image_url}?v=${task.updated_at || ""}`;
+  return null;
+}
+
+function renderTaskImagePreview(task = null) {
+  const preview = document.getElementById("tf-image-preview");
+  const removeBtn = document.getElementById("tf-image-remove");
+  const fileInput = document.getElementById("tf-image-file");
+  if (!preview) return;
+  const src = state.pendingTaskImageRemove
+    ? null
+    : taskImageSrc(task, state.pendingTaskImage);
+  if (src) {
+    preview.classList.remove("hidden");
+    preview.innerHTML = `<img src="${escapeHtml(src)}" alt="">`;
+    removeBtn?.classList.remove("hidden");
+  } else {
+    preview.classList.add("hidden");
+    preview.innerHTML = "";
+    removeBtn?.classList.add("hidden");
+  }
+  if (fileInput) fileInput.value = "";
+}
+
+async function uploadTaskImage(taskId, file) {
+  if (!file || !taskId) return null;
+  return apiUpload(`/tasks/${taskId}/image`, file);
+}
+
+async function deleteTaskImage(taskId) {
+  if (!taskId) return;
+  await api(`/tasks/${taskId}/image`, { method: "DELETE" });
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
+function addDays(n) {
+  return addDaysToDateStr(todayStr(), n);
+}
+
+function addDaysToDateStr(iso, days) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDiaryDate(iso) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function formatWeekGroupLabel(iso) {
+  const today = todayStr();
+  const tomorrow = addDays(1);
+  const wd = new Date(`${iso}T12:00:00`).toLocaleDateString("ru-RU", { weekday: "short" });
+  if (iso === today) return `${wd}, Сегодня`;
+  if (iso === tomorrow) return `${wd}, Завтра`;
+  return formatDiaryDate(iso);
+}
+
+function formatDayTitle(iso) {
+  if (!iso) return "День";
+  const d = new Date(`${iso}T12:00:00`);
+  const today = todayStr();
+  const tomorrow = addDays(1);
+  const base = d.toLocaleDateString("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  if (iso === today) return `Сегодня · ${base}`;
+  if (iso === tomorrow) return `Завтра · ${base}`;
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function openCalendarDay(day) {
+  if (!day) return;
+  state.calendarDay = day;
+  state.calendarMonth = `${day.slice(0, 7)}-01`;
+  showView("cal-day");
+}
+
+function useTaskSplitPane() {
+  return window.matchMedia("(min-width: 900px)").matches;
+}
+
+function highlightSelectedTaskRow() {
+  document.querySelectorAll(".task-row--selected").forEach((r) => r.classList.remove("task-row--selected"));
+  if (!state.editingId) return;
+  document.querySelectorAll(`[data-task-id="${state.editingId}"]`).forEach((r) => r.classList.add("task-row--selected"));
+}
+
+function usesDesktopTaskSplit() {
+  return useTaskSplitPane() && SPLIT_TASK_VIEWS.has(state.currentView);
+}
+
+function syncSplitTaskLayout() {
+  const app = document.getElementById("app");
+  const sheet = document.getElementById("task-sheet");
+  const split = usesDesktopTaskSplit();
+  const showForm = !!state.editingId || state.creatingTask;
+  app?.classList.toggle("split-task-mode", split);
+  document.getElementById("resizer-detail")?.classList.toggle("hidden", !split);
+  if (!sheet) return;
+  if (split) {
+    sheet.classList.remove("hidden");
+    sheet.classList.toggle("detail-empty", !showForm);
+    sheet.setAttribute("aria-hidden", showForm ? "false" : "true");
+    document.getElementById("task-detail-empty")?.setAttribute("aria-hidden", showForm ? "true" : "false");
+  } else if (!showForm) {
+    sheet.classList.add("hidden");
+    sheet.classList.remove("detail-empty");
+    sheet.setAttribute("aria-hidden", "true");
+  } else {
+    sheet.classList.remove("hidden");
+    sheet.classList.remove("detail-empty");
+    sheet.setAttribute("aria-hidden", "false");
+  }
+  highlightSelectedTaskRow();
+}
+
+const COLUMN_WIDTH_KEYS = {
+  sidebar: "empire_col_sidebar_w",
+  detail: "empire_col_detail_w",
+};
+const COLUMN_WIDTH_LIMITS = {
+  sidebar: { min: 200, max: 480, default: 260, cssVar: "--sidebar-w" },
+  detail: { min: 300, max: 720, default: 420, cssVar: "--detail-panel-w" },
+};
+
+function clampColWidth(n, limits) {
+  return Math.min(limits.max, Math.max(limits.min, Math.round(n)));
+}
+
+function readCssPx(app, cssVar, fallback) {
+  const raw = getComputedStyle(app).getPropertyValue(cssVar).trim();
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function loadColumnWidths() {
+  const app = document.getElementById("app");
+  if (!app) return;
+  Object.entries(COLUMN_WIDTH_LIMITS).forEach(([key, limits]) => {
+    const stored = Number(localStorage.getItem(COLUMN_WIDTH_KEYS[key]));
+    const w = clampColWidth(Number.isFinite(stored) && stored > 0 ? stored : limits.default, limits);
+    app.style.setProperty(limits.cssVar, `${w}px`);
+  });
+}
+
+function bindColumnResizer(el, key) {
+  if (!el) return;
+  const limits = COLUMN_WIDTH_LIMITS[key];
+  const app = document.getElementById("app");
+  let startX = 0;
+  let startW = 0;
+  const invert = key === "detail";
+
+  const onMove = (e) => {
+    const dx = e.clientX - startX;
+    const next = clampColWidth(startW + (invert ? -dx : dx), limits);
+    app.style.setProperty(limits.cssVar, `${next}px`);
+  };
+  const onUp = () => {
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+    document.body.classList.remove("col-resizing");
+    el.classList.remove("active");
+    const w = readCssPx(app, limits.cssVar, limits.default);
+    localStorage.setItem(COLUMN_WIDTH_KEYS[key], String(w));
+  };
+  const onDown = (e) => {
+    if (!useTaskSplitPane()) return;
+    if (key === "detail" && !app.classList.contains("split-task-mode")) return;
+    if (key === "sidebar" && app.classList.contains("settings-mode")) return;
+    e.preventDefault();
+    startX = e.clientX;
+    startW = readCssPx(app, limits.cssVar, limits.default);
+    document.body.classList.add("col-resizing");
+    el.classList.add("active");
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+  el.addEventListener("mousedown", onDown);
+  el.addEventListener("keydown", (e) => {
+    if (!useTaskSplitPane()) return;
+    if (key === "detail" && !app.classList.contains("split-task-mode")) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const cur = readCssPx(app, limits.cssVar, limits.default);
+    const step = e.shiftKey ? 40 : 16;
+    const delta = (e.key === "ArrowLeft" ? -1 : 1) * (invert ? -step : step);
+    const next = clampColWidth(cur + delta, limits);
+    app.style.setProperty(limits.cssVar, `${next}px`);
+    localStorage.setItem(COLUMN_WIDTH_KEYS[key], String(next));
+  });
+  el.addEventListener("dblclick", () => {
+    app.style.setProperty(limits.cssVar, `${limits.default}px`);
+    localStorage.removeItem(COLUMN_WIDTH_KEYS[key]);
+  });
+}
+
+function bindColumnResizers() {
+  bindColumnResizer(document.getElementById("resizer-sidebar"), "sidebar");
+  bindColumnResizer(document.getElementById("resizer-detail"), "detail");
+}
+
+function workoutDiaryNavHtml(dateValue, inputId) {
+  return `<div class="diary-nav card">
+    <button type="button" class="btn small diary-shift" data-shift="-7" title="−7 дней">«</button>
+    <button type="button" class="btn small diary-shift" data-shift="-1" title="−1 день">‹</button>
+    <div class="diary-nav-center">
+      <input type="date" id="${inputId}" value="${dateValue}">
+      <div class="diary-nav-label">${escapeHtml(formatDiaryDate(dateValue))}</div>
+    </div>
+    <button type="button" class="btn small diary-shift" data-shift="1" title="+1 день">›</button>
+    <button type="button" class="btn small diary-shift" data-shift="7" title="+7 дней">»</button>
+    <button type="button" class="btn small diary-today" type="button">Сегодня</button>
+  </div>`;
+}
+
+function bindDiaryNav(root, { inputId, onChange }) {
+  const input = root.querySelector(`#${inputId}`);
+  if (!input) return;
+  const apply = (val) => {
+    input.value = val;
+    const label = root.querySelector(".diary-nav-label");
+    if (label) label.textContent = formatDiaryDate(val);
+    onChange(val);
+  };
+  input.onchange = () => apply(input.value);
+  root.querySelectorAll(".diary-shift").forEach((btn) => {
+    btn.onclick = () => apply(addDaysToDateStr(input.value, Number(btn.dataset.shift)));
+  });
+  root.querySelector(".diary-today")?.addEventListener("click", () => apply(todayStr()));
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function formatPlainText(s) {
+  if (!s) return "";
+  let h = escapeHtml(s);
+  h = h.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  h = h.replace(/\n/g, "<br>");
+  return h;
+}
+
+function checklistByRef(ref) {
+  return state.checklists.find((c) => c.agent_ref === ref) || null;
+}
+
+function checklistPct(cl) {
+  if (!cl) return null;
+  const total = cl.items_total || 0;
+  const done = cl.items_done || 0;
+  return total ? Math.round((done / total) * 100) : 0;
+}
+
+function renderFinanceModel() {
+  const el = document.getElementById("view-finance-model");
+  const FM = window.EMPIRE_FINANCE_MODEL;
+  if (!FM) {
+    el.innerHTML = '<div class="empty">Не загружен контент финмодели</div>';
+    return;
+  }
+
+  const pipeCl = checklistByRef("empire-pipeline-2026");
+  const pipePct = checklistPct(pipeCl);
+
+  const blocksHtml = FM.pipeline
+    .map((b) => {
+      const cl = checklistByRef(b.checklistRef);
+      const pct = checklistPct(cl);
+      const clId = cl?.id || "";
+      return `<button type="button" class="fm-block" data-goto-checklist="${clId}" ${clId ? "" : "disabled"}>
+        <span class="fm-block-num">${escapeHtml(b.num)}</span>
+        <span class="fm-block-title">${escapeHtml(b.title)}</span>
+        <span class="fm-block-period">${escapeHtml(b.period)}</span>
+        <span class="fm-block-text">${escapeHtml(b.text)}</span>
+        ${pct != null ? `<span class="fm-block-pct">${pct}%</span>` : ""}
+      </button>`;
+    })
+    .join('<span class="fm-arrow" aria-hidden="true">→</span>');
+
+  const phasesHtml = FM.phases
+    .map((ph) => {
+      const cl = checklistByRef(ph.key);
+      const pct = checklistPct(cl);
+      const clId = cl?.id || "";
+      return `<div class="fm-phase card">
+        <div class="fm-phase-head">
+          <strong>${escapeHtml(ph.label)}</strong>
+          <span class="hint">${escapeHtml(ph.dates)}</span>
+          ${pct != null ? `<span class="fm-phase-pct">${pct}%</span>` : ""}
+        </div>
+        <p class="hint">${escapeHtml(ph.focus)}</p>
+        ${clId ? `<button type="button" class="btn small" data-goto-checklist="${clId}">Чеклист фазы →</button>` : ""}
+      </div>`;
+    })
+    .join("");
+
+  const milestoneTasks = state.tasks
+    .filter(
+      (t) =>
+        t.due_date &&
+        t.status !== "done" &&
+        ((t.tags || []).includes("веха") ||
+          (t.tags || []).includes("финмодель") ||
+          (t.title || "").startsWith("ФМ:") ||
+          (t.title || "").startsWith("Веха:"))
+    )
+    .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""));
+
+  const msStatic = FM.milestones
+    .map((m) => {
+      const task = milestoneTasks.find((t) => t.due_date === m.date && (t.title || "").includes(m.title.slice(0, 12)));
+      const done = task ? false : state.doneTasks.some((t) => t.due_date === m.date);
+      return `<tr class="${done ? "fm-ms-done" : ""}">
+        <td>${escapeHtml(formatDateRu(m.date))}</td>
+        <td><strong>${escapeHtml(m.title)}</strong><div class="hint">${escapeHtml(m.hint)}</div></td>
+        <td>${task ? `<button type="button" class="btn-link" data-open-task="${task.id}">В задачах</button>` : done ? "✓" : "—"}</td>
+      </tr>`;
+    })
+    .join("");
+
+  const cashflowCl = checklistByRef("empire-finance-cashflow");
+  const metricsCl = checklistByRef("empire-finance-metrics");
+
+  const glossaryHtml = FM.glossary
+    .map((g) => `<dt>${escapeHtml(g.term)}</dt><dd>${escapeHtml(g.text)}</dd>`)
+    .join("");
+
+  const monthlyHtml = FM.monthlyPlan
+    .map(
+      (r) => `<tr>
+        <td>${escapeHtml(r.month)}</td>
+        <td>${escapeHtml(r.income)}</td>
+        <td>${escapeHtml(r.expense)}</td>
+        <td class="hint">${escapeHtml(r.note)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const bridge = FM.bridge35k;
+  const introHtml = FM.intro.map((p) => `<p>${formatPlainText(p)}</p>`).join("");
+  const bridgeHtml = bridge.paragraphs.map((p) => `<p>${formatPlainText(p)}</p>`).join("");
+
+  el.innerHTML = `
+    <div class="fm-hero card">
+      <h2 class="fm-title">${escapeHtml(FM.title)}</h2>
+      <p class="hint">${escapeHtml(FM.period)}</p>
+      ${pipePct != null ? `<div class="fm-overall">Общий прогресс пайплайна: <strong>${pipePct}%</strong>
+        ${pipeCl?.id ? `<button type="button" class="btn small" data-goto-checklist="${pipeCl.id}">Итоговый чеклист →</button>` : ""}
+      </div>` : ""}
+      <div class="fm-intro">${introHtml}</div>
+    </div>
+
+    <div class="fm-bridge card fm-bridge-highlight">
+      <h3>${escapeHtml(bridge.title)}</h3>
+      <p class="fm-bridge-short"><strong>${escapeHtml(bridge.short)}</strong></p>
+      ${bridgeHtml}
+      <p class="hint">Срок: до ${escapeHtml(formatDateRu(bridge.deadline))} · задача в календаре и в проекте «Финмодель»</p>
+    </div>
+
+    <div class="section-title">Пайплайн к цели (6 блоков)</div>
+    <p class="hint fm-hint">Нажмите на блок — откроется связанный чеклист. Отмечайте пункты там, чтобы видеть процент.</p>
+    <div class="fm-pipeline">${blocksHtml}</div>
+
+    <div class="section-title">Фазы по месяцам</div>
+    <div class="fm-phases">${phasesHtml}</div>
+
+    <div class="section-title">Вехи с датами</div>
+    <p class="hint fm-hint">Те же даты — в календаре приложения. «В задачах» — открыть карточку.</p>
+    <div class="card fm-table-wrap">
+      <table class="fm-table">
+        <thead><tr><th>Дата</th><th>Что должно быть сделано</th><th></th></tr></thead>
+        <tbody>${msStatic}</tbody>
+      </table>
+    </div>
+
+    <div class="section-title">План денег по месяцам (ориентир)</div>
+    <div class="card fm-table-wrap">
+      <table class="fm-table">
+        <thead><tr><th>Месяц</th><th>Доход Σ</th><th>Расход</th><th>Комментарий</th></tr></thead>
+        <tbody>${monthlyHtml}</tbody>
+      </table>
+      ${cashflowCl?.id ? `<button type="button" class="btn small" style="margin:12px" data-goto-checklist="${cashflowCl.id}">Сверка план/факт (чеклист) →</button>` : ""}
+    </div>
+
+    <div class="section-title">Куда идут деньги</div>
+    <div class="card">
+      ${FM.moneySplit.rows
+        .map(
+          (r) => `<div class="fm-money-row">
+            <strong>${escapeHtml(r.what)}</strong>
+            <span>${escapeHtml(r.who)}</span>
+            <span class="hint">${escapeHtml(r.share)}</span>
+          </div>`
+        )
+        .join("")}
+    </div>
+
+    <div class="section-title">Словарь</div>
+    <dl class="card fm-glossary">${glossaryHtml}</dl>
+
+    <div class="fm-footer card">
+      <p><strong>Как работать каждую неделю</strong></p>
+      <ol class="fm-howto">
+        <li>Раздел <em>Финмодель</em> — понять, на какой фазе вы сейчас.</li>
+        <li><em>Чеклисты</em> — отмечать сделанное (фаза + итоговый %).</li>
+        <li><em>Календарь</em> — не пропускать вехи с датой.</li>
+        <li>Проект <em>Empire · Финмодель</em> — задачи с подробными пояснениями в заметке.</li>
+        <li>Воскресенье — KPI и чеклист «метрики»${metricsCl?.id ? ` (<button type="button" class="btn-link" data-goto-checklist="${metricsCl.id}">открыть</button>)` : ""}.</li>
+      </ol>
+    </div>`;
+
+  el.querySelectorAll("[data-goto-checklist]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = +btn.dataset.gotoChecklist;
+      if (!id) return;
+      showView("detail");
+      await renderDetail(id);
+    });
+  });
+  el.querySelectorAll("[data-open-task]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = +btn.dataset.openTask;
+      const t = state.tasks.find((x) => x.id === id);
+      if (t) await openSheet(t);
+    });
+  });
+}
+
+function formatDateRu(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  const months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  return `${d} ${months[m - 1]}. ${y}`;
+}
+
+function formatDue(t) {
+  let s = "";
+  if (t.due_date) s += t.due_date;
+  if (t.due_time) s += (s ? " " : "") + t.due_time;
+  return s;
+}
+
+function repeatKeyFromObj(obj) {
+  if (!obj) return "";
+  const f = obj.freq;
+  const i = obj.interval || 1;
+  if (f === "daily" && i === 1) return "daily";
+  if (f === "weekdays") return "weekdays";
+  if (f === "weekly" && i === 2) return "biweekly";
+  if (f === "weekly") return "weekly";
+  if (f === "monthly") return "monthly";
+  if (f === "yearly") return "yearly";
+  return "";
+}
+
+function computeRemindAt(dueDate, dueTime, offsetMin) {
+  if (!dueDate || offsetMin === "" || offsetMin == null) return null;
+  const tm = dueTime || "09:00";
+  const base = new Date(`${dueDate}T${tm}:00`);
+  if (isNaN(base)) return null;
+  base.setMinutes(base.getMinutes() - Number(offsetMin));
+  return base.toISOString().slice(0, 19);
+}
+
+function remindOffsetFromTask(t) {
+  if (!t.remind_at || !t.due_date) return "";
+  const due = new Date(`${t.due_date}T${t.due_time || "09:00"}:00`);
+  const rem = new Date(t.remind_at.replace(" ", "T"));
+  const diff = Math.round((due - rem) / 60000);
+  const presets = [0, 5, 15, 60, 1440];
+  return String(presets.find((p) => Math.abs(p - diff) < 3) ?? "");
+}
+
+function priorityBadge(p) {
+  if (p >= 3) return '<span class="badge high">высокий</span>';
+  if (p === 2) return '<span class="badge">средний</span>';
+  if (p === 1) return '<span class="badge">низкий</span>';
+  return "";
+}
+
+function numOrEmpty(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatNum(v, digits = 1) {
+  if (v == null || v === "") return "—";
+  return Number(v).toFixed(digits).replace(/\.0$/, "");
+}
+
+function measurementRowHtml(m) {
+  const parts = [];
+  if (m.weight_kg != null) parts.push(`${formatNum(m.weight_kg)} кг`);
+  if (m.waist_cm != null) parts.push(`талия ${formatNum(m.waist_cm)}`);
+  if (m.biceps_r_cm != null || m.biceps_l_cm != null) {
+    parts.push(`бицепс ${formatNum(m.biceps_r_cm)}/${formatNum(m.biceps_l_cm)}`);
+  }
+  if (m.legs_cm != null) parts.push(`ноги ${formatNum(m.legs_cm)}`);
+  const note = m.note ? `<div class="task-note-preview">${escapeHtml(m.note)}</div>` : "";
+  return `
+    <div class="task-row health-row" data-measurement-id="${m.id}">
+      <div class="health-icon">📏</div>
+      <div class="task-body" data-action="open-measurement" data-id="${m.id}">
+        <div class="task-title">${escapeHtml(m.measured_on)}</div>
+        <div class="task-meta">${parts.map((p) => `<span class="badge">${escapeHtml(p)}</span>`).join("")}</div>
+        ${note}
+      </div>
+    </div>`;
+}
+
+function workoutRowHtml(w) {
+  const vol = w.sets > 1 ? `${w.sets}×` : "";
+  const note = w.note ? `<div class="task-note-preview">${escapeHtml(w.note)}</div>` : "";
+  return `
+    <div class="task-row health-row" data-workout-id="${w.id}">
+      <div class="health-icon">🏋</div>
+      <div class="task-body" data-action="open-workout" data-id="${w.id}">
+        <div class="task-title">${escapeHtml(w.exercise_label || w.exercise_key)}</div>
+        <div class="task-meta">
+          <span class="badge">${escapeHtml(w.logged_on)}</span>
+          <span class="badge">${vol}${formatNum(w.weight_kg)} кг × ${w.reps}</span>
+        </div>
+        ${note}
+      </div>
+    </div>`;
+}
+
+function isoWeekKey(d = new Date()) {
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = x.getUTCDay() || 7;
+  x.setUTCDate(x.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((x - yearStart) / 86400000) + 1) / 7);
+  return `${x.getUTCFullYear()}-W${week}`;
+}
+
+function isSunday(d = new Date()) {
+  return d.getDay() === 0;
+}
+
+function renderSparkChart(points, title, valueFn, unit = "") {
+  const pts = points.filter((p) => valueFn(p) != null).slice(0, 14).reverse();
+  if (pts.length < 2) return "";
+  const values = pts.map((p) => Number(valueFn(p)));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const bars = pts
+    .map((p) => {
+      const val = Number(valueFn(p));
+      const h = 20 + Math.round(((val - min) / span) * 80);
+      const label = formatNum(val);
+      const date = p.measured_on || p.logged_on || "";
+      return `<div class="spark-item" title="${escapeHtml(date)}: ${label}${unit}">
+        <div class="spark-bar" style="height:${h}%"></div>
+        <div class="spark-label">${label}</div>
+      </div>`;
+    })
+    .join("");
+  return `<div class="spark-card"><div class="section-title">${escapeHtml(title)}</div><div class="spark-chart">${bars}</div></div>`;
+}
+
+function bicepsAvg(m) {
+  const r = m.biceps_r_cm;
+  const l = m.biceps_l_cm;
+  if (r != null && l != null) return (Number(r) + Number(l)) / 2;
+  return r ?? l ?? null;
+}
+
+function measurementSettingsHtml() {
+  const s = state.healthSettings;
+  const checked = s.remind_measure_sunday ? "checked" : "";
+  return `
+    <div class="health-settings card" style="padding:14px;margin-bottom:12px">
+      <label class="toggle-row">
+        <input type="checkbox" id="hs-remind-sunday" ${checked}>
+        <span>Напоминать о замере по воскресеньям</span>
+      </label>
+      <div class="field-grid" style="margin-top:10px">
+        <div>
+          <label class="field-label">Час напоминания</label>
+          <input id="hs-remind-hour" type="number" min="0" max="23" value="${s.remind_measure_hour ?? 10}">
+        </div>
+      </div>
+      <button type="button" id="hs-save" class="btn small" style="margin-top:10px;width:auto">Сохранить настройки</button>
+    </div>`;
+}
+
+function sundayBannerHtml() {
+  if (!state.healthSettings.remind_measure_sunday) return "";
+  if (!isSunday()) return "";
+  if (state.healthSummary.measurement_this_week) return "";
+  return `<div class="health-banner">
+    <span>📏 Воскресенье — время замеров тела</span>
+    <button type="button" class="btn small" data-action="add-measurement-now">+ Замер</button>
+  </div>`;
+}
+
+function renderMeasurementCharts() {
+  const ms = [...state.measurements];
+  return [
+    renderSparkChart(ms, "Вес, кг", (m) => m.weight_kg, " кг"),
+    renderSparkChart(ms, "Талия, см", (m) => m.waist_cm, " см"),
+    renderSparkChart(ms, "Бицепс (средн.), см", bicepsAvg, " см"),
+    renderSparkChart(ms, "Ноги, см", (m) => m.legs_cm, " см"),
+  ].join("");
+}
+
+function renderMeasurements() {
+  const el = document.getElementById("view-measurements");
+  const hs = state.healthSummary;
+  const head = hs.latest_weight_kg
+    ? `<div class="health-hero">
+        <div class="health-hero-val">${formatNum(hs.latest_weight_kg)} <span>кг</span></div>
+        <div class="health-hero-sub">${escapeHtml(hs.latest_measured_on || "")}${hs.latest_waist_cm ? ` · талия ${formatNum(hs.latest_waist_cm)}` : ""}</div>
+      </div>`
+    : '<div class="empty" style="padding:16px">Добавьте первый замер</div>';
+  const list = state.measurements.length
+    ? `<div class="section-title">История</div><div class="card">${state.measurements.map(measurementRowHtml).join("")}</div>`
+    : "";
+  el.innerHTML = sundayBannerHtml() + measurementSettingsHtml() + head + list;
+  const saveBtn = document.getElementById("hs-save");
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      const body = {
+        remind_measure_sunday: document.getElementById("hs-remind-sunday").checked,
+        remind_measure_hour: Number(document.getElementById("hs-remind-hour").value),
+      };
+      const r = await api("/body/settings", { method: "PUT", body: JSON.stringify(body) });
+      state.healthSettings = r;
+      showToast("Настройки сохранены");
+      renderMeasurements();
+    };
+  }
+}
+
+function renderWorkouts() {
+  const el = document.getElementById("view-workouts");
+  state.workoutDiaryDate = state.workoutDiaryDate || todayStr();
+  const from = addDaysToDateStr(state.workoutDiaryDate, -7);
+  const to = addDaysToDateStr(state.workoutDiaryDate, 7);
+  const nav = workoutDiaryNavHtml(state.workoutDiaryDate, "workout-diary-date");
+  const programLink = `<div class="card program-promo">
+    <strong>Программа 2026</strong> — шаблон дня (A/B/C), веса и подходы из плана.
+    <button type="button" class="btn linkish" data-goto="program">Открыть программу →</button>
+  </div>`;
+  api(`/workouts?from_date=${from}&to_date=${to}&limit=200`)
+    .then((res) => {
+      const logs = res.workouts || [];
+      const byDate = {};
+      logs.forEach((w) => {
+        byDate[w.logged_on] = byDate[w.logged_on] || [];
+        byDate[w.logged_on].push(w);
+      });
+      const days = [];
+      for (let i = -7; i <= 7; i += 1) days.push(addDaysToDateStr(state.workoutDiaryDate, i));
+      const sections = days.map((day) => {
+        const items = byDate[day] || [];
+        const title = day === todayStr() ? `Сегодня · ${formatDiaryDate(day)}` : formatDiaryDate(day);
+        if (!items.length) {
+          return `<div class="section-title">${escapeHtml(title)}</div><div class="card"><div class="empty" style="padding:12px">Нет записей</div></div>`;
+        }
+        return `<div class="section-title">${escapeHtml(title)} (${items.length})</div><div class="card">${items.map(workoutRowHtml).join("")}</div>`;
+      }).join("");
+      el.innerHTML = nav + programLink + sections;
+      bindDiaryNav(el, {
+        inputId: "workout-diary-date",
+        onChange: (val) => {
+          state.workoutDiaryDate = val;
+          renderWorkouts();
+        },
+      });
+      el.querySelector('[data-goto="program"]')?.addEventListener("click", () => {
+        state.programDate = state.workoutDiaryDate;
+        showView("program");
+      });
+    })
+    .catch(() => {
+      el.innerHTML = nav + programLink + '<div class="empty">Не удалось загрузить дневник</div>';
+      bindDiaryNav(el, {
+        inputId: "workout-diary-date",
+        onChange: (val) => {
+          state.workoutDiaryDate = val;
+          renderWorkouts();
+        },
+      });
+    });
+}
+
+async function loadProgramSession(on) {
+  state.programDate = on || state.programDate || todayStr();
+  state.workoutDiaryDate = state.programDate;
+  try {
+    const [session, logsRes] = await Promise.all([
+      api(`/workouts/program/session?on=${encodeURIComponent(state.programDate)}`),
+      api(`/workouts?logged_on=${encodeURIComponent(state.programDate)}`),
+    ]);
+    state.programSession = session;
+    state.programLogsForDate = logsRes.workouts || [];
+  } catch {
+    state.programSession = null;
+    state.programLogsForDate = [];
+  }
+}
+
+function savedProgramSet(logs, exerciseKey, setNum) {
+  const prefix = `подход ${setNum}/`;
+  return logs.find((l) => l.exercise_key === exerciseKey && (l.note || "").startsWith(prefix));
+}
+
+function programSetCount(ex) {
+  if (ex.is_max) return 1;
+  return Math.max(1, ex.sets || 1);
+}
+
+function programExerciseRowHtml(ex, idx, logs) {
+  if (ex.is_rest) {
+    return `<div class="program-rest card">${escapeHtml(ex.detail || "Отдых")}</div>`;
+  }
+  const n = programSetCount(ex);
+  const w0 = ex.suggested_weight_kg ?? "";
+  const reps0 = ex.reps ?? ex.reps_max ?? ex.reps_min ?? 10;
+  const hint = [ex.prescription, ex.detail].filter(Boolean).join(" · ");
+  const setRows = [];
+  for (let s = 1; s <= n; s += 1) {
+    const saved = savedProgramSet(logs, ex.exercise_key, s);
+    const wVal = saved ? saved.weight_kg : (s === 1 ? w0 : "");
+    const rVal = saved ? saved.reps : reps0;
+    const checked = saved ? "checked" : "";
+    const touched = saved ? 'data-touched="1"' : "";
+    setRows.push(`<div class="program-set-row">
+      <label class="set-check"><input type="checkbox" class="pg-set-done" data-idx="${idx}" data-set="${s}" ${checked}></label>
+      <span class="set-num">${s}</span>
+      <input type="number" class="pg-w" data-idx="${idx}" data-set="${s}" min="0" step="2.5" value="${wVal !== "" && wVal != null ? wVal : ""}" placeholder="кг" inputmode="decimal" ${touched}>
+      <input type="number" class="pg-r" data-idx="${idx}" data-set="${s}" min="1" max="50" value="${rVal}" placeholder="повт" inputmode="numeric" ${touched}>
+    </div>`);
+  }
+  const doneCount = setRows.length ? logs.filter((l) => l.exercise_key === ex.exercise_key && (l.note || "").startsWith("подход ")).length : 0;
+  const dots = `${"●".repeat(Math.min(doneCount, n))}${"○".repeat(Math.max(0, n - doneCount))}`;
+  return `<details class="program-ex card">
+    <summary class="program-ex-summary">
+      <span class="program-ex-title">${escapeHtml(ex.exercise_label)}</span>
+      <span class="program-plan">${escapeHtml(ex.prescription)}</span>
+      <span class="program-dots" data-idx="${idx}">${dots}</span>
+    </summary>
+    <div class="program-ex-hint">${escapeHtml(hint)}</div>
+    <div class="program-ex-body">
+      <div class="program-sets-head"><span></span><span>#</span><span>кг</span><span>повт</span></div>
+      ${setRows.join("")}
+      ${n > 1 ? `<button type="button" class="btn linkish pg-copy-w" data-idx="${idx}">Тот же вес во всех</button>` : ""}
+    </div>
+  </details>`;
+}
+
+function updateProgramDots(root, idx) {
+  const boxes = root.querySelectorAll(`.pg-set-done[data-idx="${idx}"]`);
+  let done = 0;
+  boxes.forEach((b) => { if (b.checked) done += 1; });
+  const el = root.querySelector(`.program-dots[data-idx="${idx}"]`);
+  if (el) el.textContent = `${"●".repeat(done)}${"○".repeat(boxes.length - done)}`;
+}
+
+function bindProgramExerciseHandlers(root) {
+  root.querySelectorAll(".pg-copy-w").forEach((btn) => {
+    btn.onclick = () => {
+      const idx = btn.dataset.idx;
+      const first = root.querySelector(`.pg-w[data-idx="${idx}"][data-set="1"]`);
+      if (!first) return;
+      root.querySelectorAll(`.pg-w[data-idx="${idx}"]`).forEach((inp) => { inp.value = first.value; });
+    };
+  });
+  root.querySelectorAll(".pg-set-done").forEach((cb) => {
+    cb.onchange = () => {
+      updateProgramDots(root, cb.dataset.idx);
+      scheduleProgramAutoSave();
+    };
+  });
+  root.querySelectorAll(".pg-w, .pg-r").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      inp.dataset.touched = "1";
+      scheduleProgramAutoSave();
+    });
+    inp.addEventListener("change", () => {
+      inp.dataset.touched = "1";
+      scheduleProgramAutoSave();
+    });
+  });
+  root.querySelectorAll(".program-ex").forEach((det) => {
+    det.addEventListener("toggle", () => {
+      if (!det.open) return;
+      requestAnimationFrame(() => {
+        const last = det.querySelector(".program-set-row:last-child");
+        const target = last || det.querySelector(".program-ex-body") || det;
+        target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    });
+  });
+}
+
+async function renderInsights() {
+  const el = document.getElementById("view-insights");
+  el.innerHTML = '<div class="empty">Анализ данных…</div>';
+  try {
+    const [daily, data] = await Promise.all([
+      api("/insights/daily").catch(() => null),
+      api("/insights?llm=0"),
+    ]);
+    state.insights = data;
+    const pipe = data.pipeline || {};
+    const tasks = data.tasks || {};
+    const health = data.health || {};
+    const focus = (daily?.focus_items || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("");
+    const dailyBlock = daily
+      ? `<div class="insights-hero daily-brief">
+        <h3>Фокус дня · ${escapeHtml(daily.day || "")}</h3>
+        <div class="insights-meta">${daily.llm_used ? "LLM · " : ""}${daily.telegram_sent ? "TG ✓" : "PWA"}</div>
+        <ul class="insights-list">${focus || "<li>—</li>"}</ul>
+        ${daily.checklist_id ? `<button type="button" class="btn primary small" data-goto-checklist="${daily.checklist_id}">Чеклист фокуса →</button>` : ""}
+        <button type="button" class="btn small" id="btn-run-daily" style="margin-top:8px">Запустить брифинг сейчас</button>
+      </div>`
+      : "";
+    const conclusions = (data.conclusions || [])
+      .map((c) => `<li>${escapeHtml(c)}</li>`)
+      .join("");
+    const narrative = data.narrative
+      ? `<div class="card"><pre class="insights-narrative">${escapeHtml(data.narrative)}</pre></div>`
+      : "";
+    el.innerHTML = `
+      ${dailyBlock}
+      <div class="insights-hero">
+        <h3>ИИ-брифинг Empire</h3>
+        <div class="insights-meta">Обновлено: ${escapeHtml((data.generated_at || "").replace("T", " "))}</div>
+        <button type="button" class="btn primary small" id="btn-refresh-insights" style="margin-top:10px">Обновить анализ</button>
+      </div>
+      <div class="insights-stat-grid">
+        <div class="insights-stat"><strong>${tasks.tasks_todo ?? "—"}</strong><span>к выполнению</span></div>
+        <div class="insights-stat"><strong>${tasks.overdue_count ?? 0}</strong><span>просрочено</span></div>
+        <div class="insights-stat"><strong>${pipe.percent_weighted ?? "—"}%</strong><span>пайплайн (вес)</span></div>
+        <div class="insights-stat"><strong>${health.workouts_last_31d ?? 0}</strong><span>силовых / 31д</span></div>
+      </div>
+      <div class="section-title">Выводы</div>
+      <div class="card" style="padding:14px"><ul class="insights-list">${conclusions}</ul></div>
+      ${narrative}`;
+    document.getElementById("btn-refresh-insights").onclick = async () => {
+      try {
+        await api("/insights/refresh?llm=1", { method: "POST" });
+        await renderInsights();
+        showToast("Анализ обновлён");
+      } catch (err) { showToast(err.message); }
+    };
+    document.getElementById("btn-run-daily")?.addEventListener("click", async () => {
+      try {
+        await api("/insights/daily/run?llm=1", { method: "POST" });
+        await renderInsights();
+        await loadAll();
+        showToast("Брифинг готов");
+      } catch (err) { showToast(err.message); }
+    });
+    el.querySelector("[data-goto-checklist]")?.addEventListener("click", async (e) => {
+      const id = +e.currentTarget.dataset.gotoChecklist;
+      showView("detail");
+      await renderDetail(id);
+    });
+  } catch (err) {
+    el.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function renderWorkoutProgram() {
+  const el = document.getElementById("view-program");
+  if (!state.workoutProgramSummary) {
+    try {
+      state.workoutProgramSummary = await api("/workouts/program/summary");
+    } catch {
+      el.innerHTML = '<div class="empty">Файл программы не найден на сервере</div>';
+      return;
+    }
+  }
+  await loadProgramSession(state.programDate);
+  const sum = state.workoutProgramSummary;
+  const s = state.programSession;
+  const nav = workoutDiaryNavHtml(state.programDate, "program-date");
+  const head = `<div class="card program-head">
+    <div class="program-range">${sum.start} — ${sum.end} · ${sum.calendar_days} тренировок</div>
+    ${nav}
+    <div id="program-autosave-hint" class="program-autosave-hint">Подходы сохраняются автоматически</div>
+  </div>`;
+  if (!s) {
+    el.innerHTML = head + '<div class="empty">На эту дату нет тренировки по календарю</div>';
+    bindDiaryNav(el, {
+      inputId: "program-date",
+      onChange: async (val) => {
+        state.programDate = val;
+        await renderWorkoutProgram();
+      },
+    });
+    return;
+  }
+  const meta = s.meta && Object.keys(s.meta).length
+    ? `<details class="card"><summary>Питание / фаза</summary><pre class="program-meta">${escapeHtml(JSON.stringify(s.meta, null, 2))}</pre></details>`
+    : "";
+  const logs = state.programLogsForDate || [];
+  const exercises = (s.exercises || []).map((ex, idx) => programExerciseRowHtml(ex, idx, logs)).join("");
+  el.innerHTML = `${head}
+    <div class="card program-session">
+      <h3>${escapeHtml(s.label)}</h3>
+      <div class="program-sub">${escapeHtml(s.title || "")}${s.note ? " · " + escapeHtml(s.note) : ""}</div>
+    </div>
+    ${meta}
+    <div class="section-title">Упражнения</div>
+    ${exercises}
+    <button type="button" class="btn block" id="btn-save-program">Сохранить сейчас</button>`;
+  bindDiaryNav(el, {
+    inputId: "program-date",
+    onChange: async (val) => {
+      state.programDate = val;
+      await renderWorkoutProgram();
+    },
+  });
+  document.getElementById("btn-save-program").onclick = () => saveProgramWorkout({ silent: false });
+  bindProgramExerciseHandlers(el);
+  el.querySelectorAll(".program-dots").forEach((d) => updateProgramDots(el, d.dataset.idx));
+}
+
+function collectProgramEntries() {
+  const s = state.programSession;
+  if (!s || !s.exercises) return [];
+  const root = document.getElementById("view-program");
+  if (!root) return [];
+  const entries = [];
+  s.exercises.forEach((ex, idx) => {
+    if (ex.is_rest) return;
+    const n = programSetCount(ex);
+    for (let set = 1; set <= n; set += 1) {
+      const wInp = root.querySelector(`.pg-w[data-idx="${idx}"][data-set="${set}"]`);
+      const rInp = root.querySelector(`.pg-r[data-idx="${idx}"][data-set="${set}"]`);
+      const done = root.querySelector(`.pg-set-done[data-idx="${idx}"][data-set="${set}"]`);
+      const touched = wInp?.dataset.touched || rInp?.dataset.touched;
+      if (done && !done.checked && !touched) continue;
+      const wRaw = wInp?.value;
+      const reps = Number(rInp?.value || 0);
+      if (!reps || reps < 1) continue;
+      if (!reps || reps < 1) continue;
+      const w = wRaw === "" || wRaw == null ? 0 : Number(wRaw);
+      entries.push({
+        logged_on: state.programDate,
+        exercise_key: ex.exercise_key,
+        weight_kg: w,
+        reps,
+        sets: 1,
+        note: `подход ${set}/${n}`,
+      });
+    }
+  });
+  return entries;
+}
+
+function scheduleProgramAutoSave() {
+  clearTimeout(state.programSaveTimer);
+  state.programSaveTimer = setTimeout(() => {
+    saveProgramWorkout({ silent: true, auto: true }).catch(() => {});
+  }, 900);
+}
+
+async function saveProgramWorkout({ silent = false, auto = false } = {}) {
+  if (state.programSaving) return;
+  const entries = collectProgramEntries();
+  if (!entries.length) {
+    if (!silent) showToast("Отметьте хотя бы один подход");
+    return;
+  }
+  state.programSaving = true;
+  const hint = document.getElementById("program-autosave-hint");
+  if (hint) hint.textContent = "Сохранение…";
+  try {
+    const r = await api("/workouts/program/log-batch", {
+      method: "POST",
+      body: JSON.stringify({
+        logged_on: state.programDate,
+        entries,
+        replace_program: true,
+      }),
+    });
+    const logsRes = await api(`/workouts?logged_on=${encodeURIComponent(state.programDate)}`);
+    state.programLogsForDate = logsRes.workouts || [];
+    const workRes = await api("/workouts?limit=100");
+    state.workouts = workRes.workouts || [];
+    if (hint) hint.textContent = auto ? `Автосохранено · ${r.saved} подх.` : `Сохранено: ${r.saved}`;
+    if (!silent) showToast(`Сохранено: ${r.saved}`);
+    const root = document.getElementById("view-program");
+    if (root) {
+      root.querySelectorAll(".program-dots").forEach((d) => updateProgramDots(root, d.dataset.idx));
+    }
+  } catch (err) {
+    if (hint) hint.textContent = "Ошибка сохранения";
+    if (!silent) showToast(err.message);
+  } finally {
+    state.programSaving = false;
+  }
+}
+
+function periodChipsHtml(target) {
+  const periods = [
+    ["week", "7 дней"],
+    ["month", "30 дней"],
+    ["quarter", "90 дней"],
+  ];
+  return `<div class="chip-row period-chips" data-period-target="${target}">
+    ${periods.map(([k, label]) => `<button type="button" class="chip${state.statsPeriod === k ? " active" : ""}" data-period="${k}">${label}</button>`).join("")}
+  </div>`;
+}
+
+function progressBarHtml(label, pct, sub = "") {
+  const p = Math.max(0, Math.min(100, pct));
+  return `<div class="stat-row">
+    <div class="stat-row-head"><span>${escapeHtml(label)}</span><strong>${p}%</strong></div>
+    <div class="list-progress"><span style="width:${p}%"></span></div>
+    ${sub ? `<div class="stat-sub">${escapeHtml(sub)}</div>` : ""}
+  </div>`;
+}
+
+function deltaHtml(label, d, unit) {
+  if (!d) return `<div class="stat-metric"><span class="stat-label">${escapeHtml(label)}</span><span class="stat-val">—</span></div>`;
+  const sign = d.delta > 0 ? "+" : "";
+  return `<div class="stat-metric">
+    <span class="stat-label">${escapeHtml(label)}</span>
+    <span class="stat-val">${formatNum(d.end)}${unit}</span>
+    <span class="stat-delta${d.delta < 0 ? " good" : d.delta > 0 ? " warn" : ""}">${sign}${formatNum(d.delta)}${unit}</span>
+  </div>`;
+}
+
+async function loadTaskStats() {
+  state.taskStats = await api(`/stats/tasks?period=${state.statsPeriod}`);
+}
+
+async function loadHealthStats() {
+  state.healthStats = await api(`/stats/health?period=${state.statsPeriod}`);
+}
+
+async function renderTaskStats() {
+  await loadTaskStats();
+  const s = state.taskStats;
+  const el = document.getElementById("view-task-stats");
+  const projects = (s.projects || [])
+    .map((p) => progressBarHtml(p.title, p.pct, `${p.done}/${p.total} · открыто ${p.open}`))
+    .join("");
+  const lists = (s.checklists || [])
+    .map((c) => progressBarHtml(c.title, c.pct, `${c.done}/${c.total}`))
+    .join("");
+  el.innerHTML = `
+    ${periodChipsHtml("tasks")}
+    <div class="stats-hero card">
+      <div class="stat-metric"><span class="stat-label">Выполнено за период</span><span class="stat-val">${s.completed}</span></div>
+      <div class="stat-metric"><span class="stat-label">Создано</span><span class="stat-val">${s.created}</span></div>
+      <div class="stat-metric"><span class="stat-label">Открыто сейчас</span><span class="stat-val">${s.open}</span></div>
+    </div>
+    <div class="section-title">Прогресс по проектам</div>
+    <div class="card stats-card">${projects || '<div class="empty">Нет задач в проектах</div>'}</div>
+    <div class="section-title">Чеклисты</div>
+    <div class="card stats-card">${lists || '<div class="empty">Чеклистов нет</div>'}</div>`;
+  bindPeriodChips(el, "tasks");
+}
+
+async function renderHealthStats() {
+  await loadHealthStats();
+  const s = state.healthStats;
+  const el = document.getElementById("view-health-stats");
+  const charts = [
+    renderSparkChart(state.measurements, "Вес, кг", (m) => m.weight_kg, " кг"),
+    renderSparkChart(state.measurements, "Талия, см", (m) => m.waist_cm, " см"),
+    renderSparkChart(state.measurements, "Бицепс (средн.), см", bicepsAvg, " см"),
+    renderSparkChart(state.measurements, "Ноги, см", (m) => m.legs_cm, " см"),
+  ].join("");
+  const prs = (s.personal_records || [])
+    .map((p) => `<span class="badge">${escapeHtml(p.exercise_label)}: ${formatNum(p.max_kg)} кг</span>`)
+    .join("");
+  const act = s.activities || {};
+  el.innerHTML = `
+    ${periodChipsHtml("health")}
+    <div class="stats-hero card">
+      ${deltaHtml("Вес", s.weight, " кг")}
+      ${deltaHtml("Талия", s.waist, " см")}
+      ${deltaHtml("Бицепс", s.biceps, " см")}
+      ${deltaHtml("Ноги", s.legs, " см")}
+    </div>
+    <div class="stats-hero card" style="margin-top:8px">
+      <div class="stat-metric"><span class="stat-label">ИМТ</span><span class="stat-val">${s.bmi ?? "—"}</span></div>
+      <div class="stat-metric"><span class="stat-label">Талия/рост (WHtR)</span><span class="stat-val">${s.whtr ?? "—"}</span></div>
+      <div class="stat-metric"><span class="stat-label">Силовых за период</span><span class="stat-val">${s.workouts_count}</span></div>
+      <div class="stat-metric"><span class="stat-label">В неделю (силовые)</span><span class="stat-val">${s.workouts_per_week}</span></div>
+      <div class="stat-metric"><span class="stat-label">Тоннаж / нед</span><span class="stat-val">${s.volume_per_week} кг</span></div>
+      <div class="stat-metric"><span class="stat-label">Замеров</span><span class="stat-val">${s.measurements_count}</span></div>
+    </div>
+    ${charts}
+    <div class="section-title">Рекорды за период</div>
+    <div class="card stats-card"><div class="task-meta">${prs || "—"}</div></div>
+    <div class="section-title">Кардио (авто-синхрон)</div>
+    <div class="card stats-card" style="padding:14px;color:var(--muted);font-size:0.9rem">
+      <p style="margin:0 0 8px">Garmin / Google Fit подгружаются на VPS автоматически — в приложении руками не импортируем.</p>
+      <div class="task-meta">
+        <span class="badge">${act.sessions || 0} тренировок</span>
+        <span class="badge">${formatNum(act.distance_km, 1)} км</span>
+        <span class="badge">${act.minutes || 0} мин</span>
+        <span class="badge">${act.calories || 0} ккал</span>
+      </div>
+    </div>`;
+  bindPeriodChips(el, "health");
+}
+
+function bindPeriodChips(container, target) {
+  container.querySelectorAll("[data-period]").forEach((btn) => {
+    btn.onclick = async () => {
+      state.statsPeriod = btn.dataset.period;
+      if (target === "tasks") await renderTaskStats();
+      else await renderHealthStats();
+    };
+  });
+}
+
+function renderAllTasks() {
+  const items = activeTasks();
+  const groups = groupTasks(state.tasks);
+  const total = state.summary?.tasks_todo ?? items.length;
+  const hint =
+    total > items.length
+      ? `<p class="sheet-hint">Показано ${items.length} из ${total}. Используйте поиск или фильтр по проекту.</p>`
+      : "";
+  document.getElementById("view-all-tasks").innerHTML =
+    [
+      quickAddHtml(),
+      hint,
+      groups.overdue.length ? '<div class="task-group-label overdue">Просрочено</div>' : "",
+      groups.overdue.length ? renderTaskList(groups.overdue) : "",
+      renderCollapsibleGroup("Сегодня", groups.today, { open: true, cls: "today" }),
+      renderCollapsibleGroup("7 дней", groups.week, { open: true }),
+      renderCollapsibleGroup("Позже / без срока", groups.later, { open: false }),
+    ].filter(Boolean).join("") || `${quickAddHtml()}<div class="empty">Нет активных задач</div>`;
+}
+
+function checkHealthReminders() {
+  const s = state.healthSettings;
+  if (!s.remind_measure_sunday) return;
+  if (!isSunday()) return;
+  const hour = Number(s.remind_measure_hour ?? 10);
+  if (new Date().getHours() < hour) return;
+  if (state.healthSummary.measurement_this_week) return;
+  const weekKey = isoWeekKey();
+  if (localStorage.getItem("empire_measure_reminded_week") === weekKey) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  new Notification("Empire", {
+    body: "Воскресенье — время замеров тела (вес, талия, бицепсы)",
+    tag: "measure-sunday",
+  });
+  localStorage.setItem("empire_measure_reminded_week", weekKey);
+}
+
+function fillExerciseSelect(selected) {
+  const sel = document.getElementById("wf-exercise");
+  sel.innerHTML = Object.entries(state.exercises)
+    .map(([k, label]) => `<option value="${k}"${k === selected ? " selected" : ""}>${escapeHtml(label)}</option>`)
+    .join("");
+}
+
+function closeAllSheets() {
+  closeSheet();
+  closeMeasurementSheet();
+  closeWorkoutSheet();
+}
+
+function openMeasurementSheet(row = null) {
+  closeSheet();
+  closeWorkoutSheet();
+  const sheet = document.getElementById("measurement-sheet");
+  sheet.classList.remove("hidden");
+  sheet.setAttribute("aria-hidden", "false");
+  document.getElementById("mf-id").value = row?.id || "";
+  document.getElementById("mf-date").value = (row?.measured_on || todayStr()).slice(0, 10);
+  document.getElementById("mf-weight").value = row?.weight_kg ?? "";
+  document.getElementById("mf-waist").value = row?.waist_cm ?? "";
+  document.getElementById("mf-biceps-r").value = row?.biceps_r_cm ?? "";
+  document.getElementById("mf-biceps-l").value = row?.biceps_l_cm ?? "";
+  document.getElementById("mf-legs").value = row?.legs_cm ?? "";
+  document.getElementById("mf-note").value = row?.note || "";
+  document.getElementById("mf-delete").classList.toggle("hidden", !row?.id);
+}
+
+function closeMeasurementSheet() {
+  const sheet = document.getElementById("measurement-sheet");
+  sheet.classList.add("hidden");
+  sheet.setAttribute("aria-hidden", "true");
+}
+
+function openWorkoutSheet(row = null) {
+  closeSheet();
+  closeMeasurementSheet();
+  fillExerciseSelect(row?.exercise_key || "bench_press");
+  const sheet = document.getElementById("workout-sheet");
+  sheet.classList.remove("hidden");
+  sheet.setAttribute("aria-hidden", "false");
+  document.getElementById("wf-id").value = row?.id || "";
+  document.getElementById("wf-date").value = (row?.logged_on || todayStr()).slice(0, 10);
+  document.getElementById("wf-exercise").value = row?.exercise_key || "bench_press";
+  document.getElementById("wf-weight").value = row?.weight_kg ?? "";
+  document.getElementById("wf-reps").value = row?.reps ?? "";
+  document.getElementById("wf-sets").value = row?.sets ?? 1;
+  document.getElementById("wf-note").value = row?.note || "";
+  document.getElementById("wf-delete").classList.toggle("hidden", !row?.id);
+}
+
+function closeWorkoutSheet() {
+  const sheet = document.getElementById("workout-sheet");
+  sheet.classList.add("hidden");
+  sheet.setAttribute("aria-hidden", "true");
+}
+
+function onPrimaryAdd() {
+  const v = state.currentView;
+  if (v === "health-stats" || v === "task-stats") return;
+  if (v === "workouts") {
+    openWorkoutSheet();
+    return;
+  }
+  if (v === "program") {
+    showView("workouts");
+    return;
+  }
+  if (v === "measurements") {
+    openMeasurementSheet();
+    return;
+  }
+  openSheet(null);
+  if (v === "cal-day" && state.calendarDay) {
+    document.getElementById("tf-due-date").value = state.calendarDay;
+  }
+}
+
+async function saveMeasurementForm(e) {
+  e.preventDefault();
+  const id = document.getElementById("mf-id").value;
+  const body = {
+    measured_on: document.getElementById("mf-date").value,
+    weight_kg: numOrEmpty(document.getElementById("mf-weight").value),
+    waist_cm: numOrEmpty(document.getElementById("mf-waist").value),
+    biceps_r_cm: numOrEmpty(document.getElementById("mf-biceps-r").value),
+    biceps_l_cm: numOrEmpty(document.getElementById("mf-biceps-l").value),
+    legs_cm: numOrEmpty(document.getElementById("mf-legs").value),
+    note: document.getElementById("mf-note").value.trim() || null,
+  };
+  if (id) await api(`/measurements/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  else await api("/measurements", { method: "POST", body: JSON.stringify(body) });
+  closeMeasurementSheet();
+  await loadAll();
+  showToast("Замер сохранён");
+}
+
+async function saveWorkoutForm(e) {
+  e.preventDefault();
+  const id = document.getElementById("wf-id").value;
+  const body = {
+    logged_on: document.getElementById("wf-date").value,
+    exercise_key: document.getElementById("wf-exercise").value,
+    weight_kg: numOrEmpty(document.getElementById("wf-weight").value),
+    reps: Number(document.getElementById("wf-reps").value),
+    sets: Number(document.getElementById("wf-sets").value) || 1,
+    note: document.getElementById("wf-note").value.trim() || null,
+  };
+  if (id) await api(`/workouts/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  else await api("/workouts", { method: "POST", body: JSON.stringify(body) });
+  closeWorkoutSheet();
+  await loadAll();
+  showToast("Тренировка сохранена");
+}
+
+function taskRowHtml(t, { compact = false } = {}) {
+  const done = t.status === "done";
+  const doing = t.status === "doing";
+  const checkCls = done ? "check done" : doing ? "check doing" : "check";
+  const checkMark = done ? "✓" : doing ? "…" : "";
+  const overdue = t.due_date && t.due_date < todayStr() && !done;
+
+  if (compact) {
+    const dateLabel = t.due_date ? formatTaskDateShort(t.due_date) : "";
+    const projectName = t.project_title || "Входящие";
+    const projectHtml = t.project_id
+      ? `<span class="task-project"><span class="project-dot" style="background:${projectColor(t.project_id)}"></span>${escapeHtml(projectName)}</span>`
+      : `<span class="task-project">${escapeHtml(projectName)}</span>`;
+    const dateCls = overdue ? "task-date overdue" : "task-date";
+    const selected = state.editingId === t.id ? " task-row--selected" : "";
+    return `
+    <div class="task-row task-row--compact${done ? " task-row--done" : ""}${selected}" data-task-id="${t.id}">
+      <button type="button" class="${checkCls}" data-action="toggle-task" data-id="${t.id}" data-status="${t.status}">${checkMark}</button>
+      <div class="task-body" data-action="open-task" data-id="${t.id}">
+        <div class="task-title${done ? " done-text" : ""}">${escapeHtml(t.title)}</div>
+      </div>
+      <div class="task-aside">
+        ${projectHtml}
+        ${dateLabel ? `<span class="${dateCls}">${escapeHtml(dateLabel)}</span>` : ""}
+      </div>
+    </div>`;
+  }
+
+  let meta = "";
+  const due = formatDue(t);
+  if (due) meta += `<span class="badge${overdue ? " overdue" : ""}">${escapeHtml(due)}</span>`;
+  if (t.repeat_label && t.repeat_label !== "Без повтора") {
+    meta += `<span class="badge repeat">🔁 ${escapeHtml(t.repeat_label)}</span>`;
+  }
+  meta += priorityBadge(t.priority || 0);
+  if (t.project_title) meta += `<span class="badge">${escapeHtml(t.project_title)}</span>`;
+  (t.tags || []).forEach((tag) => {
+    meta += `<span class="badge">#${escapeHtml(tag)}</span>`;
+  });
+  const noteLine = t.note
+    ? `<div class="task-note-preview">${escapeHtml(t.note.split("\n")[0].slice(0, 140))}${t.note.length > 140 ? "…" : ""}</div>`
+    : "";
+  const thumb = t.image_url
+    ? `<img class="task-thumb" src="${escapeHtml(t.image_url)}" alt="" loading="lazy">`
+    : "";
+  return `
+    <div class="task-row${state.editingId === t.id ? " task-row--selected" : ""}" data-task-id="${t.id}">
+      <button type="button" class="${checkCls}" data-action="toggle-task" data-id="${t.id}" data-status="${t.status}">${checkMark}</button>
+      <div class="task-body" data-action="open-task" data-id="${t.id}">
+        <div class="task-title-row">${thumb}<div class="task-title${done ? " done-text" : ""}">${escapeHtml(t.title)}</div></div>
+        ${noteLine}
+        <div class="task-meta">${meta}</div>
+      </div>
+    </div>`;
+}
+
+function sortByDueTime(a, b) {
+  const ad = a.due_date || "9999";
+  const bd = b.due_date || "9999";
+  if (ad !== bd) return ad.localeCompare(bd);
+  return (a.due_time || "99:99").localeCompare(b.due_time || "99:99");
+}
+
+function groupTasks(tasks) {
+  const today = todayStr();
+  const weekEnd = addDays(7);
+  const groups = { overdue: [], today: [], week: [], later: [] };
+  const sorted = [...tasks].sort(sortByDueTime);
+  for (const t of sorted) {
+    if (t.status === "done" || t.status === "cancelled") continue;
+    if (!t.due_date) { groups.later.push(t); continue; }
+    if (t.due_date < today) groups.overdue.push(t);
+    else if (t.due_date === today) groups.today.push(t);
+    else if (t.due_date <= weekEnd) groups.week.push(t);
+    else groups.later.push(t);
+  }
+  return groups;
+}
+
+function renderSection(title, items, cls = "") {
+  if (!items.length) return "";
+  return `<div class="section-title ${cls}">${title} (${items.length})</div>
+    ${renderTaskList(items)}`;
+}
+
+function renderToday() {
+  const groups = groupTasks(state.tasks);
+  const counts = taskNavCounts();
+  const completedToday = [...counts.completedToday]
+    .sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""))
+    .slice(0, 50);
+  const doneOpen = localStorage.getItem("empire_group_done_open") !== "0";
+  const parts = [
+    quickAddHtml(),
+    groups.overdue.length ? renderTaskList(groups.overdue) : "",
+    renderCollapsibleGroup("Сегодня", groups.today, { open: true, cls: "today" }),
+    renderCollapsibleGroup("Выполнено", completedToday, {
+      open: doneOpen,
+      cls: "done",
+      footer: completedToday.length
+        ? `<button type="button" class="btn linkish" data-action="show-done-history">Вся история →</button>`
+        : "",
+    }),
+  ].filter(Boolean);
+  const el = document.getElementById("view-today");
+  el.innerHTML = parts.join("") || `${quickAddHtml()}<div class="empty">Нет активных задач</div>`;
+  el.querySelector(".task-group.done")?.addEventListener("toggle", (e) => {
+    localStorage.setItem("empire_group_done_open", e.target.open ? "1" : "0");
+  });
+}
+
+function renderWeek() {
+  const today = todayStr();
+  const weekEnd = addDays(7);
+  const active = activeTasks().sort(sortByDueTime);
+  const overdue = active.filter((t) => t.due_date && t.due_date < today);
+  const byDay = {};
+  for (let i = 0; i <= 7; i += 1) byDay[addDaysToDateStr(today, i)] = [];
+  active.forEach((t) => {
+    if (!t.due_date || t.due_date < today || t.due_date > weekEnd) return;
+    byDay[t.due_date].push(t);
+  });
+  const parts = [quickAddHtml()];
+  if (overdue.length) {
+    parts.push('<div class="task-group-label overdue">Просрочено</div>');
+    parts.push(renderTaskList(overdue));
+  }
+  Object.entries(byDay).forEach(([day, items]) => {
+    if (!items.length) return;
+    const label = formatWeekGroupLabel(day);
+    parts.push(renderCollapsibleGroup(label, items, { open: day === today || items.length <= 5 }));
+  });
+  const el = document.getElementById("view-week");
+  el.innerHTML = parts.length > 1
+    ? parts.join("")
+    : `${quickAddHtml()}<div class="empty">На ближайшие 7 дней задач нет</div>`;
+}
+
+function eisenhowerQuadrant(task) {
+  const today = todayStr();
+  const urgentUntil = addDays(2);
+  const important = (task.priority || 0) >= 2;
+  const urgent = Boolean(task.due_date) && (task.due_date < today || task.due_date <= urgentUntil);
+  if (urgent && important) return "q1";
+  if (!urgent && important) return "q2";
+  if (urgent && !important) return "q3";
+  return "q4";
+}
+
+function renderMatrix() {
+  const el = document.getElementById("view-matrix");
+  const groups = { q1: [], q2: [], q3: [], q4: [] };
+  activeTasks()
+    .sort(sortByDueTime)
+    .forEach((t) => groups[eisenhowerQuadrant(t)].push(t));
+  const quadrant = (key) => {
+    const meta = MATRIX_META[key];
+    const body = groups[key].length
+      ? `<div class="matrix-body">${renderTaskList(groups[key])}</div>`
+      : '<div class="matrix-body"><div class="task-group-empty">Пусто</div></div>';
+    return `<div class="matrix-quadrant ${key}">
+      <div class="matrix-head"><strong>${escapeHtml(meta.title)}</strong><span>${escapeHtml(meta.hint)} · ${groups[key].length}</span></div>
+      ${body}
+    </div>`;
+  };
+  el.innerHTML = `
+    <p class="matrix-note">Как в TickTick: <b>важно</b> — приоритет «средний» или «высокий»; <b>срочно</b> — просрочено или срок в ближайшие 2 дня.</p>
+    <div class="matrix-grid">${["q1", "q2", "q3", "q4"].map(quadrant).join("")}</div>`;
+}
+
+function monthStartFromToday() {
+  const t = todayStr();
+  return `${t.slice(0, 7)}-01`;
+}
+
+function addMonthsToMonthStart(iso, delta) {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setMonth(d.getMonth() + delta);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function calendarGridRange(monthStart) {
+  const d = new Date(`${monthStart}T12:00:00`);
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const first = new Date(y, m, 1);
+  const last = new Date(y, m + 1, 0);
+  const startPad = (first.getDay() + 6) % 7;
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - startPad);
+  const endPad = 6 - ((last.getDay() + 6) % 7);
+  const gridEnd = new Date(last);
+  gridEnd.setDate(last.getDate() + endPad);
+  return {
+    monthStart,
+    monthLabel: first.toLocaleDateString("ru-RU", { month: "long", year: "numeric" }),
+    gridStart: gridStart.toISOString().slice(0, 10),
+    gridEnd: gridEnd.toISOString().slice(0, 10),
+    monthKey: monthStart.slice(0, 7),
+  };
+}
+
+function expandGoogleEventDays(ev) {
+  let start = ev.start;
+  let end = ev.end || start;
+  if (ev.all_day && end > start) {
+    end = addDaysToDateStr(end, -1);
+  }
+  const days = [];
+  let cur = start;
+  while (cur <= end) {
+    days.push(cur);
+    cur = addDaysToDateStr(cur, 1);
+  }
+  return days;
+}
+
+function bindCalendarView(el) {
+  el.querySelector('[data-action="cal-prev"]')?.addEventListener("click", () => {
+    state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, -1);
+    renderCalendar();
+  });
+  el.querySelector('[data-action="cal-next"]')?.addEventListener("click", () => {
+    state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, 1);
+    renderCalendar();
+  });
+  el.querySelector('[data-action="cal-today"]')?.addEventListener("click", () => {
+    openCalendarDay(todayStr());
+  });
+  el.querySelector('[data-action="cal-pick-month"]')?.addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (!v) return;
+    state.calendarMonth = `${v}-01`;
+    renderCalendar();
+  });
+  el.querySelectorAll(".cal-day[data-date]").forEach((cell) => {
+    cell.addEventListener("click", async (e) => {
+      if (e.target.closest("[data-action='toggle-task']")) return;
+      const taskEv = e.target.closest(".cal-event.task[data-task-id]");
+      if (taskEv) {
+        const id = +taskEv.dataset.taskId;
+        const t = [...state.tasks, ...state.doneTasks].find((x) => x.id === id);
+        if (t) await openSheet(t);
+        return;
+      }
+      openCalendarDay(cell.dataset.date);
+    });
+  });
+}
+
+function bindCalendarDayView(el) {
+  el.querySelector('[data-action="cal-back-month"]')?.addEventListener("click", () => {
+    showView("calendar");
+  });
+  el.querySelector('[data-action="cal-day-prev"]')?.addEventListener("click", () => {
+    state.calendarDay = addDaysToDateStr(state.calendarDay, -1);
+    state.calendarMonth = `${state.calendarDay.slice(0, 7)}-01`;
+    renderCalendarDay();
+  });
+  el.querySelector('[data-action="cal-day-next"]')?.addEventListener("click", () => {
+    state.calendarDay = addDaysToDateStr(state.calendarDay, 1);
+    state.calendarMonth = `${state.calendarDay.slice(0, 7)}-01`;
+    renderCalendarDay();
+  });
+  el.querySelector('[data-action="cal-day-today"]')?.addEventListener("click", () => {
+    openCalendarDay(todayStr());
+  });
+}
+
+function localCalendarTasks(gridStart, gridEnd) {
+  return activeTasks().filter(
+    (t) => t.due_date && t.due_date >= gridStart && t.due_date <= gridEnd
+  );
+}
+
+async function fetchCalendarPayload(range) {
+  try {
+    return await api(
+      `/calendar?from_date=${encodeURIComponent(range.gridStart)}&to_date=${encodeURIComponent(range.gridEnd)}`
+    );
+  } catch (err) {
+    const msg = String(err.message || "").toLowerCase();
+    if (msg.includes("not found") || msg.includes("404") || msg.includes("failed")) {
+      return {
+        tasks: localCalendarTasks(range.gridStart, range.gridEnd),
+        google_events: [],
+        google_configured: false,
+        google_error: null,
+        _local: true,
+      };
+    }
+    throw err;
+  }
+}
+
+async function renderCalendar() {
+  state.calendarMonth = state.calendarMonth || monthStartFromToday();
+  const range = calendarGridRange(state.calendarMonth);
+  const el = document.getElementById("view-calendar");
+  el.innerHTML = '<div class="empty">Загрузка календаря…</div>';
+  try {
+    const [data, gcal] = await Promise.all([
+      fetchCalendarPayload(range),
+      api("/calendar/google").catch(() => ({ configured: false, ical_url: "" })),
+    ]);
+    state.googleCalendarUrl = gcal.ical_url || "";
+    if (data._local) data.google_configured = !!gcal.configured;
+    const byDay = {};
+    (data.tasks || []).forEach((t) => {
+      byDay[t.due_date] = byDay[t.due_date] || [];
+      byDay[t.due_date].push({ kind: "task", title: t.title, id: t.id });
+    });
+    (data.google_events || []).forEach((ev) => {
+      expandGoogleEventDays(ev).forEach((day) => {
+        byDay[day] = byDay[day] || [];
+        byDay[day].push({ kind: "google", title: ev.title, id: `${ev.id}-${day}` });
+      });
+    });
+    const days = [];
+    let cur = range.gridStart;
+    while (cur <= range.gridEnd) {
+      days.push(cur);
+      cur = addDaysToDateStr(cur, 1);
+    }
+    const cells = days.map((day) => {
+      const outside = !day.startsWith(range.monthKey);
+      const isToday = day === todayStr();
+      const events = (byDay[day] || [])
+        .slice(0, 4)
+        .map(
+          (ev) =>
+            ev.kind === "task"
+              ? `<div class="cal-event task" data-task-id="${ev.id}" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</div>`
+              : `<div class="cal-event ${ev.kind}" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</div>`
+        )
+        .join("");
+      const more = (byDay[day] || []).length > 4 ? `<div class="cal-event">+${byDay[day].length - 4}</div>` : "";
+      return `<div class="cal-day${outside ? " outside" : ""}${isToday ? " today" : ""}" data-date="${day}">
+        <div class="cal-day-num">${Number(day.slice(8, 10))}</div>${events}${more}
+      </div>`;
+    }).join("");
+    const gcalErr = data.google_error
+      ? `<div class="sheet-hint" style="color:#f87171;margin-bottom:12px">Google: ${escapeHtml(data.google_error)}</div>`
+      : "";
+    const localHint = data._local
+      ? `<div class="sheet-hint" style="margin-bottom:12px;color:var(--muted)">Задачи из локальных данных. Google — после подключения в настройках.</div>`
+      : "";
+    const gcalBanner = data.google_configured
+      ? `<div class="cal-connect-banner"><span>Google Calendar · ${(data.google_events || []).length} событий в периоде</span><button type="button" class="btn small" data-action="open-settings-calendar">Настройки</button></div>`
+      : `<div class="cal-connect-banner"><span>Подключите Google Calendar, чтобы видеть события рядом с задачами</span><button type="button" class="btn small primary" data-action="open-settings-calendar">Подключить</button></div>`;
+    el.innerHTML = `
+      ${gcalBanner}
+      ${localHint}
+      ${gcalErr}
+      <div class="cal-legend">
+        <span class="task"><i></i> Задачи Empire</span>
+        <span class="google"><i></i> Google Calendar</span>
+      </div>
+      <div class="cal-engine">
+        <button type="button" class="cal-engine-arrow" data-action="cal-prev" title="Предыдущий месяц" aria-label="Предыдущий месяц">‹</button>
+        <div class="cal-engine-center">
+          <h2 class="cal-engine-title">${escapeHtml(range.monthLabel)}</h2>
+          <label class="cal-engine-jump">
+            <span class="cal-engine-jump-label">Перейти к месяцу</span>
+            <input type="month" class="cal-month-picker" data-action="cal-pick-month" value="${escapeHtml(range.monthKey)}" aria-label="Выбор месяца">
+          </label>
+        </div>
+        <button type="button" class="cal-engine-today" data-action="cal-today">Сегодня</button>
+        <button type="button" class="cal-engine-arrow" data-action="cal-next" title="Следующий месяц" aria-label="Следующий месяц">›</button>
+      </div>
+      ${quickAddHtml()}
+      <div class="cal-grid">
+        ${WEEKDAYS.map((d) => `<div class="cal-dow">${d}</div>`).join("")}
+        ${cells}
+      </div>`;
+    bindCalendarView(el);
+  } catch (err) {
+    el.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function renderCalendarDay() {
+  const day = state.calendarDay || todayStr();
+  state.calendarDay = day;
+  state.calendarMonth = `${day.slice(0, 7)}-01`;
+  const el = document.getElementById("view-cal-day");
+  el.innerHTML = '<div class="empty">Загрузка дня…</div>';
+  document.getElementById("page-title").textContent = formatDayTitle(day);
+  try {
+    const range = { gridStart: day, gridEnd: day };
+    const data = await fetchCalendarPayload(range);
+    const active = activeTasks()
+      .filter((t) => t.due_date === day)
+      .sort(sortByDueTime);
+    const completed = state.doneTasks
+      .filter((t) => (t.completed_at || "").slice(0, 10) === day || (t.due_date === day && t.status === "done"))
+      .sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""));
+    const googleEvents = (data.google_events || []).filter((ev) => expandGoogleEventDays(ev).includes(day));
+    const isToday = day === todayStr();
+    const gcalHtml = googleEvents.length
+      ? `<div class="cal-day-events card">
+          <div class="section-title">Google Calendar</div>
+          ${googleEvents
+            .map(
+              (ev) => `<div class="cal-day-gevent">
+                <span class="cal-day-gevent-dot"></span>
+                <div>
+                  <div class="cal-day-gevent-title">${escapeHtml(ev.title)}</div>
+                  ${ev.start !== ev.end ? `<div class="hint">${escapeHtml(ev.start)}${ev.end ? ` — ${escapeHtml(ev.end)}` : ""}</div>` : ""}
+                </div>
+              </div>`
+            )
+            .join("")}
+        </div>`
+      : "";
+    const tasksHtml = active.length
+      ? renderTaskList(active, { compact: false })
+      : '<div class="empty cal-day-empty">Нет открытых задач на этот день</div>';
+    const doneHtml = completed.length
+      ? renderCollapsibleGroup("Выполнено", completed, { open: isToday, cls: "done" })
+      : "";
+    el.innerHTML = `
+      <button type="button" class="back-btn" data-action="cal-back-month">← Обзор месяца</button>
+      <div class="cal-day-header">
+        <button type="button" class="cal-engine-arrow" data-action="cal-day-prev" title="Предыдущий день" aria-label="Предыдущий день">‹</button>
+        <div class="cal-day-header-center">
+          <h2 class="cal-day-title">${escapeHtml(formatDayTitle(day))}</h2>
+          ${isToday ? "" : `<button type="button" class="btn small cal-day-today-btn" data-action="cal-day-today">Сегодня</button>`}
+        </div>
+        <button type="button" class="cal-engine-arrow" data-action="cal-day-next" title="Следующий день" aria-label="Следующий день">›</button>
+      </div>
+      ${quickAddHtml()}
+      ${gcalHtml}
+      <div class="section-title">Задачи (${active.length})</div>
+      ${tasksHtml}
+      ${doneHtml}`;
+    bindCalendarDayView(el);
+    el.querySelector(".task-group.done")?.addEventListener("toggle", (e) => {
+      localStorage.setItem("empire_group_done_open", e.target.open ? "1" : "0");
+    });
+  } catch (err) {
+    el.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderSearch(q) {
+  const el = document.getElementById("view-search");
+  const query = (q || "").trim().toLowerCase();
+  let items = state.tasks;
+  if (query) {
+    items = items.filter(
+      (t) =>
+        t.title.toLowerCase().includes(query) ||
+        (t.note || "").toLowerCase().includes(query) ||
+        (t.tags || []).some((x) => x.toLowerCase().includes(query))
+    );
+  }
+  items = items.filter((t) => t.status !== "done").sort(sortByDueTime);
+  el.innerHTML = items.length
+    ? renderTaskList(items)
+    : '<div class="empty">Ничего не найдено</div>';
+}
+
+function projectProgress(projectId) {
+  const open = state.tasks.filter((t) => t.project_id === projectId);
+  const done = state.doneTasks.filter((t) => t.project_id === projectId);
+  const total = open.length + done.length;
+  const pct = total ? Math.round((done.length / total) * 100) : 0;
+  return { open: open.length, done: done.length, total, pct };
+}
+
+function linkedChecklistsForProject(projectTitle) {
+  const slug = (projectTitle || "").toLowerCase();
+  const key = slug.includes("gdepar")
+    ? "gdepar"
+    : slug.includes("pension")
+      ? "pension"
+      : slug.includes("финмодель") || slug.includes("финансовая")
+        ? "finance"
+        : slug.includes("метрик")
+          ? "metrics"
+          : "";
+  if (!key) return [];
+  return state.checklists.filter((c) => {
+    const tags = (c.tags || []).join(" ").toLowerCase();
+    const title = (c.title || "").toLowerCase();
+    return tags.includes(key) || title.includes(key) || (c.agent_ref || "").includes(key);
+  });
+}
+
+function projectHeaderHtml(p) {
+  if (!p) return "";
+  const prog = projectProgress(p.id);
+  const linked = linkedChecklistsForProject(p.title);
+  let clHtml = "";
+  if (linked.length) {
+    const parts = linked.map((c) => {
+      const total = c.items_total || 0;
+      const done = c.items_done || 0;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      return `${escapeHtml(c.title)} ${pct}%`;
+    });
+    clHtml = `<div class="project-linked-cl hint">Чеклисты: ${parts.join(" · ")}</div>`;
+  }
+  const desc = (p.description || "").trim();
+  return `<div class="project-head card">
+    <div class="project-head-row">
+      <span class="project-head-pct">${prog.pct}%</span>
+      <span class="project-head-stats">${prog.done}/${prog.total} закрыто · ${prog.open} открыто</span>
+    </div>
+    <div class="list-progress" style="margin:8px 0"><span style="width:${prog.pct}%"></span></div>
+    ${desc ? `<div class="project-desc hint">${formatPlainText(desc)}</div>` : ""}
+    ${clHtml}
+  </div>`;
+}
+
+function renderProjects() {
+  const el = document.getElementById("view-projects");
+  if (!state.projects.length) {
+    el.innerHTML = '<div class="empty">Проектов нет</div>';
+    return;
+  }
+  el.innerHTML = state.projects
+    .map((p) => {
+      const prog = projectProgress(p.id);
+      return `
+    <div class="card project-row" data-project-id="${p.id}">
+      <div class="task-body">
+        <div class="task-title">${escapeHtml(p.title)}<span class="project-count">${prog.pct}%</span></div>
+        <div class="hint">${prog.done}/${prog.total} закрыто</div>
+      </div>
+    </div>`;
+    })
+    .join("");
+}
+
+function renderProjectTasks(pid) {
+  const p = state.projects.find((x) => x.id === pid);
+  const tasks = state.tasks.filter((t) => t.project_id === pid && t.status !== "done").sort(sortByDueTime);
+  document.getElementById("view-project-tasks").innerHTML = `
+    <button class="back-btn" data-action="back-projects">← Проекты</button>
+    ${projectHeaderHtml(p)}
+    <div class="section-title">Задачи</div>
+    ${tasks.length ? renderTaskList(tasks) : '<div class="empty">Нет открытых задач</div>'}`;
+}
+
+function renderDone() {
+  const el = document.getElementById("view-done");
+  const items = state.doneTasks.slice(0, 100);
+  el.innerHTML = items.length
+    ? renderTaskList(items)
+    : '<div class="empty">Выполненных задач нет</div>';
+}
+
+async function importTicktickFile(file, { fresh = false } = {}) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const q = fresh ? "?fresh=1" : "";
+  const res = await fetch(`${API_BASE}/import/ticktick${q}`, {
+    method: "POST",
+    headers: { "X-Planning-Token": token() },
+    body: fd,
+  });
+  if (!res.ok) {
+    if (res.status === 413) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      throw new Error(`Файл слишком большой (${mb} МБ). Сообщите админу — нужен лимит nginx.`);
+    }
+    const body = await res.json().catch(() => ({}));
+    const detail = body.detail;
+    const msg = Array.isArray(detail)
+      ? detail.map((d) => d.msg || d).join("; ")
+      : detail || `import failed (${res.status})`;
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+function requestNotify() {
+  if (!("Notification" in window)) {
+    showToast("Уведомления не поддерживаются");
+    return Promise.resolve();
+  }
+  return Notification.requestPermission().then(async (p) => {
+    if (p !== "granted") {
+      showToast("Разрешение не дано");
+      return;
+    }
+    try {
+      const pushed = await subscribeWebPush();
+      showToast(pushed ? "Push-напоминания включены" : "Уведомления включены");
+    } catch (err) {
+      showToast(err.message === "push_not_configured" ? "Уведомления в приложении" : "Push: " + err.message);
+    }
+  });
+}
+
+async function subscribeWebPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  const reg = await navigator.serviceWorker.ready;
+  const res = await fetch(`${API_BASE}/push/vapid-public-key`);
+  if (!res.ok) throw new Error("push_not_configured");
+  const { public_key: publicKey } = await res.json();
+  if (!publicKey) throw new Error("push_not_configured");
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+  }
+  await api("/push/subscribe", { method: "POST", body: JSON.stringify(sub.toJSON()) });
+  return true;
+}
+
+async function ensurePushSubscription() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  try {
+    await subscribeWebPush();
+  } catch (_) {}
+}
+
+function openSettings(section = "notifications") {
+  if (state.currentView !== "settings") {
+    state.settingsReturnView = state.currentView || "today";
+  }
+  state.settingsSection = section;
+  showView("settings");
+}
+
+function isPushOn() {
+  return typeof Notification !== "undefined" && Notification.permission === "granted";
+}
+
+function btn3dToggleHtml(action, on, { onLabel = "Вкл", offLabel = "Выкл", wide = false } = {}) {
+  const cls = `btn-3d-toggle${wide ? " btn-3d-toggle--wide" : ""}${on ? " on" : ""}`;
+  return `<button type="button" class="${cls}" data-action="${action}" aria-pressed="${on}">${on ? onLabel : offLabel}</button>`;
+}
+
+function notifyPermissionLabel() {
+  if (!("Notification" in window)) return "Не поддерживается";
+  const map = { granted: "Разрешены", denied: "Запрещены", default: "Не запрошены" };
+  return map[Notification.permission] || Notification.permission;
+}
+
+function settingsPanelHtml(section) {
+  if (section === "notifications") {
+    const hour = Number(localStorage.getItem("empire_briefing_hour") || "8");
+    const pushOn = isPushOn();
+    const hourOpts = Array.from({ length: 17 }, (_, i) => i + 6)
+      .map((h) => `<option value="${h}"${h === hour ? " selected" : ""}>${String(h).padStart(2, "0")}:00</option>`)
+      .join("");
+    return `
+      <h2>Уведомления</h2>
+      <p class="settings-desc">Напоминания по задачам, push с сервера и утренний брифинг с фокусом дня.</p>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div><label>Push-напоминания</label><div class="hint">${escapeHtml(notifyPermissionLabel())}</div></div>
+          ${btn3dToggleHtml("settings-enable-push", pushOn, {
+            onLabel: "Push включён",
+            offLabel: "Включить push",
+            wide: true,
+          })}
+        </div>
+        <div class="settings-row">
+          <div><label>Брифинг «фокус дня»</label><div class="hint">Локальное уведомление в выбранный час</div></div>
+          <select id="settings-briefing-hour" class="settings-input">${hourOpts}</select>
+        </div>
+      </div>
+      <p class="settings-desc">Напоминания о замерах настраиваются в разделе <b>Здоровье → Замеры</b>.</p>`;
+  }
+  if (section === "calendar") {
+    return `
+      <h2>Подписка на календарь</h2>
+      <p class="settings-desc">Подключите Google Calendar через секретную ссылку iCal — события появятся в обзоре месяца рядом с задачами Empire.</p>
+      <div class="settings-card">
+        <div class="sheet-hint" style="margin-bottom:12px">1. Откройте <b>Google Calendar</b> на компьютере<br>
+        2. Настройки нужного календаря → <b>Интеграция календаря</b><br>
+        3. Скопируйте <b>Секретный адрес в формате iCal</b></div>
+        <input id="settings-gcal-url" class="settings-input" type="url" placeholder="https://calendar.google.com/calendar/ical/..." value="${escapeHtml(state.googleCalendarUrl)}" autocomplete="off">
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button type="button" class="btn primary small" data-action="settings-save-gcal">Сохранить</button>
+          <button type="button" class="btn small" data-action="settings-refresh-gcal">Обновить в календаре</button>
+          <button type="button" class="btn small danger" data-action="settings-disconnect-gcal">Отключить</button>
+        </div>
+        <div id="settings-gcal-status" class="hint" style="margin-top:10px"></div>
+      </div>`;
+  }
+  if (section === "appearance") {
+    const doneOpen = localStorage.getItem("empire_group_done_open") !== "0";
+    const projectsOpen = localStorage.getItem("empire_projects_open") !== "0";
+    return `
+      <h2>Внешний вид</h2>
+      <p class="settings-desc">Поведение списков и бокового меню.</p>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div><label>Секция «Выполнено» открыта</label><div class="hint">На экране «Сегодня»</div></div>
+          ${btn3dToggleHtml("settings-toggle-done-open", doneOpen)}
+        </div>
+        <div class="settings-row">
+          <div><label>Проекты развёрнуты</label><div class="hint">Блок «Проекты» в боковом меню</div></div>
+          ${btn3dToggleHtml("settings-toggle-projects-open", projectsOpen)}
+        </div>
+        <div class="settings-row">
+          <div><label>Сброс ширины колонок</label><div class="hint">Меню слева и панель задачи справа</div></div>
+          <button type="button" class="btn small" data-action="settings-reset-columns">По умолчанию</button>
+        </div>
+      </div>`;
+  }
+  if (section === "data") {
+    return `
+      <h2>Данные</h2>
+      <p class="settings-desc">Импорт TickTick. Тренировки, замеры и программа — в отдельном разделе «Здоровье», не удаляются.</p>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div><label>Сброс и импорт TickTick CSV</label><div class="hint" id="ticktick-purge-status">Загрузка…</div></div>
+          <button type="button" class="btn small primary" data-action="settings-fresh-import-ticktick" id="btn-fresh-import-ticktick">Выбрать CSV…</button>
+          <input type="file" id="settings-ticktick-fresh-csv" accept=".csv,text/csv" hidden>
+        </div>
+        <div class="settings-row">
+          <div><label>Удалить только задачи и проекты</label><div class="hint">Чеклисты, цели, тренировки и замеры остаются</div></div>
+          <button type="button" class="btn small danger" data-action="settings-purge-tasks">Очистить задачи</button>
+        </div>
+        <div class="settings-row">
+          <div><label>Дубликаты задач</label><div class="hint" id="dedupe-status">Одинаковое название и дата — лишние удаляются, остаётся задача с повтором и заметкой</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+            <button type="button" class="btn small" data-action="settings-scan-dupes">Проверить</button>
+            <button type="button" class="btn small danger" data-action="settings-dedupe-tasks">Удалить дубликаты</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div><label>Очистить офлайн-кэш</label><div class="hint">Снимок задач и кэш service worker</div></div>
+          <button type="button" class="btn small danger" data-action="settings-clear-cache">Очистить</button>
+        </div>
+      </div>`;
+  }
+  return `
+    <h2>О приложении</h2>
+    <p class="settings-desc">Empire Tasks — задачи, календарь и здоровье на neverretire.ru.</p>
+    <div class="settings-card">
+      <div class="settings-row"><label>Версия</label><span>${escapeHtml(APP_VER)}</span></div>
+      <div class="settings-row"><label>Адрес</label><a href="/tasks/" style="color:var(--accent)">neverretire.ru/tasks</a></div>
+      <div class="settings-row"><label>Аккаунт</label><span class="hint">Один токен доступа — без отдельного профиля</span></div>
+    </div>`;
+}
+
+async function loadGoogleSettingsStatus() {
+  try {
+    const gcal = await api("/calendar/google");
+    state.googleCalendarUrl = gcal.ical_url || "";
+    return gcal;
+  } catch {
+    return { configured: false, ical_url: "" };
+  }
+}
+
+async function renderSettings() {
+  const el = document.getElementById("view-settings");
+  const section = state.settingsSection || "notifications";
+  const nav = SETTINGS_SECTIONS.map(
+    (s) =>
+      `<button type="button" class="settings-nav-item${s.id === section ? " active" : ""}" data-settings-section="${s.id}">
+        <span class="settings-nav-icon">${window.NavIcons ? NavIcons.badge(s.icon) : ""}</span>${escapeHtml(s.title)}
+      </button>`
+  ).join("");
+  el.innerHTML = `<div class="settings-layout">
+    <nav class="settings-nav" aria-label="Разделы настроек">${nav}</nav>
+    <div class="settings-body" id="settings-panel">${settingsPanelHtml(section)}</div>
+  </div>`;
+  if (section === "calendar") {
+    const gcal = await loadGoogleSettingsStatus();
+    const input = el.querySelector("#settings-gcal-url");
+    if (input && gcal.ical_url) input.value = gcal.ical_url;
+    const status = el.querySelector("#settings-gcal-status");
+    if (status) {
+      status.textContent = gcal.configured ? "Google Calendar подключён" : "Не подключён";
+    }
+  }
+  if (section === "data") {
+    loadTicktickStats(el);
+  }
+  bindSettings(el);
+}
+
+async function loadTicktickStats(root) {
+  const status = root.querySelector("#ticktick-purge-status");
+  if (!status) return;
+  try {
+    const stats = await api("/import/ticktick/stats?scope=tasks");
+    const parts = [];
+    if (stats.tasks) parts.push(`${stats.tasks} задач`);
+    if (stats.projects) parts.push(`${stats.projects} проектов`);
+    status.textContent = stats.count
+      ? `Сейчас: ${parts.join(", ")}. Импорт удалит их и загрузит CSV заново (1–3 мин)`
+      : "Задач нет — можно импортировать CSV из TickTick";
+  } catch {
+    status.textContent = "Не удалось загрузить статистику";
+  }
+}
+
+function bindSettings(root) {
+  root.querySelectorAll("[data-settings-section]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.settingsSection = btn.dataset.settingsSection;
+      renderSettings();
+    });
+  });
+  root.querySelector('[data-action="settings-enable-push"]')?.addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    if (isPushOn()) {
+      btn.classList.add("on");
+      btn.setAttribute("aria-pressed", "true");
+      btn.textContent = "Push включён";
+      return;
+    }
+    requestNotify().then(() => renderSettings());
+  });
+  root.querySelector("#settings-briefing-hour")?.addEventListener("change", (e) => {
+    localStorage.setItem("empire_briefing_hour", String(e.target.value));
+    showToast("Час брифинга сохранён");
+  });
+  root.querySelector('[data-action="settings-toggle-done-open"]')?.addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const on = !btn.classList.contains("on");
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", on);
+    btn.textContent = on ? "Вкл" : "Выкл";
+    localStorage.setItem("empire_group_done_open", on ? "1" : "0");
+    renderToday();
+  });
+  root.querySelector('[data-action="settings-toggle-projects-open"]')?.addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const on = !btn.classList.contains("on");
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-pressed", on);
+    btn.textContent = on ? "Вкл" : "Выкл";
+    localStorage.setItem("empire_projects_open", on ? "1" : "0");
+    const wrap = document.querySelector(".nav-projects-wrap");
+    if (wrap) wrap.open = on;
+  });
+  root.querySelector('[data-action="settings-reset-columns"]')?.addEventListener("click", () => {
+    Object.keys(COLUMN_WIDTH_KEYS).forEach((k) => localStorage.removeItem(COLUMN_WIDTH_KEYS[k]));
+    loadColumnWidths();
+    showToast("Ширина колонок сброшена");
+  });
+  root.querySelector('[data-action="settings-purge-tasks"]')?.addEventListener("click", async () => {
+    try {
+      const stats = await api("/import/ticktick/stats?scope=tasks");
+      if (!stats.tasks && !stats.projects) {
+        showToast("Задач и проектов нет");
+        return;
+      }
+      const parts = [];
+      if (stats.tasks) parts.push(`${stats.tasks} задач`);
+      if (stats.projects) parts.push(`${stats.projects} проектов`);
+      if (!confirm(`Удалить ${parts.join(" и ")}? Тренировки, замеры и чеклисты не трогаем.`)) return;
+      const res = await api("/import/ticktick/purge?scope=tasks", { method: "POST" });
+      showToast(`Удалено: ${res.tasks} задач, ${res.projects} проектов`);
+      await loadAll();
+      renderSettings();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+  const freshCsv = root.querySelector("#settings-ticktick-fresh-csv");
+  root.querySelector('[data-action="settings-fresh-import-ticktick"]')?.addEventListener("click", () => {
+    freshCsv?.click();
+  });
+  freshCsv?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const btn = root.querySelector("#btn-fresh-import-ticktick");
+    try {
+      const stats = await api("/import/ticktick/stats?scope=tasks");
+      const parts = [];
+      if (stats.tasks) parts.push(`${stats.tasks} задач`);
+      if (stats.projects) parts.push(`${stats.projects} проектов`);
+      const msg = stats.tasks || stats.projects
+        ? `Удалить ${parts.join(" и ")} и импортировать «${file.name}»? (1–3 мин, не закрывайте вкладку)`
+        : `Импортировать «${file.name}»? (1–3 мин)`;
+      if (!confirm(msg)) return;
+      if (btn) { btn.disabled = true; btn.textContent = "Импорт…"; }
+      showToast("Импорт CSV… подождите 1–3 минуты");
+      const r = await importTicktickFile(file, { fresh: true });
+      showToast(`Готово: +${r.imported || 0} задач, проектов ${r.projects || 0}`);
+      loadAll().catch((err) => showToast(err.message));
+      renderSettings();
+    } catch (err) {
+      showToast(String(err.message));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Выбрать CSV…"; }
+    }
+    e.target.value = "";
+  });
+  root.querySelector('[data-action="settings-scan-dupes"]')?.addEventListener("click", async () => {
+    try {
+      const preview = await api("/tasks/duplicates");
+      const status = root.querySelector("#dedupe-status");
+      if (status) {
+        status.textContent = preview.to_remove
+          ? `Найдено ${preview.group_count} групп, лишних задач: ${preview.to_remove}`
+          : "Дубликатов не найдено";
+      }
+      if (!preview.to_remove) showToast("Дубликатов нет");
+      else showToast(`Лишних задач: ${preview.to_remove}`);
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+  root.querySelector('[data-action="settings-dedupe-tasks"]')?.addEventListener("click", async () => {
+    try {
+      const preview = await api("/tasks/duplicates");
+      if (!preview.to_remove) {
+        showToast("Дубликатов не найдено");
+        return;
+      }
+      if (!confirm(`Удалить ${preview.to_remove} дубликатов в ${preview.group_count} группах?`)) return;
+      const res = await api("/tasks/deduplicate", { method: "POST" });
+      showToast(`Удалено: ${res.removed}`);
+      await loadAll();
+      renderSettings();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+  root.querySelector('[data-action="settings-clear-cache"]')?.addEventListener("click", async () => {
+    if (!confirm("Очистить офлайн-кэш и снимок данных?")) return;
+    localStorage.removeItem(OFFLINE_SNAPSHOT_KEY);
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    showToast("Кэш очищен");
+  });
+  root.querySelector('[data-action="settings-save-gcal"]')?.addEventListener("click", async () => {
+    const url = (root.querySelector("#settings-gcal-url")?.value || "").trim();
+    try {
+      await api("/calendar/google", { method: "PUT", body: JSON.stringify({ ical_url: url || null }) });
+      state.googleCalendarUrl = url;
+      showToast(url ? "Google Calendar подключён" : "Ссылка удалена");
+      await renderSettings();
+      if (state.currentView === "calendar") renderCalendar();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+  root.querySelector('[data-action="settings-disconnect-gcal"]')?.addEventListener("click", async () => {
+    try {
+      await api("/calendar/google", { method: "PUT", body: JSON.stringify({ ical_url: null }) });
+      state.googleCalendarUrl = "";
+      showToast("Google Calendar отключён");
+      await renderSettings();
+      if (state.currentView === "calendar") renderCalendar();
+    } catch (err) {
+      showToast(err.message);
+    }
+  });
+  root.querySelector('[data-action="settings-refresh-gcal"]')?.addEventListener("click", () => {
+    if (state.currentView === "calendar") renderCalendar();
+    else showToast("Откройте календарь для обновления");
+  });
+}
+
+function updateChromeForView(name) {
+  const isSettings = name === "settings";
+  document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
+    const match = btn.dataset.view === name || (name === "cal-day" && btn.dataset.view === "calendar");
+    btn.classList.toggle("active", !isSettings && match);
+  });
+  document.querySelectorAll("#btn-settings-rail, #btn-settings").forEach((btn) => {
+    btn.classList.toggle("active", isSettings);
+  });
+  const backBtn = document.getElementById("btn-back-view");
+  if (backBtn) backBtn.classList.toggle("hidden", !isSettings);
+}
+
+function renderLists() {
+  const el = document.getElementById("view-lists");
+  if (!state.checklists.length) {
+    el.innerHTML = '<div class="empty">Чеклисты от агента появятся здесь</div>';
+    return;
+  }
+  el.innerHTML = state.checklists
+    .map((cl) => {
+      const total = cl.items_total || 0;
+      const done = cl.items_done || 0;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      return `
+      <div class="card list-row" data-checklist-id="${cl.id}">
+        <div style="padding:14px;width:100%">
+          <div class="task-title">${escapeHtml(cl.title)}</div>
+          <div class="list-progress"><span style="width:${pct}%"></span></div>
+          <div class="task-meta">${done}/${total}</div>
+        </div>
+      </div>`;
+    })
+    .join("");
+}
+
+async function renderDetail(id) {
+  const cl = await api(`/checklists/${id}`);
+  const items = (cl.items || [])
+    .map(
+      (item) => `
+      <div class="check-item">
+        <button type="button" class="check${item.status === "done" ? " done" : ""}" data-action="toggle-item" data-id="${item.id}" data-cl="${cl.id}">${item.status === "done" ? "✓" : ""}</button>
+        <div class="task-body"><div class="task-title${item.status === "done" ? " done-text" : ""}">${escapeHtml(item.title)}</div></div>
+      </div>`
+    )
+    .join("");
+  document.getElementById("view-detail").innerHTML = `
+    <button class="back-btn" data-action="back-lists">← Чеклисты</button>
+    <div class="card"><div class="detail-header"><h2>${escapeHtml(cl.title)}</h2></div>${items}</div>`;
+}
+
+function renderMetrics() {
+  const s = state.summary;
+  const h = state.healthSummary;
+  let html = `
+    <div class="metric"><strong>${s.tasks_todo || 0}</strong>к выполнению</div>
+    <div class="metric"><strong>${s.tasks_doing || 0}</strong>в работе</div>`;
+  if (h.latest_weight_kg) {
+    html += `<div class="metric"><strong>${formatNum(h.latest_weight_kg)}</strong>кг</div>`;
+  }
+  if (state.currentView === "measurements") {
+    html += `<div class="metric"><strong>${h.measurements_count || 0}</strong>замеров</div>`;
+  } else if (state.currentView === "workouts") {
+    html += `<div class="metric"><strong>${h.workouts_count || 0}</strong>тренировок</div>`;
+  } else if (state.currentView === "health-stats") {
+    html += `<div class="metric"><strong>${formatNum(h.latest_weight_kg)}</strong>кг</div>`;
+  } else if (state.currentView === "task-stats") {
+    html += `<div class="metric"><strong>${state.taskStats?.completed ?? "—"}</strong>сделано</div>`;
+  }
+  document.getElementById("metrics").innerHTML = html;
+}
+
+function fillProjectSelect() {
+  const sel = document.getElementById("tf-project");
+  sel.innerHTML = '<option value="">—</option>';
+  state.projects.forEach((p) => {
+    sel.innerHTML += `<option value="${p.id}">${escapeHtml(p.title)}</option>`;
+  });
+}
+
+async function openSheet(task = null) {
+  closeMeasurementSheet();
+  closeWorkoutSheet();
+  if (task?.id) {
+    try {
+      task = await api(`/tasks/${task.id}`);
+    } catch (_) {
+      /* keep list row */
+    }
+  }
+  state.editingId = task?.id || null;
+  state.creatingTask = !task?.id;
+  const sheet = document.getElementById("task-sheet");
+  sheet.classList.remove("hidden");
+  sheet.classList.remove("detail-empty");
+  sheet.setAttribute("aria-hidden", "false");
+  document.getElementById("task-detail-empty")?.setAttribute("aria-hidden", "true");
+  document.getElementById("tf-id").value = task?.id || "";
+  document.getElementById("tf-title").value = task?.title || "";
+  document.getElementById("tf-note").value = task?.note || "";
+  document.getElementById("tf-due-date").value = task?.due_date || "";
+  document.getElementById("tf-due-time").value = task?.due_time || "";
+  document.getElementById("tf-priority").value = String(task?.priority ?? 0);
+  document.getElementById("tf-project").value = task?.project_id || "";
+  document.getElementById("tf-tags").value = (task?.tags || []).join(", ");
+  document.getElementById("tf-repeat").value = repeatKeyFromObj(task?.repeat_rule_obj);
+  document.getElementById("tf-remind").value = task ? remindOffsetFromTask(task) : "";
+  document.getElementById("tf-delete").classList.toggle("hidden", !task?.id);
+  document.getElementById("subtasks-block").classList.toggle("hidden", !task?.id);
+  const chk = document.getElementById("tf-complete");
+  chk.className = "check large" + (task?.status === "done" ? " done" : "");
+  chk.textContent = task?.status === "done" ? "✓" : "";
+  if (task?.id) loadSubtasks(task.id);
+  else document.getElementById("subtasks-list").innerHTML = "";
+  state.pendingTaskImage = null;
+  state.pendingTaskImageRemove = false;
+  renderTaskImagePreview(task);
+  document.getElementById("tf-title").focus();
+  syncSplitTaskLayout();
+}
+
+function closeSheet() {
+  const sheet = document.getElementById("task-sheet");
+  state.editingId = null;
+  state.creatingTask = false;
+  state.pendingTaskImage = null;
+  state.pendingTaskImageRemove = false;
+  if (usesDesktopTaskSplit()) {
+    sheet.classList.remove("hidden");
+    sheet.classList.add("detail-empty");
+    sheet.setAttribute("aria-hidden", "true");
+    document.getElementById("task-detail-empty")?.setAttribute("aria-hidden", "false");
+  } else {
+    sheet.classList.add("hidden");
+    sheet.classList.remove("detail-empty");
+    sheet.setAttribute("aria-hidden", "true");
+  }
+  syncSplitTaskLayout();
+}
+
+async function loadSubtasks(parentId) {
+  const data = await api(`/tasks/${parentId}`);
+  const list = document.getElementById("subtasks-list");
+  list.innerHTML = (data.subtasks || []).map(taskRowHtml).join("") || '<div class="empty" style="padding:8px">Нет подзадач</div>';
+}
+
+function showView(name) {
+  if (name === "more") {
+    document.getElementById("more-menu").classList.toggle("hidden");
+    return;
+  }
+  closeAllSheets();
+  document.getElementById("more-menu")?.classList.add("hidden");
+  if (name === "settings") {
+    state.currentView = "settings";
+    document.getElementById("app")?.classList.add("settings-mode");
+    document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+    document.getElementById("view-settings").classList.add("active");
+    document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]").forEach((n) => {
+      n.classList.remove("active");
+    });
+    document.getElementById("page-title").textContent = TITLES.settings;
+    document.getElementById("search-bar").classList.add("hidden");
+    document.getElementById("btn-add-header").classList.add("hidden");
+    document.getElementById("fab-add").classList.add("hidden");
+    document.getElementById("metrics")?.classList.add("hidden");
+    updateChromeForView("settings");
+    renderSettings();
+    return;
+  }
+  document.getElementById("app")?.classList.remove("settings-mode");
+  state.currentView = name;
+  if (HEALTH_VIEWS.has(name)) {
+    state.section = "health";
+    state.healthView = name;
+  } else if (TASK_VIEWS.has(name)) {
+    state.section = "tasks";
+    state.taskView = name;
+  }
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]").forEach((n) => {
+    const match = n.dataset.view === name || (name === "cal-day" && n.dataset.view === "calendar");
+    n.classList.toggle("active", match);
+  });
+  document.querySelectorAll(".tab[data-section]").forEach((t) => {
+    const sec = t.dataset.section;
+    t.classList.toggle("active", (sec === "tasks" && TASK_VIEWS.has(name)) || (sec === "health" && HEALTH_VIEWS.has(name)));
+  });
+  const map = {
+    today: "view-today",
+    week: "view-week",
+    calendar: "view-calendar",
+    "cal-day": "view-cal-day",
+    matrix: "view-matrix",
+    "all-tasks": "view-all-tasks",
+    search: "view-search",
+    projects: "view-projects",
+    lists: "view-lists",
+    done: "view-done",
+    "task-stats": "view-task-stats",
+    insights: "view-insights",
+    "finance-model": "view-finance-model",
+    measurements: "view-measurements",
+    workouts: "view-workouts",
+    program: "view-program",
+    "health-stats": "view-health-stats",
+    detail: "view-detail",
+    "project-tasks": "view-project-tasks",
+    settings: "view-settings",
+  };
+  document.getElementById(map[name] || "view-today").classList.add("active");
+  document.getElementById("page-title").textContent =
+    name === "cal-day" ? formatDayTitle(state.calendarDay || todayStr()) : (TITLES[name] || "Empire");
+  const mainEl = document.getElementById("main");
+  if (mainEl) mainEl.scrollTop = 0;
+  document.getElementById("search-bar").classList.toggle("hidden", name !== "search");
+  document.getElementById("metrics")?.classList.toggle("hidden", name === "settings");
+  const addBtn = document.getElementById("btn-add-header");
+  const isHealth = HEALTH_VIEWS.has(name);
+  const isStats = name === "task-stats" || name === "health-stats" || name === "insights" || name === "finance-model";
+  addBtn.classList.toggle("hidden", isStats);
+  updateChromeForView(name);
+  if (!isStats) {
+    if (name === "measurements") addBtn.textContent = "+ Замер";
+    else if (name === "workouts") addBtn.textContent = "+ Тренировка";
+    else if (name === "program") addBtn.textContent = "Дневник";
+    else addBtn.textContent = "+ Задача";
+  }
+  document.getElementById("fab-add").classList.toggle("hidden", isStats);
+  document.getElementById("fab-add").setAttribute(
+    "aria-label",
+    name === "measurements" ? "Новый замер" : name === "workouts" ? "Новая тренировка" : name === "program" ? "Дневник" : "Новая задача"
+  );
+  if (name === "all-tasks") renderAllTasks();
+  if (name === "week") renderWeek();
+  if (name === "calendar") renderCalendar();
+  if (name === "cal-day") renderCalendarDay();
+  if (name === "matrix") renderMatrix();
+  if (name === "measurements") renderMeasurements();
+  if (name === "workouts") renderWorkouts();
+  if (name === "program") renderWorkoutProgram();
+  if (name === "insights") renderInsights();
+  if (name === "finance-model") renderFinanceModel();
+  if (name === "task-stats") renderTaskStats();
+  if (name === "health-stats") renderHealthStats();
+  renderMetrics();
+  renderSidebarNav();
+  syncSplitTaskLayout();
+}
+
+function showSection(section) {
+  if (section === "tasks") showView(state.taskView || "today");
+  else if (section === "health") showView(state.healthView || "measurements");
+}
+
+async function loadAll() {
+  try {
+    const [tasksRes, doneRes, listsRes, projRes, summary, measRes, workRes, bodySum] = await Promise.all([
+      api("/tasks"),
+      api("/tasks?include_done=true&status=done"),
+      api("/checklists"),
+      api("/projects"),
+      api("/summary"),
+      api("/measurements"),
+      api("/workouts"),
+      api("/body/summary"),
+    ]);
+    state.tasks = tasksRes.tasks || [];
+    state.doneTasks = doneRes.tasks || [];
+    state.checklists = listsRes.checklists || [];
+    state.projects = projRes.projects || [];
+    state.summary = summary;
+    state.measurements = measRes.measurements || [];
+    state.workouts = workRes.workouts || [];
+    state.healthSummary = bodySum || {};
+    state.healthSettings = bodySum.settings || state.healthSettings;
+    state.exercises = bodySum.exercises || {};
+    saveOfflineSnapshot();
+  } catch (e) {
+    if (e.message === "auth") throw e;
+    const snap = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(OFFLINE_SNAPSHOT_KEY) || "null");
+      } catch {
+        return null;
+      }
+    })();
+    if (snap?.tasks) {
+      applyOfflineSnapshot(snap);
+      renderSidebarNav();
+      renderToday();
+      renderMetrics();
+      showToast("Офлайн — сохранённые данные");
+      return;
+    }
+    throw e;
+  }
+  fillProjectSelect();
+  fillExerciseSelect();
+  renderSidebarNav();
+  renderMetrics();
+  renderToday();
+  renderWeek();
+  renderSearch(document.getElementById("search-input").value);
+  renderProjects();
+  renderLists();
+  renderDone();
+  if (state.currentView === "all-tasks") renderAllTasks();
+  if (state.currentView === "week") renderWeek();
+  if (state.currentView === "calendar") renderCalendar();
+  if (state.currentView === "cal-day") renderCalendarDay();
+  if (state.currentView === "matrix") renderMatrix();
+  if (state.currentView === "measurements") renderMeasurements();
+  if (state.currentView === "workouts") renderWorkouts();
+  if (state.currentView === "task-stats") await renderTaskStats();
+  if (state.currentView === "health-stats") await renderHealthStats();
+  if (state.projectFilter) renderProjectTasks(state.projectFilter);
+  checkReminders();
+  checkHealthReminders();
+}
+
+async function toggleTask(id, status) {
+  if (status !== "done") {
+    const res = await api(`/tasks/${id}/complete`, { method: "POST" });
+    if (res.spawned) showToast("Следующее повторение создано");
+  } else {
+    await api(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify({ status: "todo" }) });
+  }
+  await loadAll();
+}
+
+async function saveTaskForm(e) {
+  e.preventDefault();
+  const id = document.getElementById("tf-id").value;
+  const dueDate = document.getElementById("tf-due-date").value || null;
+  const dueTime = document.getElementById("tf-due-time").value || null;
+  const repeatKey = document.getElementById("tf-repeat").value;
+  const remindOff = document.getElementById("tf-remind").value;
+  const tags = document
+    .getElementById("tf-tags")
+    .value.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const body = {
+    title: document.getElementById("tf-title").value.trim(),
+    note: document.getElementById("tf-note").value.trim() || null,
+    due_date: dueDate,
+    due_time: dueTime,
+    clear_due: !dueDate,
+    clear_time: !dueTime,
+    priority: +document.getElementById("tf-priority").value,
+    project_id: document.getElementById("tf-project").value
+      ? +document.getElementById("tf-project").value
+      : null,
+    tags,
+    repeat_rule: repeatKey ? REPEAT_MAP[repeatKey] : null,
+    clear_repeat: !repeatKey,
+    remind_at: computeRemindAt(dueDate, dueTime, remindOff),
+    clear_remind: !remindOff,
+  };
+  if (id) {
+    await api(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(body) });
+    if (state.pendingTaskImageRemove && !state.pendingTaskImage) {
+      await deleteTaskImage(+id);
+    } else if (state.pendingTaskImage) {
+      await uploadTaskImage(+id, state.pendingTaskImage);
+    }
+    showToast("Сохранено");
+  } else {
+    const created = await api("/tasks", { method: "POST", body: JSON.stringify(body) });
+    if (state.pendingTaskImage && created?.id) {
+      await uploadTaskImage(created.id, state.pendingTaskImage);
+    }
+    showToast("Задача создана");
+  }
+  state.pendingTaskImage = null;
+  state.pendingTaskImageRemove = false;
+  closeSheet();
+  await loadAll();
+}
+
+async function checkDailyBriefing() {
+  const hour = Number(localStorage.getItem("empire_briefing_hour") || "8");
+  const now = new Date();
+  if (now.getHours() < hour || now.getHours() > hour + 2) return;
+  const key = `empire_daily_notified_${todayStr()}`;
+  if (localStorage.getItem(key)) return;
+  try {
+    const daily = await api("/insights/daily");
+    const items = daily.focus_items || [];
+    if (!items.length) return;
+    localStorage.setItem(key, "1");
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    new Notification("Empire · фокус дня", {
+      body: items.slice(0, 3).join("\n"),
+      tag: `daily-${daily.day}`,
+    });
+  } catch (_) {}
+}
+
+async function checkReminders() {
+  await checkDailyBriefing();
+  if (!("Notification" in window)) return;
+  try {
+    const data = await api("/reminders/due");
+    for (const t of data.reminders || []) {
+      if (state.reminded.has(t.id)) continue;
+      if (Notification.permission === "granted") {
+        const opts = { body: t.title, tag: `task-${t.id}` };
+        if (t.image_url) opts.image = t.image_url;
+        new Notification("Empire Tasks", opts);
+        await api(`/tasks/${t.id}/reminder/ack`, { method: "POST" });
+        state.reminded.add(t.id);
+        localStorage.setItem("empire_reminded", JSON.stringify([...state.reminded]));
+      }
+    }
+  } catch (_) {}
+}
+
+function bindEvents() {
+  document.addEventListener("click", (e) => {
+    const settingsBtn = e.target.closest("[data-action^='open-settings']");
+    if (settingsBtn) {
+      e.preventDefault();
+      const action = settingsBtn.dataset.action;
+      if (action === "open-settings-notify") openSettings("notifications");
+      else if (action === "open-settings-calendar") openSettings("calendar");
+      else openSettings();
+      return;
+    }
+    const navBtn = e.target.closest(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]");
+    if (navBtn && !navBtn.dataset.projectId) {
+      e.preventDefault();
+      e.stopPropagation();
+      showView(navBtn.dataset.view);
+      return;
+    }
+    const projBtn = e.target.closest("[data-view='project-tasks'][data-project-id]");
+    if (projBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      state.projectFilter = +projBtn.dataset.projectId;
+      showView("project-tasks");
+      renderProjectTasks(state.projectFilter);
+    }
+  });
+  document.querySelectorAll(".tab[data-section]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showSection(btn.dataset.section);
+    });
+  });
+  document.querySelector(".tab[data-view='more']")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showView("more");
+  });
+
+  document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.view === "search") {
+        const bar = document.getElementById("search-bar");
+        bar.classList.remove("hidden");
+        showView("search");
+        document.getElementById("search-input").focus();
+      } else {
+        showView(btn.dataset.view);
+      }
+    });
+  });
+  document.getElementById("btn-back-view")?.addEventListener("click", () => {
+    showView(state.settingsReturnView || "today");
+  });
+
+  document.getElementById("btn-search-toggle")?.addEventListener("click", () => {
+    const bar = document.getElementById("search-bar");
+    bar.classList.toggle("hidden");
+    if (!bar.classList.contains("hidden")) {
+      showView("search");
+      document.getElementById("search-input").focus();
+    }
+  });
+
+  document.getElementById("btn-refresh").addEventListener("click", () => loadAll().catch((e) => showToast(e.message)));
+  document.getElementById("fab-add").addEventListener("click", () => onPrimaryAdd());
+  document.getElementById("btn-add-header").addEventListener("click", () => onPrimaryAdd());
+  document.getElementById("task-form").addEventListener("submit", (e) => saveTaskForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("tf-image-file")?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    state.pendingTaskImage = file;
+    state.pendingTaskImageRemove = false;
+    renderTaskImagePreview();
+  });
+  document.getElementById("tf-image-remove")?.addEventListener("click", () => {
+    state.pendingTaskImage = null;
+    state.pendingTaskImageRemove = true;
+    renderTaskImagePreview();
+  });
+  document.getElementById("tf-delete").addEventListener("click", async () => {
+    const id = document.getElementById("tf-id").value;
+    if (!id || !confirm("Удалить задачу?")) return;
+    await api(`/tasks/${id}`, { method: "DELETE" });
+    closeSheet();
+    await loadAll();
+    showToast("Удалено");
+  });
+  document.getElementById("tf-complete").addEventListener("click", async () => {
+    const id = document.getElementById("tf-id").value;
+    if (!id) return;
+    await toggleTask(+id, "doing");
+    closeSheet();
+  });
+
+  document.querySelectorAll("[data-action='close-sheet'], .sheet-backdrop").forEach((el) => {
+    if (el.closest("#task-sheet")) el.addEventListener("click", closeSheet);
+  });
+  document.querySelectorAll("[data-action='close-measurement']").forEach((el) => {
+    el.addEventListener("click", closeMeasurementSheet);
+  });
+  document.querySelectorAll("[data-action='close-workout']").forEach((el) => {
+    el.addEventListener("click", closeWorkoutSheet);
+  });
+  document.getElementById("measurement-form").addEventListener("submit", (e) => saveMeasurementForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("workout-form").addEventListener("submit", (e) => saveWorkoutForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("mf-delete").addEventListener("click", async () => {
+    const id = document.getElementById("mf-id").value;
+    if (!id || !confirm("Удалить замер?")) return;
+    await api(`/measurements/${id}`, { method: "DELETE" });
+    closeMeasurementSheet();
+    await loadAll();
+    showToast("Удалено");
+  });
+  document.getElementById("wf-delete").addEventListener("click", async () => {
+    const id = document.getElementById("wf-id").value;
+    if (!id || !confirm("Удалить запись?")) return;
+    await api(`/workouts/${id}`, { method: "DELETE" });
+    closeWorkoutSheet();
+    await loadAll();
+    showToast("Удалено");
+  });
+
+  document.getElementById("date-chips").addEventListener("click", (e) => {
+    const chip = e.target.closest("[data-date]");
+    if (!chip) return;
+    const kind = chip.dataset.date;
+    const dateEl = document.getElementById("tf-due-date");
+    if (kind === "today") dateEl.value = todayStr();
+    else if (kind === "tomorrow") dateEl.value = addDays(1);
+    else if (kind === "week") dateEl.value = addDays(7);
+    else dateEl.value = "";
+  });
+
+  document.getElementById("search-input").addEventListener("input", (e) => renderSearch(e.target.value));
+
+  document.getElementById("subtask-add-btn").addEventListener("click", async () => {
+    const parentId = document.getElementById("tf-id").value;
+    const title = document.getElementById("subtask-new").value.trim();
+    if (!parentId || !title) return;
+    await api("/tasks", { method: "POST", body: JSON.stringify({ title, parent_id: +parentId }) });
+    document.getElementById("subtask-new").value = "";
+    await loadSubtasks(+parentId);
+    await loadAll();
+  });
+
+  async function onCsvPick(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const r = await importTicktickFile(file);
+      showToast(`Импорт: +${r.imported || 0}, обновлено ${r.updated || 0}, описаний ${r.backfilled || 0}, в CSV с текстом ${r.with_notes || 0}`);
+      await loadAll();
+    } catch (err) { showToast(String(err.message)); }
+    e.target.value = "";
+  }
+  document.getElementById("import-csv").addEventListener("change", onCsvPick);
+  document.getElementById("import-csv-mobile").addEventListener("change", onCsvPick);
+
+  document.getElementById("main").addEventListener("click", async (e) => {
+    const actionEl = e.target.closest("[data-action]");
+    if (actionEl) {
+      const action = actionEl.dataset.action;
+      if (action === "toggle-task") {
+        e.stopPropagation();
+        try { await toggleTask(+actionEl.dataset.id, actionEl.dataset.status); } catch (err) { showToast(err.message); }
+        return;
+      }
+      if (action === "open-task") {
+        const t = state.tasks.find((x) => x.id === +actionEl.dataset.id) || state.doneTasks.find((x) => x.id === +actionEl.dataset.id);
+        if (t) await openSheet(t);
+        return;
+      }
+      if (action === "toggle-item") {
+        try {
+          const item = actionEl;
+          const next = item.classList.contains("done") ? "todo" : "done";
+          await api(`/checklists/${item.dataset.cl}/items/${item.dataset.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: next }),
+          });
+          await loadAll();
+          if (state.currentView === "detail") await renderDetail(+item.dataset.cl);
+        } catch (err) { showToast(err.message); }
+        return;
+      }
+      if (action === "add-measurement-now") {
+        openMeasurementSheet();
+        return;
+      }
+      if (action === "open-measurement") {
+        const m = state.measurements.find((x) => x.id === +actionEl.dataset.id);
+        if (m) openMeasurementSheet(m);
+        return;
+      }
+      if (action === "open-workout") {
+        const w = state.workouts.find((x) => x.id === +actionEl.dataset.id);
+        if (w) openWorkoutSheet(w);
+        return;
+      }
+      if (action === "back-lists") showView("lists");
+      if (action === "back-projects") { state.projectFilter = null; showView("projects"); }
+      if (action === "show-all-tasks") showView("all-tasks");
+      if (action === "show-done-history") showView("done");
+      if (action === "quick-add") {
+        openSheet(null);
+        if (state.currentView === "cal-day" && state.calendarDay) {
+          document.getElementById("tf-due-date").value = state.calendarDay;
+        }
+        return;
+      }
+      if (action === "cal-back-month") {
+        showView("calendar");
+        return;
+      }
+      if (action === "cal-day-prev") {
+        state.calendarDay = addDaysToDateStr(state.calendarDay || todayStr(), -1);
+        renderCalendarDay();
+        return;
+      }
+      if (action === "cal-day-next") {
+        state.calendarDay = addDaysToDateStr(state.calendarDay || todayStr(), 1);
+        renderCalendarDay();
+        return;
+      }
+      if (action === "cal-day-today") {
+        openCalendarDay(todayStr());
+        return;
+      }
+    }
+
+    const mRow = e.target.closest("[data-measurement-id]");
+    if (mRow && !e.target.closest("[data-action]")) {
+      const m = state.measurements.find((x) => x.id === +mRow.dataset.measurementId);
+      if (m) openMeasurementSheet(m);
+      return;
+    }
+
+    const wRow = e.target.closest("[data-workout-id]");
+    if (wRow && !e.target.closest("[data-action]")) {
+      const w = state.workouts.find((x) => x.id === +wRow.dataset.workoutId);
+      if (w) openWorkoutSheet(w);
+      return;
+    }
+
+    const row = e.target.closest("[data-task-id]");
+    if (row && !e.target.closest("[data-action='toggle-task']")) {
+      const t = [...state.tasks, ...state.doneTasks].find((x) => x.id === +row.dataset.taskId);
+      if (t) await openSheet(t);
+      return;
+    }
+
+    const clRow = e.target.closest("[data-checklist-id]");
+    if (clRow) {
+      showView("detail");
+      await renderDetail(+clRow.dataset.checklistId);
+      return;
+    }
+
+    const pRow = e.target.closest("[data-project-id]");
+    if (pRow) {
+      state.projectFilter = +pRow.dataset.projectId;
+      showView("project-tasks");
+      renderProjectTasks(state.projectFilter);
+    }
+  });
+
+  document.getElementById("token-save").addEventListener("click", () => {
+    const v = document.getElementById("token-input").value.trim();
+    if (!v) return;
+    localStorage.setItem(TOKEN_KEY, v);
+    document.getElementById("auth-screen").classList.add("hidden");
+    loadAll().catch(() => {});
+  });
+}
+
+async function purgeOldAppCache() {
+  const prev = localStorage.getItem("empire_app_ver");
+  if (prev === APP_VER) return;
+  localStorage.setItem("empire_app_ver", APP_VER);
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  }
+  if ("serviceWorker" in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  }
+  if (prev) location.reload();
+}
+
+async function init() {
+  await purgeOldAppCache();
+  closeAllSheets();
+  loadColumnWidths();
+  const projectsWrap = document.querySelector(".nav-projects-wrap");
+  if (projectsWrap && localStorage.getItem("empire_projects_open") === "0") {
+    projectsWrap.open = false;
+  }
+  bindEvents();
+  bindColumnResizers();
+  hydrateNavIcons();
+  window.addEventListener("resize", () => syncSplitTaskLayout());
+  document.addEventListener("keydown", (e) => {
+    if (state.currentView !== "calendar") return;
+    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+    if (e.key === "ArrowLeft") {
+      state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, -1);
+      renderCalendar();
+    } else if (e.key === "ArrowRight") {
+      state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, 1);
+      renderCalendar();
+    }
+  });
+  if (!token()) {
+    document.getElementById("auth-screen").classList.remove("hidden");
+    return;
+  }
+  try {
+    await loadAll();
+    closeAllSheets();
+    const params = new URLSearchParams(location.search);
+    const view = params.get("view");
+    const settingsSection = params.get("section");
+    if (view === "settings") {
+      if (settingsSection && SETTINGS_SECTIONS.some((s) => s.id === settingsSection)) {
+        state.settingsSection = settingsSection;
+      }
+      openSettings(state.settingsSection);
+    } else if (view && TITLES[view]) showView(view);
+    else closeAllSheets();
+    if (params.get("action") === "new") onPrimaryAdd();
+    const taskId = params.get("task");
+    if (taskId) {
+      const t = state.tasks.find((x) => String(x.id) === taskId) || state.doneTasks.find((x) => String(x.id) === taskId);
+      if (t) await openSheet(t);
+      else {
+        try {
+          const remote = await api(`/tasks/${taskId}`);
+          if (remote) await openSheet(remote);
+        } catch (_) {}
+      }
+    }
+    await ensurePushSubscription();
+    syncSplitTaskLayout();
+  } catch (e) {
+    if (e.message !== "auth") showToast(e.message);
+  }
+  setInterval(() => checkReminders(), 60000);
+  setInterval(() => checkHealthReminders(), 60000);
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/tasks/assets/sw.js?v=23", { scope: "/tasks/" }).catch(() => {});
+  }
+}
+
+init();

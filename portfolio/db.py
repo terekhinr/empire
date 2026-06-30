@@ -3,12 +3,36 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
 from portfolio.config import BROKERS, PORTFOLIO_DB
+
+_init_lock = threading.Lock()
+_initialized_paths: set[str] = set()
+
+
+def _db_path_key(db_path: Path | None = None) -> str:
+    return str((db_path or PORTFOLIO_DB).resolve())
+
+
+def _retry_locked(fn, *, attempts: int = 10, base_delay: float = 0.05):
+    last: sqlite3.OperationalError | None = None
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except sqlite3.OperationalError as exc:
+            if "locked" not in str(exc).lower():
+                raise
+            last = exc
+            time.sleep(base_delay * (attempt + 1))
+    if last is not None:
+        raise last
+    raise RuntimeError("retry_locked failed without exception")
 
 
 def _now_iso() -> str:
@@ -18,10 +42,10 @@ def _now_iso() -> str:
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     path = db_path or PORTFOLIO_DB
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=30)
+    conn = sqlite3.connect(path, timeout=60, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=30000")
+    conn.execute("PRAGMA busy_timeout=60000")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
@@ -32,7 +56,7 @@ def db_session(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
     conn = get_connection(db_path)
     try:
         yield conn
-        conn.commit()
+        _retry_locked(conn.commit)
     except Exception:
         conn.rollback()
         raise
@@ -40,10 +64,7 @@ def db_session(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-def init_db(conn: sqlite3.Connection | None = None) -> None:
-    own = conn is None
-    if own:
-        conn = get_connection()
+def _bootstrap_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS brokers (
@@ -175,8 +196,34 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
         ON CONFLICT(key) DO NOTHING
         """
     )
+
+
+def init_db(conn: sqlite3.Connection | None = None, db_path: Path | None = None) -> None:
+    own = conn is None
     if own:
-        conn.commit()
+        conn = get_connection(db_path)
+    path_key = _db_path_key(db_path)
+
+    if path_key in _initialized_paths:
+        if own:
+            conn.close()
+        return
+
+    with _init_lock:
+        if path_key in _initialized_paths:
+            if own:
+                conn.close()
+            return
+
+        def _run() -> None:
+            _bootstrap_schema(conn)
+            if own:
+                conn.commit()
+
+        _retry_locked(_run)
+        _initialized_paths.add(path_key)
+
+    if own:
         conn.close()
 
 

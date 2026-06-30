@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "titlev30000001",
+      "type": "text",
+      "text": "# Empire Pipeline v3\n\nBridge 35k · ИП супруги · 3 free→депозит · нативка апр 27",
+      "x": -150,
+      "y": -1500,
+      "width": 700,
+      "height": 100,
+      "color": "6"
+    },
+    {
+      "id": "filer30000012",
+      "type": "file",
+      "file": "Empire/_canon/audit-12-gemini-r3.md",
+      "x": -150,
+      "y": -1360,
+      "width": 700,
+      "height": 180
+    },
+    {
+      "id": "blk0bridge000",
+      "type": "text",
+      "text": "## Блок 0\n**Bridge 35k**\n\nГарантия Директа\nдо 15.11",
+      "x": -1200,
+      "y": -1100,
+      "width": 280,
+      "height": 160,
+      "color": "1"
+    },
+    {
+      "id": "blk1book001",
+      "type": "text",
+      "text": "## Блок 1\n**Книга Q3**\n\nРоялти автор\nLaunch 299₽",
+      "x": -850,
+      "y": -1100,
+      "width": 280,
+      "height": 160,
+      "color": "4"
+    },
+    {
+      "id": "blk2base002",
+      "type": "text",
+      "text": "## Блок 2\n**База Q3**\n\n500+ бань\n0 продаж",
+      "x": -500,
+      "y": -1100,
+      "width": 280,
+      "height": 160,
+      "color": "2"
+    },
+    {
+      "id": "blk3traffic3",
+      "type": "text",
+      "text": "## Блок 3\n**Трафик Q4**\n\nДирект 12k\nYT→книга",
+      "x": -150,
+      "y": -1100,
+      "width": 280,
+      "height": 160,
+      "color": "3"
+    },
+    {
+      "id": "blk4proof004",
+      "type": "file",
+      "file": "Empire/_canon/gdepar-cpa-deposit.md",
+      "x": 200,
+      "y": -1120,
+      "width": 320,
+      "height": 200,
+      "color": "5"
+    },
+    {
+      "id": "blk5legal005",
+      "type": "file",
+      "file": "Empire/_canon/empire-legal-structure.md",
+      "x": 560,
+      "y": -1120,
+      "width": 320,
+      "height": 200,
+      "color": "6"
+    },
+    {
+      "id": "blk5scale006",
+      "type": "file",
+      "file": "Empire/_canon/audit-08-pipeline-year.md",
+      "x": -150,
+      "y": -820,
+      "width": 700,
+      "height": 280
+    },
+    {
+      "id": "hubtrack009",
+      "type": "file",
+      "file": "Empire/_canon/audit-09-progress-tracker.md",
+      "x": -150,
+      "y": -480,
+      "width": 700,
+      "height": 260
+    }
+  ],
+  "edges": [
+    {"id": "e0to3", "fromNode": "blk0bridge000", "fromSide": "right", "toNode": "blk3traffic3", "toSide": "left", "label": "гарантия Q4"},
+    {"id": "e1to3", "fromNode": "blk1book001", "fromSide": "right", "toNode": "blk3traffic3", "toSide": "left", "label": "роялти"},
+    {"id": "e2to4", "fromNode": "blk2base002", "fromSide": "right", "toNode": "blk4proof004", "toSide": "left", "label": "объекты"},
+    {"id": "e3to4", "fromNode": "blk3traffic3", "fromSide": "right", "toNode": "blk4proof004", "toSide": "left", "label": "3 free→депозит"},
+    {"id": "e4to5", "fromNode": "blk4proof004", "fromSide": "bottom", "toNode": "blk5scale006", "toSide": "top", "label": "кейсы"},
+    {"id": "eleg4", "fromNode": "blk4proof004", "fromSide": "right", "toNode": "blk5legal005", "toSide": "left", "label": "ИП супруги"},
+    {"id": "eR2hub", "fromNode": "filer30000012", "fromSide": "bottom", "toNode": "blk5scale006", "toSide": "top"},
+    {"id": "eHubTrack", "fromNode": "blk5scale006", "fromSide": "bottom", "toNode": "hubtrack009", "toSide": "top"}
+  ]
+}

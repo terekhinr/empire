@@ -126,5 +126,17 @@ async def resolve_stern_slot(
 
         topic, body = swa.build_weekly_recap_post()
         return topic, body, None, None
+    if special in ("stern_technique", "technique_video", "[SPECIAL:stern_technique]"):
+        import stern_technique as st
+
+        return await st.build_technique_slot()
+    if special in ("stern_comic_video", "comic_video", "[SPECIAL:stern_comic_video]"):
+        import stern_comic_video as scv
+
+        return await scv.build_comic_slot()
+    if special in ("stern_curated", "[SPECIAL:stern_curated]"):
+        import stern_curated as sc
+
+        return await sc.build_stern_curated_slot(slot=sc.slot_from_value(slot_value))
     topic = await resolve_topic_fn("stern", slot_value)
     return topic, None, None, None

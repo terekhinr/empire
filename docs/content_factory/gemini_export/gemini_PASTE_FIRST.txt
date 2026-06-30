@@ -1,0 +1,9 @@
+⚠️ СТАРЫЙ ПРОМПТ — НЕ ИСПОЛЬЗОВАТЬ (Gemini не открывает .tar.gz и уходит в фазу 0).
+
+Используй вместо этого:
+
+1. **Сообщение 1:** `gemini_PASTE_MSG1_BOOT.txt` — в новый чат, БЕЗ архива
+2. **Сообщение 2:** `gemini_PASTE_MSG2_FIRST_BATCH.txt` — задание на 6 постов
+3. **Дальше:** по одному файлу из `batch_requests/` (не весь BATCH_REQUESTS_REDO.md — он огромный)
+
+Инструкция: `gemini_HOWTO_NEW_CHAT.md`

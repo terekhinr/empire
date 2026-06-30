@@ -16,7 +16,7 @@ import os
 import secrets
 import time
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime, parsedate_to_datetime
 from pathlib import Path
 from collections.abc import AsyncIterator
@@ -38,7 +38,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import httpx
 import uvicorn
 
-from main import BanyaSpot, BanyaReview, DATABASE_URL, PostDraft, normalize_clip_list
+from empire_db import BanyaSpot, BanyaReview, BanyaLead, BanyaCallEvent, DATABASE_URL, PostDraft
+from empire_clips import normalize_clip_list
 import admin_banya
 
 BASE_DIR = Path(__file__).parent
@@ -921,6 +922,23 @@ class GdeparSecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app = FastAPI(title="Где Пар", docs_url=None, redoc_url=None)
+
+
+@app.on_event("startup")
+async def _gdepar_mvp_schema_startup() -> None:
+    """Идемпотентная миграция MVP (лиды, поля профиля)."""
+    import sqlite3
+
+    from tools.banya_schema_mvp import ensure_banya_mvp_schema
+
+    db_path = BASE_DIR / "empire.db"
+    if not db_path.is_file():
+        return
+    con = sqlite3.connect(str(db_path))
+    try:
+        ensure_banya_mvp_schema(con)
+    finally:
+        con.close()
 app.add_middleware(GdeparAssistantSessionMiddleware)
 if os.getenv("GDEPAR_SECURITY_HEADERS", "1").strip().lower() not in ("0", "false", "no", "off"):
     app.add_middleware(GdeparSecurityHeadersMiddleware)
@@ -1083,7 +1101,8 @@ def _spot_to_dict(spot: BanyaSpot) -> dict:
         "kind": spot.kind or "public",
         "visited": bool(spot.visited),
         "site_url": _safe_http_url(spot.site_url),
-        "phone": spot.phone,
+        "has_phone": bool((spot.phone or "").strip()),
+        "phone": None,  # только через POST /api/banya/lead (phone_reveal)
         "yandex_url": _safe_http_url(spot.yandex_url),
         "twogis_url": _safe_http_url(spot.twogis_url),
         "description": (spot.description or "")[:500],
@@ -1091,6 +1110,11 @@ def _spot_to_dict(spot: BanyaSpot) -> dict:
         "clips": clips,
         "rating_avg": spot.rating_avg,
         "reviews_total": spot.reviews_total or 0,
+        "price_from": spot.price_from,
+        "price_per_hour": spot.price_per_hour,
+        "capacity_max": spot.capacity_max,
+        "partner_tier": spot.partner_tier or "free",
+        "phone_blocked": bool(getattr(spot, "phone_blocked", 0)),
         "cover_url": _cover_url_for_output(spot.cover_url),
     }
 
@@ -2665,6 +2689,175 @@ async def api_banya_reviews_block(
             _apply_summary_parts_to_payload(payload, llm_parts)
             payload["summary_source"] = "llm"
     return JSONResponse(payload)
+
+
+class BanyaLeadIn(BaseModel):
+    spot_id: int = Field(..., ge=1)
+    lead_type: str = Field(..., min_length=3, max_length=32)
+    source: str = Field(default="site", max_length=32)
+    session_id: str | None = Field(default=None, max_length=80)
+
+
+_LEAD_TYPES = frozenset({"phone_reveal", "whatsapp", "booking_request", "map_click"})
+
+
+@app.post("/api/banya/lead")
+async def api_banya_lead(body: BanyaLeadIn, request: Request):
+    """Фиксация лида (клик «Показать телефон» и др.) — основа B2B-отчётов."""
+    lead_type = (body.lead_type or "").strip().lower()
+    if lead_type not in _LEAD_TYPES:
+        raise HTTPException(status_code=400, detail="invalid_lead_type")
+
+    async with async_session() as session:
+        spot = await session.get(BanyaSpot, body.spot_id)
+        if spot is None or spot.status != "published":
+            raise HTTPException(status_code=404, detail="spot_not_found")
+
+        referrer = (request.headers.get("referer") or "")[:500]
+        lead = BanyaLead(
+            spot_id=body.spot_id,
+            lead_type=lead_type,
+            source=(body.source or "site")[:32],
+            session_id=(body.session_id or "")[:80] or None,
+            referrer=referrer or None,
+        )
+        session.add(lead)
+        await session.commit()
+
+    try:
+        from analytics_db import log_event
+
+        log_event(
+            "gdepar_lead",
+            source_id=str(body.spot_id),
+            persona_key="gdepar",
+            payload={"lead_type": lead_type, "source": body.source},
+        )
+    except Exception:
+        logger.debug("gdepar_lead analytics skip", exc_info=True)
+
+    out: dict = {"ok": True, "lead_type": lead_type}
+    phone_raw = (spot.phone or "").strip()
+
+    if lead_type == "phone_reveal":
+        from tools.cpa_trial import phone_reveal_status
+
+        reveal = phone_reveal_status(spot)
+        out["reveal"] = reveal
+        if not reveal.get("allowed"):
+            out["phone"] = None
+            out["phone_blocked"] = True
+            out["message"] = reveal.get("message")
+            out["pay_url"] = reveal.get("pay_url")
+        else:
+            out["phone"] = phone_raw or None
+    elif lead_type == "whatsapp" and phone_raw:
+        digits = re.sub(r"\D", "", phone_raw)
+        if digits.startswith("8") and len(digits) == 11:
+            digits = "7" + digits[1:]
+        out["whatsapp_url"] = f"https://wa.me/{digits}" if digits else None
+    return JSONResponse(out)
+
+
+class BanyaCalltrackIn(BaseModel):
+    spot_id: int = Field(..., ge=1)
+    billsec: int | None = Field(default=None, ge=0, description="Разговор после ответа (не IVR)")
+    duration_sec: int | None = Field(default=None, ge=0, description="Deprecated: use billsec")
+    disposition: str | None = Field(default="ANSWERED", max_length=32)
+    external_id: str | None = Field(default=None, max_length=120)
+    secret: str | None = Field(default=None, max_length=128)
+
+
+@app.post("/api/banya/calltrack")
+async def api_banya_calltrack(body: BanyaCalltrackIn, request: Request):
+    """Webhook коллтрекинга: billsec ≥90 + ANSWERED → триал/депозит."""
+    expected = (os.getenv("GDEPAR_CALLTRACK_WEBHOOK_SECRET") or "").strip()
+    if expected:
+        token = (body.secret or request.headers.get("X-Gdepar-Calltrack-Secret") or "").strip()
+        if token != expected:
+            raise HTTPException(status_code=403, detail="invalid_secret")
+
+    billsec = body.billsec if body.billsec is not None else body.duration_sec
+    if billsec is None:
+        raise HTTPException(status_code=400, detail="billsec_required")
+
+    from tools.cpa_trial import apply_call_credit
+
+    async with async_session() as session:
+        spot = await session.get(BanyaSpot, body.spot_id)
+        if spot is None or spot.status != "published":
+            raise HTTPException(status_code=404, detail="spot_not_found")
+
+        ext = (body.external_id or "").strip() or None
+        if ext:
+            dup = (
+                await session.execute(
+                    select(BanyaCallEvent.id).where(BanyaCallEvent.external_id == ext).limit(1)
+                )
+            ).scalar_one_or_none()
+            if dup is not None:
+                return JSONResponse({"ok": True, "duplicate": True})
+
+        result = apply_call_credit(
+            spot, int(billsec), disposition=body.disposition or "ANSWERED"
+        )
+        credited = 1 if result.get("credited") else 0
+        session.add(
+            BanyaCallEvent(
+                spot_id=body.spot_id,
+                duration_sec=int(billsec),
+                external_id=ext,
+                credited=credited,
+                payload_json=json.dumps(
+                    {**result, "disposition": body.disposition},
+                    ensure_ascii=False,
+                ),
+            )
+        )
+        await session.commit()
+
+    return JSONResponse({"ok": True, **result})
+
+
+@app.get("/partners")
+async def gdepar_partners_page(request: Request):
+    """B2B-лендинг для владельцев бань."""
+    async with async_session() as session:
+        published = (
+            await session.execute(
+                select(func.count()).select_from(BanyaSpot).where(BanyaSpot.status == "published")
+            )
+        ).scalar() or 0
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        try:
+            leads_month = (
+                await session.execute(
+                    select(func.count())
+                    .select_from(BanyaLead)
+                    .where(BanyaLead.created_at >= cutoff)
+                )
+            ).scalar() or 0
+        except Exception:
+            leads_month = 0
+    return templates.TemplateResponse(
+        request,
+        "gdepar_partners.html",
+        {
+            "request": request,
+            "canonical_host": CANONICAL_HOST,
+            "canonical_base_url": CANONICAL_BASE_URL,
+            "canonical_page_url": f"{CANONICAL_BASE_URL}/partners",
+            "asset_version": GDEPAR_ASSET_VERSION,
+            "metrika_id": YANDEX_METRIKA_ID,
+            "metrika_page": "partners",
+            "published_count": published,
+            "leads_month": leads_month,
+            "site_title": "Где Пар",
+            "site_tagline": "Партнёрам — лиды, не «размещение ради размещения»",
+            "nav_active": "partners",
+        },
+        headers=_html_public_page_headers(f"{CANONICAL_BASE_URL}/partners"),
+    )
 
 
 @app.get("/api/gdepar/health")

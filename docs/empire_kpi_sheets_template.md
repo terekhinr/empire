@@ -33,13 +33,24 @@
 | `pension_site_sessions` | Сессии neverretire.ru | ≥500/мес к launch |
 | `pension_book_toc` | Визиты `/book` | рост |
 | `pension_buy_clicks` | Цели buy/cta в Метрике | рост к launch |
+| `tg_posts_published` | Постов в TG за неделю (все 5 каналов) | ≥70/нед при автопосте |
+| `autopost_failures` | `[autopublish] skip` за неделю (`journalctl`) | **0** |
+| `gift_emails` | Подписчиков `/gift` (накопительно) | **50** к 31.08 |
+| `gdepar_phone_reveals` | `phone_reveal` / цель Метрики | рост с окт 26 |
 | `orders` | Оплаченные заказы (шт) | по продукту |
 | `revenue_rub` | Выручка за неделю | > 0 после launch |
 | `expenses_rub` | Расходы Empire за неделю | ≤ ~1 500 + VPS/4 |
 | `top_utm` | Лучший utm_source недели | не пусто при трафике |
 | `notes` | Решение недели (1 фраза) | — |
 
-Подробные пороги: `docs/empire_business_plan_2026.md` §6.2.
+Подробные пороги: `docs/empire_business_plan_2026.md` §6.2 · триггеры решений: `docs/audit/14_PIPELINE_R5_AUTOPOST.md` §4.
+
+**Счётчики автопоста (bash):**
+
+```bash
+journalctl -u empire --since "7 days ago" | grep -c '\[autopublish\] published'
+journalctl -u empire --since "7 days ago" | grep -c '\[autopublish\] skip'
+```
 
 ---
 

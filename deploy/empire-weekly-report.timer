@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Empire report Sunday 08:00 MSK (05:00 UTC)
+
+[Timer]
+OnCalendar=Sun *-*-* 05:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

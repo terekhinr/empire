@@ -731,7 +731,12 @@ def is_prebuilt_evening_topic(topic_raw: str) -> bool:
 
 def requires_curated_photo(topic_raw: str) -> bool:
     """Посты, которые нельзя публиковать без фото."""
-    return is_curated_topic(topic_raw) or is_prebuilt_evening_topic(topic_raw)
+    t = topic_raw or ""
+    return (
+        is_curated_topic(t)
+        or is_prebuilt_evening_topic(t)
+        or "[#Вэтотдень]" in t
+    )
 
 
 async def resolve_lenin_slot(

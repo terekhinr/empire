@@ -11,7 +11,9 @@
   /about       — о проекте и контакты
   /api/health  — health + metrika_id_set
   POST /api/health/ingest — Health Connect webhook (Lifesum nutrition, weight)
+  GET  /gift         — лид-магнит (5 принципов, email → PDF)
   POST /api/pension/waitlist — email pre-launch
+  POST /api/pension/gift     — email с лид-магнита /gift
   /robots.txt  — индексация
   /sitemap.xml — карта сайта
 
@@ -96,6 +98,8 @@ def _metrika_page_for_path(path: str, *, slug: str | None = None) -> str:
         return f"book_chapter:{slug}"
     if path == "/buy":
         return "buy"
+    if path == "/gift":
+        return "gift"
     if path == "/articles":
         return "articles"
     if path.startswith("/articles/"):
@@ -146,6 +150,30 @@ async def _fetch_published_articles(limit: int = 50) -> list[PostDraft]:
 
 class WaitlistBody(BaseModel):
     email: str = Field(..., min_length=5, max_length=254)
+    source: str | None = Field(default=None, max_length=64)
+    utm_source: str | None = Field(default=None, max_length=128)
+    utm_medium: str | None = Field(default=None, max_length=128)
+    utm_campaign: str | None = Field(default=None, max_length=128)
+
+
+class GiftBody(BaseModel):
+    email: str = Field(..., min_length=5, max_length=254)
+    consent: bool = False
+    utm_source: str | None = Field(default=None, max_length=128)
+    utm_medium: str | None = Field(default=None, max_length=128)
+    utm_campaign: str | None = Field(default=None, max_length=128)
+
+
+GIFT_PDF_URL = "/static/pension/5-principles-antipension.html"
+
+
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _validate_email(email: str) -> None:
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(status_code=400, detail="invalid_email")
 
 
 @app.get("/api/health")
@@ -160,12 +188,39 @@ async def api_health():
 
 @app.post("/api/pension/waitlist")
 async def api_pension_waitlist(body: WaitlistBody):
-    email = body.email.strip().lower()
-    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
-        raise HTTPException(status_code=400, detail="invalid_email")
-    if not append_waitlist_email(email, source="site_form"):
+    email = _normalize_email(body.email)
+    _validate_email(email)
+    source = (body.source or "site_form").strip() or "site_form"
+    if not append_waitlist_email(
+        email,
+        source=source[:64],
+        utm_source=body.utm_source,
+        utm_medium=body.utm_medium,
+        utm_campaign=body.utm_campaign,
+    ):
         raise HTTPException(status_code=400, detail="invalid_email")
     return {"ok": True, "waitlist_count": waitlist_count()}
+
+
+@app.post("/api/pension/gift")
+async def api_pension_gift(body: GiftBody):
+    if not body.consent:
+        raise HTTPException(status_code=400, detail="consent_required")
+    email = _normalize_email(body.email)
+    _validate_email(email)
+    if not append_waitlist_email(
+        email,
+        source="gift",
+        utm_source=body.utm_source,
+        utm_medium=body.utm_medium,
+        utm_campaign=body.utm_campaign,
+    ):
+        raise HTTPException(status_code=400, detail="invalid_email")
+    return {
+        "ok": True,
+        "waitlist_count": waitlist_count(),
+        "download_url": GIFT_PDF_URL,
+    }
 
 
 @app.post("/api/health/ingest")
@@ -240,6 +295,19 @@ async def book_chapter(request: Request, slug: str):
             chapter=chapters[idx],
             prev_chapter=chapters[idx - 1] if idx > 0 else None,
             next_chapter=chapters[idx + 1] if idx + 1 < len(chapters) else None,
+        ),
+    )
+
+
+@app.get("/gift")
+async def gift_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "gift.html",
+        _ctx(
+            request,
+            metrika_page="gift",
+            gift_pdf_url=GIFT_PDF_URL,
         ),
     )
 
@@ -335,6 +403,7 @@ async def sitemap():
         f"https://{CANONICAL_HOST}/",
         f"https://{CANONICAL_HOST}/book",
         f"https://{CANONICAL_HOST}/buy",
+        f"https://{CANONICAL_HOST}/gift",
         f"https://{CANONICAL_HOST}/articles",
         f"https://{CANONICAL_HOST}/videos",
         f"https://{CANONICAL_HOST}/about",

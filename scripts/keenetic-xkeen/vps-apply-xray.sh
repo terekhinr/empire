@@ -11,6 +11,10 @@ Restart=on-failure
 RestartSec=5
 EOF
 cp "$CFG_SRC" "$CFG_DST"
+SCRIPT_DIR="$(dirname "$CFG_SRC")"
+if [ -x "$SCRIPT_DIR/vps-pin-xray.sh" ]; then
+  sh "$SCRIPT_DIR/vps-pin-xray.sh" || true
+fi
 xray run -test -config "$CFG_DST" >/dev/null
 systemctl daemon-reload
 systemctl restart xray

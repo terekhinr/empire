@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/projects/empire
-Environment=PATH=/root/projects/empire/venv/bin
+Environment=PATH=/root/projects/empire/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=-/etc/empire/empire.env
 EnvironmentFile=-/root/projects/empire/.env

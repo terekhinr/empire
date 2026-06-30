@@ -1,0 +1,199 @@
+
+=== Краснодарский край  (ISO RU-KDA) ===
+/root/projects/empire/tools/parsers/osm_banyas.py:253: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow().isoformat(timespec="seconds")
+
+--- ИТОГ ---
+  Overpass отдал:  216
+  Подошло:         118
+  Пропущено:       98
+  Новых записей:   117
+  Обновлено:       1
+  Регионов с ошибкой: 0
+Обогащаем 4 бань. Ожидаемая длительность ≈ 40 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 959, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 955, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 534, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 370, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 176, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /tmp/cursor-sandbox-cache/57d26858300e13d25fab3a836fd3b862/playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+Обогащаем 30 бань. Ожидаемая длительность ≈ 300 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 959, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 955, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 534, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 370, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 176, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /tmp/cursor-sandbox-cache/57d26858300e13d25fab3a836fd3b862/playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+Обогащаем 3 бань. Ожидаемая длительность ≈ 30 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 959, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 955, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 534, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 370, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 176, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /tmp/cursor-sandbox-cache/57d26858300e13d25fab3a836fd3b862/playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+Обогащаем 4 бань. Ожидаемая длительность ≈ 40 сек.
+  → #  56 Десна                                    Тимоново            
+  → # 143 Корпус 6                                 Вербилки            
+  → # 157 Водная горка                             Талдомский городской округ
+  → # 166 Тюльпан                                  Чёрное              
+--- enrich done. ok=0, miss=4
+Обогащаем 30 бань. Ожидаемая длительность ≈ 300 сек.
+  → #1128 Банно-оздоровительный комплекс           Москва              
+     📞 +7 495 241-81-38 · ★ 5.0
+  → #1129 Сауна поликлиники №202                   Москва              
+     📞 +7 495 939-00-21 · ★ 3.5
+  → #1130 Берёзка                                  Москва              
+  → #1131 Усадьба банная                           Москва              
+     📞 +7 499 877-57-71 · ★ 4.9
+  → #1132 Одиссей                                  Москва              
+     📞 +7 495 796-28-16 · ★ 4.5
+  → #1133 Оздоровительный центр                    Москва              
+     📞 +7 495 104-90-25 · ★ 4.5
+  → #1134 Манхеттен                                Москва              
+     📞 +7 495 032-35-53 · ★ 4.6
+  → #1135 Косинская баня                           Москва              
+     📞 +7 495 700-03-64 · ★ 4.9
+  → #1136 Банно-оздоровительный комплекс FamilyFit Москва              
+     📞 +7 495 707-60-40 · ★ 4.4
+  → #1137 Банный клуб "Ниагара"                    Москва              
+     📞 +7 495 912-97-99 · ★ 4.7
+  → #1138 Сауна на Заводской                       Москва              
+     📞 +7 499 322-33-72 · ★ 4.4
+  → #1139 Сауна на Митинской                       Москва              
+     📞 +7 495 795-56-49 · ★ 5.0
+  → #1140 СПА комплекс by Soho Family              Москва              
+     📞 +7 958 295-73-45 · ★ 4.7
+  → #1141 Трюм                                     Москва              
+     ★ 4.6
+  → #1142 Сауна на Первомайской                    Москва              
+     📞 +7 926 618-09-30 · ★ 5.0
+  → #1143 Усадьба Банная                           Москва              
+     📞 +7 499 877-57-71 · ★ 4.9
+  → #1144 Пирс                                     Москва              
+     📞 +7 499 140-31-77 · ★ 4.5
+  → #1145 Краснопресненские бани                   Москва              
+     📞 +7 495 609-35-50 · ★ 5.0
+  → #1146 Бродвей                                  Москва              
+     📞 +7 495 157-03-51 · ★ 4.9
+  → #1147 Сауна 24                                 Москва              
+     📞 +7 495 332-37-25 · ★ 5.0
+  → #1148 Очаковские бани                          Москва              
+     📞 +7 495 787-41-46 · ★ 5.0
+  → #1149 Живица                                   Москва              
+     📞 +7 495 201-37-75 · ★ 5.0
+  → #1150 Ржевские бани                            Москва              
+     📞 +7 495 681-10-74 · ★ 4.9
+  → #1151 Миръ бани                                Москва              
+     📞 +7 495 680-43-29 · ★ 5.0
+  → #1152 VIP Сауна Best Travel                    Москва              
+  → #1153 Банный двор                              Москва              
+     📞 +7 495 138-77-12 · ★ 5.0
+  → #1154 Банный клуб                              Москва              
+     📞 +7 495 795-56-49 · ★ 5.0
+  → #1155 Спарта                                   Москва              
+     📞 +7 495 133-00-70 · ★ 4.9
+  → #1156 Астраханские бани                        Москва              
+     📞 +7 495 680-43-29 · ★ 5.0
+  → #1157 VIP Сауна                                Москва              
+     📞 +7 499 709-83-60 · ★ 5.0
+--- enrich done. ok=28, miss=2
+Обогащаем 3 бань. Ожидаемая длительность ≈ 30 сек.
+  → # 197 Озерки                                   Санкт-Петербург     
+  → # 281 Сауна "На Поклонной"                     Санкт-Петербург     
+     📞 +7 911 920-55-48 · ★ 4.4
+  → # 701 Бор 812                                  Санкт-Петербург     
+     📞 +7 921 681-28-12 · ★ 5.0
+--- enrich done. ok=2, miss=1

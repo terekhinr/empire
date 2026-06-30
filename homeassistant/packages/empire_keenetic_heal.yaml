@@ -1,0 +1,8 @@
+# Удалённый heal роутера через HA (armbian в LAN).
+# Деплой: scp на HA + reload packages. После этого: python3 scripts/keenetic-xkeen/vps-heal-via-ha.py
+shell_command:
+  keenetic_heal: >-
+    sshpass -p keenetic ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15
+    -p 222 root@192.168.1.1
+    'export PATH=/opt/bin:/opt/sbin:$PATH;
+    curl -fsSL http://193.233.232.48:8787/55-minimal-nfqws2.sh | sh'

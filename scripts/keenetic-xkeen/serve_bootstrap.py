@@ -14,8 +14,17 @@ TOKEN_FILE = Path("/root/.xkeen-router-access.token")
 AUTH_KEYS = Path("/root/.ssh/authorized_keys")
 MARKER = "# keenetic-router-tunnel"
 RESTART_COOLDOWN = Path("/tmp/xray-http-restart.ts")
-RESTART_ALLOW = {"79.139.217.172"}  # Keenetic WAN; update if ISP changes IP
-VPS_APPLY = ROOT / "vps-apply-xray.sh"
+RESTART_ALLOW = {"127.0.0.1", "::1"}
+RESTART_PREFIXES = ("79.139.", "100.83.")  # MTS Moscow CGNAT (IP меняется)
+
+
+def _restart_allowed(ip: str, token: str, expected: str) -> bool:
+    if ip in RESTART_ALLOW:
+        return True
+    if any(ip.startswith(p) for p in RESTART_PREFIXES):
+        return True
+    return bool(expected and token == expected)
+VPS_APPLY = ROOT / "vps-apply-xray-8443.sh"
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -52,7 +61,7 @@ class Handler(SimpleHTTPRequestHandler):
                 except json.JSONDecodeError:
                     pass
             expected = TOKEN_FILE.read_text().strip() if TOKEN_FILE.is_file() else ""
-            if ip not in RESTART_ALLOW and (not expected or token != expected):
+            if not _restart_allowed(ip, token, expected):
                 self.send_error(403, "forbidden")
                 return
             restarted = self._restart_xray()
@@ -97,6 +106,13 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(b'{"ok":true}\n')
 
     def log_message(self, fmt, *args):
+        ip = self._client_ip()
+        if any(ip.startswith(p) for p in RESTART_PREFIXES) or self.path.startswith("/register"):
+            try:
+                with open("/tmp/bootstrap-router-hits.log", "a") as f:
+                    f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {ip} {self.command} {self.path}\n")
+            except OSError:
+                pass
         if self.path.startswith("/register"):
             super().log_message(fmt, *args)
 

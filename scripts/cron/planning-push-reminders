@@ -1,0 +1,3 @@
+# Empire Tasks Web Push reminders · every minute
+SHELL=/bin/bash
+* * * * * root cd /root/projects/empire && ./venv/bin/python scripts/run_planning_push_reminders.py >> /var/log/empire_planning_push.log 2>&1

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, desc
 
-from main import PostDraft
+from empire_db import PostDraft
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///empire.db")
 engine = create_async_engine(DATABASE_URL, echo=False)

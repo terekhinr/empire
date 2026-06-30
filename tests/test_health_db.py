@@ -62,7 +62,7 @@ def test_strength_log(temp_health_db):
     hd.add_strength_log("2026-06-16", "bench_press", 100.0, 10, 3)
     df = hd.load_strength_df()
     assert len(df) == 1
-    assert df.iloc[0]["exercise_label"] == "Жим лёжа"
+    assert df.iloc[0]["exercise_label"] == "Жим штанги лёжа"
 
 
 def test_import_body_scale_csv(temp_health_db, monkeypatch):

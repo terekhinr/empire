@@ -33,6 +33,12 @@ from health_db import (
     sync_all_csv,
     sync_csv_if_changed,
 )
+from health_workout_program import (
+    get_calendar,
+    get_session_for_date,
+    next_scheduled_session,
+    program_summary,
+)
 from intervals_sync import intervals_config, should_sync_intervals, sync_intervals
 
 MOBILE_CSS = """
@@ -119,7 +125,170 @@ def _build_body_chart_df(daily: pd.DataFrame, scale_daily: pd.DataFrame) -> pd.D
     )
 
 
+def _last_weight_for_exercise(exercise_key: str) -> float | None:
+    df = load_strength_df()
+    if df.empty:
+        return None
+    sub = df[df["exercise_key"] == exercise_key]
+    if sub.empty:
+        return None
+    return float(sub.loc[sub["weight_kg"].idxmax(), "weight_kg"])
+
+
+def _workout_banner() -> None:
+    today = date.today()
+    session = get_session_for_date(today)
+    if session and session.template:
+        tpl = session.template
+        st.success(
+            f"**Сегодня:** {session.label} — {tpl.title} · "
+            f"вкладка «Программа» для записи подходов"
+        )
+        if session.note:
+            st.caption(session.note)
+        if tpl.meta.get("калории"):
+            st.caption(f"Калории: {tpl.meta['калории']}")
+    else:
+        nxt = next_scheduled_session(today)
+        if nxt:
+            st.info(f"Сегодня нет тренировки по календарю. Ближайшая: **{nxt.on}** — {nxt.label}")
+
+
+def _tab_program() -> None:
+    summary = program_summary()
+    if not summary["calendar_days"]:
+        st.warning(f"Файл программы не найден: `{summary['path']}`")
+        return
+
+    st.caption(
+        f"Макроцикл {summary['start']} — {summary['end']} · "
+        f"{summary['calendar_days']} тренировок · {summary['phases']} фазы"
+    )
+
+    session_date = st.date_input("Дата тренировки", value=date.today(), key="program_date")
+    session = get_session_for_date(session_date)
+    if not session:
+        st.info("На эту дату в календаре нет тренировки. Выберите другую дату или смотрите расписание ниже.")
+    elif not session.template:
+        st.warning(f"{session.label} — шаблон не найден в файле программы.")
+    elif session.template.exercises and all(ex.is_rest for ex in session.template.exercises):
+        st.info(f"**{session.label}** — день отдыха. {session.template.exercises[0].detail}")
+    elif session.template:
+        tpl = session.template
+        st.subheader(f"{session.label}: {tpl.title}")
+        if tpl.meta:
+            with st.expander("Питание и фаза", expanded=False):
+                for k, v in tpl.meta.items():
+                    st.markdown(f"**{k}:** {v}")
+        if session.note:
+            st.caption(session.note)
+
+        strength_today = load_strength_df()
+        if not strength_today.empty:
+            strength_today = strength_today[
+                strength_today["logged_on"].dt.date == session_date
+            ]
+
+        with st.form("program_workout_log"):
+            st.markdown("Разверните упражнение — отдельная строка на каждый подход.")
+            to_save: list[tuple] = []
+            for i, ex in enumerate(tpl.exercises):
+                if ex.is_rest:
+                    continue
+                default_w = ex.suggested_weight_kg
+                if default_w is None:
+                    default_w = _last_weight_for_exercise(ex.exercise_key) or 0.0
+                default_reps = ex.reps or ex.reps_max or ex.reps_min or 10
+                n_sets = 1 if ex.is_max else max(1, ex.sets or 1)
+                hint = ex.prescription
+                if ex.detail:
+                    hint += f" · {ex.detail}"
+                with st.expander(f"{ex.exercise_label} — {ex.prescription}", expanded=(i == 0)):
+                    st.caption(hint)
+                    shared_w = None
+                    if n_sets > 1:
+                        shared_w = st.number_input(
+                            "Вес, кг (все подходы)",
+                            min_value=0.0,
+                            max_value=500.0,
+                            value=float(default_w),
+                            step=2.5,
+                            key=f"prog_shared_w_{i}",
+                        )
+                    for s in range(1, n_sets + 1):
+                        c0, c1, c2 = st.columns([1, 2, 2])
+                        with c0:
+                            done = st.checkbox("✓", value=True, key=f"prog_done_{i}_{s}", label_visibility="collapsed")
+                        with c1:
+                            if n_sets == 1:
+                                w = st.number_input(
+                                    "кг",
+                                    min_value=0.0,
+                                    max_value=500.0,
+                                    value=float(default_w),
+                                    step=2.5,
+                                    key=f"prog_w_{i}_{s}",
+                                    label_visibility="collapsed",
+                                )
+                            else:
+                                w = shared_w
+                        with c2:
+                            reps = st.number_input(
+                                "повт",
+                                min_value=1,
+                                max_value=50,
+                                value=int(default_reps),
+                                key=f"prog_r_{i}_{s}",
+                                label_visibility="collapsed",
+                            )
+                        if done:
+                            note = f"подход {s}/{n_sets}"
+                            to_save.append((ex.exercise_key, float(w or 0), int(reps), 1, note))
+
+            if st.form_submit_button("Сохранить тренировку", type="primary"):
+                if not to_save:
+                    st.warning("Отметьте хотя бы один подход.")
+                else:
+                    for key, w, reps, sets, note in to_save:
+                        add_strength_log(
+                            session_date.isoformat(),
+                            key,
+                            weight_kg=w,
+                            reps=reps,
+                            sets=sets,
+                            note=note,
+                        )
+                    st.success(f"Сохранено подходов: {len(to_save)}")
+                    st.rerun()
+
+        if not strength_today.empty:
+            st.markdown("**Уже записано в этот день:**")
+            st.dataframe(
+                strength_today[
+                    ["exercise_label", "weight_kg", "reps", "sets", "note"]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    st.divider()
+    st.subheader("Календарь")
+    rows = []
+    for entry in get_calendar():
+        mark = "→" if entry.on == session_date else ""
+        rows.append(
+            {
+                "": mark,
+                "Дата": entry.on.isoformat(),
+                "Тренировка": entry.label,
+                "Примечание": entry.note,
+            }
+        )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+
 def _tab_overview(daily: pd.DataFrame, scale_daily: pd.DataFrame) -> None:
+    _workout_banner()
     summary = latest_measurement_summary()
     if summary:
         c1, c2, c3, c4 = st.columns(4)
@@ -420,12 +589,15 @@ def page_health() -> None:
     daily = measurements_daily_summary()
     scale_daily = load_body_scale_daily()
 
-    tab_overview, tab_log, tab_strength, tab_history, tab_import = st.tabs(
-        ["Обзор", "Записать", "Силовые", "История", "Импорт"]
+    tab_overview, tab_program, tab_log, tab_strength, tab_history, tab_import = st.tabs(
+        ["Обзор", "Программа", "Записать", "Силовые", "История", "Импорт"]
     )
 
     with tab_overview:
         _tab_overview(daily, scale_daily)
+
+    with tab_program:
+        _tab_program()
 
     with tab_log:
         _tab_log_entry()

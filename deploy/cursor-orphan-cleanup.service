@@ -1,0 +1,10 @@
+[Unit]
+Description=Prune stale Cursor Remote SSH extension hosts
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /root/projects/empire/scripts/cursor_orphan_cleanup.sh
+
+[Install]
+WantedBy=multi-user.target

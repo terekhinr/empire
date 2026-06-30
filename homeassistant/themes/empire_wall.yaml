@@ -1,0 +1,94 @@
+# Тёмная glassmorphism-тема для настенной панели (kiosk / планшет).
+# frontend.themes → !include_dir_merge_named themes
+
+empire_wall:
+  modes:
+    dark:
+      primary-color: "#00d4aa"
+      accent-color: "#38bdf8"
+      light-primary-color: "#5eead4"
+      dark-primary-color: "#0d9488"
+
+      # Градиентный фон (как на референсах)
+      primary-background-color: "#0a0a12"
+      secondary-background-color: "#12121c"
+      card-background-color: "rgba(24, 28, 42, 0.55)"
+      ha-card-background: "rgba(24, 28, 42, 0.55)"
+
+      primary-text-color: "#f0f2f5"
+      secondary-text-color: "#8b92a8"
+      disabled-text-color: "#4a5068"
+      text-primary-color: "#f0f2f5"
+
+      divider-color: "rgba(56, 189, 248, 0.15)"
+      outline-color: "rgba(56, 189, 248, 0.25)"
+
+      app-header-background-color: "rgba(10, 10, 18, 0.85)"
+      app-header-text-color: "#f0f2f5"
+      sidebar-background-color: "#0a0a12"
+      sidebar-icon-color: "#6b7289"
+      sidebar-text-color: "#c8cdd8"
+      sidebar-selected-icon-color: "#00d4aa"
+      sidebar-selected-text-color: "#00d4aa"
+
+      state-icon-color: "#8b92a8"
+      state-icon-active-color: "#00d4aa"
+      state-icon-unavailable-color: "#4a5068"
+
+      label-badge-background-color: "rgba(30, 36, 56, 0.8)"
+      label-badge-text-color: "#f0f2f5"
+      label-badge-red: "#f87171"
+      label-badge-green: "#34d399"
+      label-badge-blue: "#38bdf8"
+      label-badge-yellow: "#fbbf24"
+      label-badge-grey: "#6b7289"
+
+      error-color: "#f87171"
+      warning-color: "#fbbf24"
+      success-color: "#34d399"
+      info-color: "#38bdf8"
+
+      ha-card-border-radius: "18px"
+      ha-card-box-shadow: "0 8px 32px rgba(0, 0, 0, 0.45)"
+      ha-card-border-width: "1px"
+      ha-card-border-color: "rgba(56, 189, 248, 0.12)"
+
+      paper-slider-knob-color: "#00d4aa"
+      paper-slider-active-color: "#00d4aa"
+      paper-slider-container-color: "rgba(0, 212, 170, 0.2)"
+
+      switch-checked-color: "#00d4aa"
+      switch-unchecked-button-color: "#8b92a8"
+      switch-unchecked-track-color: "#2a3148"
+
+      mdc-theme-primary: "#00d4aa"
+      mdc-theme-on-primary: "#0a0a12"
+      mdc-theme-surface: "rgba(24, 28, 42, 0.55)"
+      mdc-theme-on-surface: "#f0f2f5"
+
+      mush-rgb-state: "0, 212, 170"
+      mush-rgb-red: "248, 113, 113"
+      mush-rgb-green: "52, 211, 153"
+      mush-rgb-blue: "56, 189, 248"
+      mush-rgb-yellow: "251, 191, 36"
+      mush-rgb-purple: "167, 139, 250"
+      mush-rgb-grey: "139, 146, 168"
+      mush-rgb-pink: "244, 114, 182"
+      mush-rgb-disabled: "74, 80, 104"
+
+      # card-mod: градиент на body (если установлен HACS card-mod)
+      card-mod-root: |
+        ha-app-layout {
+          background: linear-gradient(145deg, #0a0a12 0%, #141428 35%, #1e1030 70%, #0f172a 100%) !important;
+          background-attachment: fixed !important;
+        }
+        .header {
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+      card-mod-card: |
+        ha-card {
+          backdrop-filter: blur(14px) saturate(1.2);
+          -webkit-backdrop-filter: blur(14px) saturate(1.2);
+          border: 1px solid rgba(56, 189, 248, 0.14) !important;
+        }

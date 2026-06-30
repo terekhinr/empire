@@ -63,7 +63,7 @@ automation:
         entity_id: binary_sensor.sonoff_snzb_06p
         to: "off"
         for:
-          seconds: 30
+          seconds: 10
     actions:
       - action: light.turn_off
         target:

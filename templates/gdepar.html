@@ -291,13 +291,10 @@
                 esc(s.site_url) + '" target="_blank" rel="noopener">Сайт</a>';
         }
         var phoneBlock = '';
-        if (s.phone && String(s.phone).trim()) {
-            var disp = String(s.phone).trim();
-            var digits = disp.replace(/[^\d+]/g, '');
-            if (digits) {
-                phoneBlock = '<p class="banya-popup-phone"><a class="banya-popup-external" data-external-kind="phone" data-spot-id="' + sid +
-                    '" href="tel:' + digits + '">' + esc(disp) + '</a></p>';
-            }
+        if (s.has_phone) {
+            phoneBlock = '<p class="banya-popup-phone gdepar-phone-lead-wrap">' +
+                '<button type="button" class="gdepar-show-phone" data-spot-id="' + sid + '" data-lead-source="home_map">Показать телефон</button>' +
+                '<span class="gdepar-phone-revealed" hidden></span></p>';
         }
         var clip = (s.clips && s.clips[0]) ? s.clips[0] : null;
         var embed = '';
@@ -867,6 +864,7 @@
     if (fh) fh.addEventListener("change", sync);
 })();
 </script>
+<script src="/static/gdepar/lead.js?v={{ asset_version }}"></script>
 {% include "gdepar_assistant.inc.html" %}
 </body>
 </html>
