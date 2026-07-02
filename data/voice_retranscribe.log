@@ -1,0 +1,80 @@
+Re-transcribe 9 note(s) since 2026-06-23
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-23-0656-voice-book-trupik.md <- Моя запись 21.mp3 (78s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (630 chars)
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-30-0805-voice-book-trupik.md <- Моя запись 24.mp3 (436s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (4377 chars)
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-30-1037-voice-book-trupik.md <- Моя запись 25.mp3 (346s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (3740 chars)
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-30-103736-voice-book-trupik.md <- Моя запись 26.mp3 (183s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (1638 chars)
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-30-103752-voice-book-trupik.md <- Моя запись 27.mp3 (280s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (3000 chars)
+
+База знаний/Книги/Трупик-майора/заметки/2026-06-30-1038-voice-book-trupik.md <- Моя запись 28.mp3 (385s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (4261 chars)
+
+Входящие/2026-06-23-0656-voice-inbox.md <- Моя запись 22.mp3 (79s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (660 chars)
+
+Входящие/2026-06-23-065613-voice-inbox.md <- Моя запись 23.mp3 (48s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (446 chars)
+
+Входящие/2026-06-30-1038-voice-inbox.md <- Моя запись 29.mp3 (378s)
+  whisper: model=medium device=cpu compute=int8 lang=ru prepped=True
+  OK (4590 chars)
+
+Done: 9/9
+=== retranscribe done, pushing ===
+== Pull audio from Google Drive ==
+2026/06/30 22:06:55 INFO  : There was nothing to transfer
+2026/06/30 22:06:55 INFO  : 
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Checks:                29 / 29, 100%
+Elapsed time:         0.8s
+
+== Transcribe + route ==
+No new audio.
+== Push notes to Yandex Disk ==
+  copy -> obsidian (2)/Life/voice/transcribed
+2026/06/30 22:06:59 INFO  : There was nothing to transfer
+2026/06/30 22:06:59 INFO  : 
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Checks:                47 / 47, 100%
+Elapsed time:         1.1s
+
+  copy -> obsidian (2)/База знаний/Книги/На-пенсию-никогда/заметки
+2026/06/30 22:07:00 INFO  : There was nothing to transfer
+2026/06/30 22:07:00 INFO  : 
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Checks:                 6 / 6, 100%
+Elapsed time:         0.6s
+
+  copy -> obsidian (2)/База знаний/Книги/Трупик-майора/заметки
+2026/06/30 22:07:01 INFO  : There was nothing to transfer
+2026/06/30 22:07:01 INFO  : 
+Transferred:   	          0 B / 0 B, -, 0 B/s, ETA -
+Checks:                14 / 14, 100%
+Elapsed time:         0.7s
+
+  copy -> obsidian (2)/Входящие
+2026/06/30 22:07:04 INFO  : 2026-06-30-1038-voice-inbox.md: Copied (replaced existing)
+2026/06/30 22:07:04 INFO  : 
+Transferred:   	    8.071 KiB / 8.071 KiB, 100%, 8.068 KiB/s, ETA 0s
+Checks:                27 / 27, 100%
+Transferred:            1 / 1, 100%
+Elapsed time:         3.2s
+
+Done. Obsidian on PC gets files via Yandex Disk sync.

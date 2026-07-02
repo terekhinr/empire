@@ -26,7 +26,11 @@ _SKIP_LINE_PATTERNS = (
     re.compile(r"^\s*>\s*\*\*🔧", re.I),
     re.compile(r"^\s*>\s*\*\*Примечание к версии", re.I),
     re.compile(r"АВТОРСКАЯ ВСТАВКА \(не заполняется редактурой\)", re.I),
-    re.compile(r"^\s*\|?\s*[-:]+\s*\|", re.I),  # |---|---| separators
+    re.compile(r"^\s*\|?\s*[-:]+\s*\|", re.I),
+    re.compile(r"РАЗМЕТКА АВТОРИТЕТОВ", re.I),
+    re.compile(r"Примечание к версии", re.I),
+    re.compile(r"^\s*Версия\s+\d+", re.I),
+    re.compile(r"\[АВТОРИТЕТ\s*·", re.I),
 )
 
 
@@ -86,8 +90,9 @@ def _normalize_symbols(text: str) -> str:
     text = text.replace("−", "-")
     text = text.replace("²", " в квадрате")
     text = text.replace("₽", " рублей")
-    text = text.replace("<", " меньше ")
-    text = text.replace(">", " больше ")
+    text = re.sub(r"<\s*(\d)", r"меньше \1", text)
+    text = re.sub(r">\s*(\d)", r"больше \1", text)
+    text = re.sub(r"<[^>]+>", "", text)
     text = text.replace("&", " и ")
     text = re.sub(r"\s*\[\d{1,2}(?:\s*[\-–,;]\s*\d{1,2})*\]", "", text)
     text = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF\u2700-\u27BF⚔⚠☐✍]", "", text)
@@ -107,19 +112,43 @@ def _heading_to_speech(line: str) -> str:
     return title
 
 
+_EDITORIAL_LINE_PATTERNS = (
+    re.compile(r"РАЗМЕТКА АВТОРИТЕТОВ", re.I),
+    re.compile(r"Примечание к версии", re.I),
+    re.compile(r"^\s*Версия\s+\d+", re.I),
+    re.compile(r"\[АВТОРИТЕТ\s*·", re.I),
+)
+
+
+def _process_line(stripped: str) -> str | None:
+    if any(p.search(stripped) for p in _SKIP_LINE_PATTERNS):
+        return None
+    if stripped.startswith(">"):
+        stripped = re.sub(r"^>\s*", "", stripped)
+    if stripped.startswith("|"):
+        sentence = _table_row_to_sentence(stripped)
+        if sentence:
+            return _normalize_symbols(_strip_markdown_inline(sentence))
+        return None
+    if stripped.startswith("#"):
+        return _normalize_symbols(_heading_to_speech(stripped))
+    stripped = _strip_markdown_inline(stripped)
+    stripped = re.sub(r"^✍️?\s*", "", stripped)
+    stripped = re.sub(r"^\*+\s*", "", stripped)
+    stripped = re.sub(r"\*+\s*$", "", stripped)
+    stripped = re.sub(r"^ЛИЧНЫЙ ПРИМЕР:\s*", "Личный пример. ", stripped, flags=re.I)
+    stripped = _roman_part(stripped)
+    stripped = _normalize_symbols(stripped)
+    return stripped or None
+
+
 def prepare_md_for_tts(raw: str) -> str:
     lines = raw.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     out: list[str] = []
-    skip_meta = True
+    in_editorial = False
 
     for line in lines:
         stripped = line.strip()
-
-        if skip_meta:
-            if stripped.startswith("## Благодарности"):
-                skip_meta = False
-            else:
-                continue
 
         if not stripped:
             if out and out[-1] != "":
@@ -131,31 +160,19 @@ def prepare_md_for_tts(raw: str) -> str:
                 out.append("")
             continue
 
-        if any(p.search(stripped) for p in _SKIP_LINE_PATTERNS):
+        if any(p.search(stripped) for p in _EDITORIAL_LINE_PATTERNS):
+            in_editorial = True
             continue
 
-        if stripped.startswith(">"):
-            stripped = re.sub(r"^>\s*", "", stripped)
-
-        if stripped.startswith("|"):
-            sentence = _table_row_to_sentence(stripped)
-            if sentence:
-                out.append(_normalize_symbols(_strip_markdown_inline(sentence)))
+        if in_editorial:
+            if stripped.startswith("## Благодарности") or stripped == "Благодарности":
+                in_editorial = False
+                out.append("Благодарности.")
             continue
 
-        if stripped.startswith("#"):
-            out.append(_normalize_symbols(_heading_to_speech(stripped)))
-            continue
-
-        stripped = _strip_markdown_inline(stripped)
-        stripped = re.sub(r"^✍️?\s*", "", stripped)
-        stripped = re.sub(r"^\*+\s*", "", stripped)
-        stripped = re.sub(r"\*+\s*$", "", stripped)
-        stripped = re.sub(r"^ЛИЧНЫЙ ПРИМЕР:\s*", "Личный пример. ", stripped, flags=re.I)
-        stripped = _roman_part(stripped)
-        stripped = _normalize_symbols(stripped)
-        if stripped:
-            out.append(stripped)
+        processed = _process_line(stripped)
+        if processed:
+            out.append(processed)
 
     text = "\n\n".join(p for p in ("\n".join(out).split("\n\n")) if p.strip())
     text = unicodedata.normalize("NFC", text)
@@ -163,6 +180,11 @@ def prepare_md_for_tts(raw: str) -> str:
     text = re.sub(r"\.{2,}", ".", text)
     text = re.sub(r" +([.,;:!?])", r"\1", text)
     return text.strip() + "\n"
+
+
+def prepare_for_tts(raw: str) -> str:
+    """Markdown or plain TTS manuscript -> speech-ready text."""
+    return prepare_md_for_tts(raw)
 
 
 def main() -> int:
@@ -177,7 +199,7 @@ def main() -> int:
 
     output = args.output or args.input.with_name(f"{args.input.stem}_tts.txt")
     raw = args.input.read_text(encoding="utf-8")
-    cleaned = prepare_md_for_tts(raw)
+    cleaned = prepare_for_tts(raw)
     output.write_text(cleaned, encoding="utf-8")
 
     print(f"Input:  {args.input} ({len(raw)} chars)")

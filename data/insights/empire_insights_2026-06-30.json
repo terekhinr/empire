@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-06-30T04:10:14",
+  "generated_at": "2026-06-30T22:10:13",
   "tasks": {
     "tasks_todo": 283,
     "tasks_doing": 0,
-    "tasks_done": 4,
+    "tasks_done": 12,
     "goals_active": 1,
     "projects_active": 21,
     "checklists_active": 32,
@@ -32,9 +32,9 @@
     ]
   },
   "health": {
-    "latest_weight_kg": 111.1,
+    "latest_weight_kg": 112.1,
     "weight_change_kg": null,
-    "measurements_count": 62,
+    "measurements_count": 63,
     "workouts_total": 34,
     "workouts_last_31d": null
   },
@@ -47,10 +47,10 @@
   },
   "checklists_active": 32,
   "empire_events_7d": {
-    "daily_snapshot": 91,
+    "daily_snapshot": 94,
     "garden_bot_promo_draft": 1,
-    "gdepar_topic_family_penalty": 2,
-    "neurocomment_planned": 220,
+    "gdepar_topic_family_penalty": 1,
+    "neurocomment_planned": 235,
     "pension_waitlist_signup": 3,
     "tg_promo_map_draft": 1
   },

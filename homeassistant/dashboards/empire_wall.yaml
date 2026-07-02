@@ -278,20 +278,20 @@ views:
                         color: "#64748b"
                   - type: horizontal-stack
                     cards:
-                      - type: custom:mini-graph-card
-                        name: Семён
+                      - type: custom:mushroom-template-card
+                        primary: Семён
+                        secondary: >-
+                          {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+                          {% if v in ['unknown', 'unavailable', 'none', ''] %}
+                            Offline — нет связи Zigbee
+                          {% else %}
+                            {{ v }} °C · {{ states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost') }}%
+                          {% endif %}
                         icon: mdi:account-child
-                        hours_to_show: 12
-                        line_width: 2
-                        font_size: 65
-                        show:
-                          name: true
-                          state: true
-                          graph: sparkline
-                          fill: fade
-                        entities:
-                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
-                            color: "#00d4aa"
+                        icon_color: >-
+                          {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+                          {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else '#00d4aa' }}
+                        layout: vertical
                       - type: custom:mini-graph-card
                         name: Макс
                         icon: mdi:account-child-circle
@@ -400,16 +400,20 @@ views:
                   yellow: 60
                   red: 75
                 needle: true
-              - type: gauge
-                entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
-                name: Семён
-                min: 15
-                max: 30
-                severity:
-                  green: 20
-                  yellow: 25
-                  red: 28
-                needle: true
+              - type: custom:mushroom-template-card
+                primary: Семён
+                secondary: >-
+                  {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+                  {% if v in ['unknown', 'unavailable', 'none', ''] %}
+                    Offline — нет связи Zigbee
+                  {% else %}
+                    {{ v }} °C
+                  {% endif %}
+                icon: mdi:account-child
+                icon_color: >-
+                  {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+                  {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else 'green' }}
+                layout: vertical
 
   - title: Камеры
     path: kamery
@@ -506,18 +510,20 @@ views:
                 name: влажность
                 color: "#38bdf8"
                 y_axis: secondary
-          - type: custom:mini-graph-card
-            name: Комната Семёна
-            hours_to_show: 48
-            line_width: 2
-            entities:
-              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
-                name: t°
-                color: "#00d4aa"
-              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost
-                name: влажность
-                color: "#38bdf8"
-                y_axis: secondary
+          - type: custom:mushroom-template-card
+            primary: Комната Семёна
+            secondary: >-
+              {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+              {% if v in ['unknown', 'unavailable', 'none', ''] %}
+                Датчик offline — перепривязка ZHA (кнопка на датчике 5–10 с)
+              {% else %}
+                {{ v }} °C · {{ states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost') }}%
+              {% endif %}
+            icon: mdi:account-child
+            icon_color: >-
+              {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+              {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else '#00d4aa' }}
+            layout: horizontal
           - type: custom:mini-graph-card
             name: Комната Макса
             hours_to_show: 48

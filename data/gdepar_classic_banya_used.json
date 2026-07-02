@@ -59,9 +59,12 @@
     "ap_platonov_ochischenie",
     "va_solouhin_banya",
     "vp_astafev_banya",
-    "vg_rasputin_pamyat"
+    "vg_rasputin_pamyat",
+    "ia_bunin_sensorika",
+    "mm_zoschenko_ochered",
+    "dn_mamin_sibiryak_sibirskaya"
   ],
-  "last": "2026-06-29T13:24:14.555795",
+  "last": "2026-07-02T12:00:00.009248",
   "last_by_id": {
     "sholokhov_don": "2026-06-07T12:00:16.922077",
     "dostoevsky_poor": "2026-06-07T12:00:16.922077",
@@ -122,6 +125,9 @@
     "ap_platonov_ochischenie": "2026-06-29T13:23:38.935427",
     "va_solouhin_banya": "2026-06-29T13:23:53.057552",
     "vp_astafev_banya": "2026-06-29T13:24:07.444653",
-    "vg_rasputin_pamyat": "2026-06-29T13:24:14.555795"
+    "vg_rasputin_pamyat": "2026-06-29T13:24:14.555795",
+    "ia_bunin_sensorika": "2026-06-30T12:00:00.022838",
+    "mm_zoschenko_ochered": "2026-07-01T12:00:23.547948",
+    "dn_mamin_sibiryak_sibirskaya": "2026-07-02T12:00:00.009248"
   }
 }

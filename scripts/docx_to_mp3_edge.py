@@ -12,6 +12,7 @@ from pathlib import Path
 
 import edge_tts
 from docx import Document
+from prepare_md_for_tts import prepare_for_tts
 
 DEFAULT_VOICE = "ru-RU-DmitryNeural"
 MAX_CHUNK = 1200
@@ -32,15 +33,6 @@ BAD_TRANSCRIPT_PATTERNS = (
 )
 
 
-def normalize_for_tts(text: str) -> str:
-    """Plain text only: edge-tts escapes <>& and reads SSML tags aloud."""
-    text = re.sub(r"<\s*(\d)", r"меньше \1", text)
-    text = re.sub(r">\s*(\d)", r"больше \1", text)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"[ \t]+", " ", text)
-    return text.strip()
-
-
 def load_text(path: Path) -> str:
     if path.suffix.lower() == ".docx":
         doc = Document(str(path))
@@ -48,7 +40,7 @@ def load_text(path: Path) -> str:
         raw = "\n\n".join(paras)
     else:
         raw = path.read_text(encoding="utf-8").strip()
-    return normalize_for_tts(raw)
+    return prepare_for_tts(raw)
 
 
 def split_text(text: str, max_len: int = MAX_CHUNK) -> list[str]:

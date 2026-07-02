@@ -1,3 +1,4 @@
+# DEPRECATED: use install_voice_rclone_nightly_windows.ps1 (once per night, hidden).
 # Empire: Google Drive -> Yandex Life/voice/raw (zadacha Windows)
 # powershell -ExecutionPolicy Bypass -File install_voice_sync_task.ps1
 

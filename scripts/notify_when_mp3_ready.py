@@ -56,6 +56,7 @@ def cleanup(output: Path) -> None:
             shutil.rmtree(d, ignore_errors=True)
     for f in (parent / f".{stem}.log", parent / f".{stem}_tts.log"):
         f.unlink(missing_ok=True)
+    (parent / f"{stem}_tts_clean.txt").unlink(missing_ok=True)
 
 
 def split_for_telegram(mp3: Path, tmp_dir: Path) -> list[Path]:

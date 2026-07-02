@@ -19,6 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from voice_route import classify, load_config, write_voice_note
+from voice_whisper import audio_probe, transcribe, whisper_settings
 
 AUDIO_EXT = {".m4a", ".mp3", ".wav", ".ogg", ".webm", ".aac", ".flac"}
 
@@ -47,19 +48,11 @@ def save_state(path: Path, done: set[str]) -> None:
     )
 
 
-def transcribe(audio: Path, model_size: str, device: str) -> str:
-    from faster_whisper import WhisperModel
-
-    compute_type = "int8" if device == "cpu" else "float16"
-    model = WhisperModel(model_size, device=device, compute_type=compute_type)
-    segments, _ = model.transcribe(str(audio), language="ru", vad_filter=True)
-    return "\n".join(s.text.strip() for s in segments if s.text.strip())
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default=os.environ.get("VOICE_WHISPER_MODEL", "small"))
-    ap.add_argument("--device", default=os.environ.get("VOICE_WHISPER_DEVICE", "cpu"))
+    cfg = whisper_settings()
+    ap.add_argument("--model", default=str(cfg["model"]))
+    ap.add_argument("--device", default=str(cfg["device"]))
     args = ap.parse_args()
 
     root = repo_root()
@@ -89,9 +82,19 @@ def main() -> int:
 
     for audio in pending:
         key = file_key(audio)
-        print(f"Transcribing: {audio.name}")
+        probe = audio_probe(audio)
+        if probe:
+            print(
+                f"Transcribing: {audio.name} "
+                f"({probe.get('codec_name', '?')}, "
+                f"{probe.get('sample_rate', '?')} Hz, "
+                f"{probe.get('bit_rate', '?')} bps, "
+                f"{float(probe.get('duration', '0') or 0):.0f}s)"
+            )
+        else:
+            print(f"Transcribing: {audio.name}")
         try:
-            text = transcribe(audio, args.model, args.device)
+            text = transcribe(audio, model_size=args.model, device=args.device)
         except Exception as e:
             print(f"FAIL {audio.name}: {e}", file=sys.stderr)
             continue

@@ -25,8 +25,9 @@ except ImportError:
 
 EMPIRE_DIR = Path(__file__).resolve().parents[1]
 HOBEIAN_IEEE = "a4:c1:38:0f:14:db:5d:39"
+SEMYON_IEEE = "a4:c1:38:14:a6:45:ff:ff"
 SRW_DEVICE_ID = "bf86f3c7f53b7bb055f6x2"
-PERMIT_SEC = 300
+PERMIT_SEC = 254
 
 
 def load_env() -> None:
@@ -71,6 +72,12 @@ def entity_state(entity_id: str) -> str:
 
 
 async def zha_permit(seconds: int = PERMIT_SEC) -> bool:
+    seconds = min(seconds, 254)
+    try:
+        ha_request("POST", "/api/services/zha/permit", {"duration": seconds})
+        return True
+    except urllib.error.HTTPError:
+        pass
     if websockets is None:
         print("websockets не установлен: pip install websockets")
         return False
@@ -194,6 +201,53 @@ def scan_srw_on_ha() -> None:
         print("Скан не удался — запустите на armbian: python3 -m tinytuya scan")
 
 
+def fix_semyon(repair: bool = False) -> int:
+    print("==> Семён: CK-TLSR8656 (ZHA, detskaia_2)")
+    temp = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura")
+    hum = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost")
+    print(f"  temperatura: {temp}, vlazhnost: {hum}")
+
+    if temp not in ("unavailable", "unknown", "missing"):
+        print("  Уже online — пропуск reconfigure")
+        return 0
+
+    if repair:
+        print("  remove + permit (нажмите кнопку на датчике 5–10 с)")
+        try:
+            ha_request("POST", "/api/services/zha/remove", {"ieee": SEMYON_IEEE})
+            print("  zha.remove отправлен")
+        except urllib.error.HTTPError as exc:
+            print(f"  zha.remove: {exc.code} (возможно уже удалён)")
+        time.sleep(4)
+        ok = asyncio.run(zha_permit(PERMIT_SEC))
+        print(f"  permit {PERMIT_SEC} с ({'OK' if ok else 'FAIL'})")
+        return 0
+
+    print("  ZHA reconfigure…")
+    asyncio.run(zha_reconfigure(SEMYON_IEEE))
+    for entity in (
+        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura",
+        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost",
+        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia",
+    ):
+        try:
+            ha_request("POST", "/api/services/homeassistant/update_entity", {"entity_id": entity})
+        except urllib.error.HTTPError:
+            pass
+    time.sleep(3)
+    temp2 = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura")
+    print(f"  после reconfigure: {temp2}")
+    if temp2 not in ("unavailable", "unknown", "missing"):
+        print("  OK")
+        return 0
+
+    print("  Всё ещё offline — датчик выпал из Zigbee-сети (на дисплее t° есть, в HA нет).")
+    print("  1) python3 tools/ha_fix_now.py --semyon-repair")
+    print("  2) Зажмите кнопку на датчике 5–10 с (permit 4 мин)")
+    print("  3) Если не помогло — поставьте Zigbee-роутер ближе к комнате Семёна")
+    return 1
+
+
 def fix_balkon() -> int:
     print("==> Балкон: SRW-TH01")
     temp = entity_state("sensor.balkon_temperatura")
@@ -231,16 +285,20 @@ def main() -> int:
     parser.add_argument("--balkon-only", action="store_true")
     parser.add_argument("--balkon-scan", action="store_true")
     parser.add_argument("--tualet-repair", action="store_true", help="remove + permit ZG-301Z")
+    parser.add_argument("--semyon-only", action="store_true")
+    parser.add_argument("--semyon-repair", action="store_true", help="remove + permit CK-TLSR8656")
     args = parser.parse_args()
 
     rc = 0
     if args.balkon_scan:
         scan_srw_on_ha()
         return 0
-    if not args.balkon_only:
+    if not args.balkon_only and not args.semyon_only:
         rc = max(rc, fix_tualet(repair=args.tualet_repair))
-    if not args.tualet_only:
+    if not args.tualet_only and not args.semyon_only:
         rc = max(rc, fix_balkon())
+    if not args.tualet_only and not args.balkon_only:
+        rc = max(rc, fix_semyon(repair=args.semyon_repair))
     return rc
 
 

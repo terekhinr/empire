@@ -26,33 +26,74 @@ require_rclone() {
 upload_tox1_yandex() {
   local img="/root/tox1-backup/tox1-emmc-android-20260606.img"
   local remote="${REMOTE}:VPS-backup/${HOST}/TOX1"
-  local parts="/var/tmp/tox1-parts-${STAMP}"
-  local part_size="${TOX1_PART_SIZE:-2000M}"
+  local part_mb="${TOX1_PART_MB:-2000}"
+  local part_bytes=$((part_mb * 1024 * 1024))
+  local img_size chunk="/var/tmp/tox1-chunk-upload"
+  local prefix="tox1-emmc-android-20260606.img.part"
 
   [[ -f "$img" ]] || { log "ERROR: нет $img"; exit 1; }
   require_rclone
 
-  log "=== TOX1 eMMC → ${remote}/parts/ (по ${part_size}, streaming) ==="
-  mkdir -p "$parts"
+  img_size="$(stat -c%s "$img")"
+  local total_parts=$(((img_size + part_bytes - 1) / part_bytes))
+  log "=== TOX1 eMMC → ${remote}/parts/ (${part_mb} МБ × ~${total_parts} частей, ${img_size} байт) ==="
+
   sha256sum "$img" > "${img}.sha256"
   rclone copyto "${img}.sha256" "${remote}/parts/tox1-emmc-android-20260606.img.sha256" \
-    --retries 10 --timeout 0 -v
+    --retries 10 -v
 
-  # split --filter: данные на stdin, FILE — имя части (файл на диске пустой)
-  split -b "$part_size" -d -a 3 "$img" "${parts}/tox1-emmc-android-20260606.img.part" \
-    --filter='rclone rcat "'"${remote}"'/parts/$(basename "$FILE")" --timeout 0 --retries 10 -v'
+  local part_num=0 offset=0 uploaded=0
+  while [[ "$offset" -lt "$img_size" ]]; do
+    local name="${prefix}$(printf '%03d' "$part_num")"
+    local this_size="$part_bytes"
+    if [[ $((offset + this_size)) -gt "$img_size" ]]; then
+      this_size=$((img_size - offset))
+    fi
+
+    if rclone lsf "${remote}/parts/${name}" >/dev/null 2>&1; then
+      local csz
+      csz="$(rclone lsl "${remote}/parts/${name}" 2>/dev/null | awk '{print $1}' | head -1)"
+      csz="${csz:-0}"
+      if [[ "$csz" -ge "$this_size" ]]; then
+        log "SKIP ${name} — на облаке (${csz} байт)"
+        offset=$((offset + this_size))
+        part_num=$((part_num + 1))
+        uploaded=$((uploaded + 1))
+        continue
+      fi
+      log "WARN: ${name} неполный на облаке (${csz}/${this_size}), перезаливка"
+      rclone deletefile "${remote}/parts/${name}" 2>/dev/null || true
+    fi
+
+    log ">>> Часть $((part_num + 1))/${total_parts}: ${name} (${this_size} байт, offset ${offset})"
+    dd if="$img" of="$chunk" bs=1M skip=$((offset / 1048576)) \
+      count=$(((this_size + 1048575) / 1048576)) status=progress
+
+    rclone copyto "$chunk" "${remote}/parts/${name}" \
+      --progress --stats 1m --stats-one-line \
+      --retries 15 --low-level-retries 30 \
+      --timeout 30m -v
+    rm -f "$chunk"
+    uploaded=$((uploaded + 1))
+    log "OK ${name} залит (${uploaded}/${total_parts})"
+    if [[ -x "$ROOT/scripts/empire_tox1_part_notify.sh" ]]; then
+      "$ROOT/scripts/empire_tox1_part_notify.sh" "${LOG_DIR}/large-files-cloud-${STAMP}.log" \
+        "$((part_num + 1))" "$total_parts" 2>/dev/null || true
+    fi
+    offset=$((offset + this_size))
+    part_num=$((part_num + 1))
+  done
 
   local cloud_n
-  cloud_n="$(rclone lsf "${remote}/parts/" 2>/dev/null | grep -c 'tox1-emmc-android-20260606.img.part' || true)"
-  log "Частей на облаке: ${cloud_n}"
+  cloud_n="$(rclone lsf "${remote}/parts/" 2>/dev/null | grep -c "${prefix}" || true)"
+  log "Частей на облаке: ${cloud_n}/${total_parts}"
   if [[ "$cloud_n" -lt 10 ]]; then
     log "ERROR: ожидалось ≥10 частей, получено ${cloud_n}"
     exit 1
   fi
 
-  rm -rf "$parts"
-  rm -f "$img" "${img}.sha256"
-  log "DONE tox1-yandex: образ удалён с VPS после выгрузки"
+  rm -f "$img" "${img}.sha256" "$chunk"
+  log "DONE tox1-yandex: образ удалён с VPS (+30 ГБ)"
 }
 
 stage_empire_large() {

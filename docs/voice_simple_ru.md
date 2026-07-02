@@ -39,8 +39,34 @@ journalctl -u voice-pipeline.service -n 20 --no-pager
 
 Таймер: `voice-pipeline.timer` — каждые 15 мин.
 
-## Запасной путь через ПК
+## ПК (не основной путь)
 
-Если OAuth сбросился — `Life/tools/sync_evrec_to_life.ps1` и `install_voice_sync_task.ps1` (см. старый гайд в git history).
+`Life/tools/sync_evrec_to_life.ps1` — запасной вариант.
+
+**Ночной бэкап на ПК (рекомендуется вместо мигания каждые 15 мин):**
+
+```powershell
+cd C:\path\to\empire
+powershell -ExecutionPolicy Bypass -File scripts\install_voice_rclone_nightly_windows.ps1
+```
+
+Копирует `Easy Voice Recorder` → `Life/voice/raw` на Яндекс.Диске раз в ночь (скрытое окно). Старую задачу `Empire-Voice-Sync` удаляет.
+
+## Качество расшифровки
+
+| Было (ПК) | Сейчас (VPS) | Что делать |
+|-----------|--------------|------------|
+| `small` + GPU | раньше стоял **`tiny`** на CPU | в `/etc/empire/voice.env` → `VOICE_WHISPER_MODEL=medium` |
+| локальный файл | rclone с Google Drive | норм, тот же mp3 |
+| float16 | int8 | для CPU это ок при `medium` |
+
+Проверка на VPS:
+
+```bash
+cd /root/projects/empire/scripts
+./venv/bin/python voice_quality_check.py --models small,medium data/voice_vault_staging/Life/voice/transcribed/ИМЯ.mp3
+```
+
+Если оба варианта плохие при bitrate < 48 kbps — поднять качество записи в Easy Voice Recorder на телефоне.
 
 Полный гайд OAuth: `docs/voice_pipeline_vps_ru.md`

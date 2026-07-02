@@ -15,7 +15,8 @@
       "gear_home",
       "gear_home",
       "gear_chalk",
-      "gear_chalk"
+      "gear_chalk",
+      "gear_belt"
     ],
     "sports_med": [
       "med_shoulder",
@@ -28,7 +29,8 @@
       "med_hr_zones",
       "med_return",
       "med_shoulder",
-      "med_lower_back"
+      "med_lower_back",
+      "med_hr_zones"
     ],
     "kettlebell_fitness": [
       "fit_long_cycle"
@@ -65,5 +67,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-06-29T13:24:14.551847"
+  "last": "2026-07-02T07:00:00.005762"
 }
