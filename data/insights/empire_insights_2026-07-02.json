@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-02T16:10:48",
+  "generated_at": "2026-07-02T22:10:13",
   "tasks": {
     "tasks_todo": 282,
     "tasks_doing": 0,
@@ -35,7 +35,7 @@
     "latest_weight_kg": 112.1,
     "weight_change_kg": null,
     "measurements_count": 63,
-    "workouts_total": 34,
+    "workouts_total": 35,
     "workouts_last_31d": null
   },
   "pipeline": {
