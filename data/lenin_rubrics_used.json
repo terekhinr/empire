@@ -41,7 +41,8 @@
       "art_repin_smolny",
       "art_monument_volgograd",
       "art_monument_volgograd",
-      "art_serov_sketch"
+      "art_serov_sketch",
+      "art_kuzma_petrograd"
     ],
     "biography": [
       "bio_danilkin_paris",
@@ -57,7 +58,8 @@
       "danilkin_1870_1887_055",
       "danilkin_1897_1900_066",
       "danilkin_1905_1905_1907_044",
-      "danilkin_1897_1900_069"
+      "danilkin_1897_1900_069",
+      "danilkin_1889_1893_065"
     ],
     "literature": [
       "lit_bulgakov",
@@ -85,5 +87,5 @@
       "lit_solzhenitsyn"
     ]
   },
-  "last": "2026-07-03T09:00:11.403871"
+  "last": "2026-07-05T09:00:18.198611"
 }

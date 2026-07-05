@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T06:10:14",
+  "generated_at": "2026-07-04T22:10:11",
   "tasks": {
     "tasks_todo": 282,
     "tasks_doing": 0,
@@ -47,10 +47,9 @@
   },
   "checklists_active": 32,
   "empire_events_7d": {
-    "daily_snapshot": 95,
+    "daily_snapshot": 94,
     "garden_bot_promo_draft": 1,
-    "gdepar_topic_family_penalty": 1,
-    "neurocomment_planned": 195,
+    "neurocomment_planned": 180,
     "tg_promo_map_draft": 1
   },
   "conclusions": [

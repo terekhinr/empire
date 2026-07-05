@@ -58,7 +58,8 @@
       "hist_trade_weight",
       "hist_competition_standard",
       "hist_circus_strong",
-      "hist_competition_standard"
+      "hist_competition_standard",
+      "hist_soviet_sport"
     ],
     "russian_strongmen": [
       "strong_kryloff",
@@ -68,5 +69,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-07-03T07:00:00.008344"
+  "last": "2026-07-04T07:00:00.006428"
 }
