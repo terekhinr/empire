@@ -42,7 +42,8 @@
       "art_monument_volgograd",
       "art_monument_volgograd",
       "art_serov_sketch",
-      "art_kuzma_petrograd"
+      "art_kuzma_petrograd",
+      "art_monument_volgograd"
     ],
     "biography": [
       "bio_danilkin_paris",
@@ -84,8 +85,9 @@
       "danilkin_1912_1914_038",
       "danilkin_1908_1912_008",
       "danilkin_frag_057",
-      "lit_solzhenitsyn"
+      "lit_solzhenitsyn",
+      "danilkin_1908_1912_008"
     ]
   },
-  "last": "2026-07-05T09:00:18.198611"
+  "last": "2026-07-07T09:00:18.489391"
 }

@@ -59,7 +59,8 @@
       "hist_competition_standard",
       "hist_circus_strong",
       "hist_competition_standard",
-      "hist_soviet_sport"
+      "hist_soviet_sport",
+      "hist_circus_strong"
     ],
     "russian_strongmen": [
       "strong_kryloff",
@@ -69,5 +70,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-07-04T07:00:00.006428"
+  "last": "2026-07-06T07:00:00.007342"
 }
