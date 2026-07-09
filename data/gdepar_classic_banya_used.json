@@ -67,9 +67,10 @@
     "ai_kuprin_banya_2",
     "ma_sholohov_kazachya",
     "ia_bunin_banya",
-    "ln_andreev_ekzistentsialnyy"
+    "ln_andreev_ekzistentsialnyy",
+    "vg_rasputin_banya_2"
   ],
-  "last": "2026-07-07T12:00:00.010266",
+  "last": "2026-07-08T12:00:22.384883",
   "last_by_id": {
     "sholokhov_don": "2026-06-07T12:00:16.922077",
     "dostoevsky_poor": "2026-06-07T12:00:16.922077",
@@ -138,6 +139,7 @@
     "ai_kuprin_banya_2": "2026-07-04T12:00:01.465504",
     "ma_sholohov_kazachya": "2026-07-05T12:00:00.012701",
     "ia_bunin_banya": "2026-07-06T12:00:00.007165",
-    "ln_andreev_ekzistentsialnyy": "2026-07-07T12:00:00.010266"
+    "ln_andreev_ekzistentsialnyy": "2026-07-07T12:00:00.010266",
+    "vg_rasputin_banya_2": "2026-07-08T12:00:22.384883"
   }
 }
