@@ -35,10 +35,10 @@ def _slot_label(raw) -> str:
     return str(raw)
 
 
-async def _resolve_preview(p_key: str, raw_slot, weekday: int) -> str:
+async def _resolve_preview(p_key: str, raw_slot, when: datetime) -> str:
     import main as m
 
-    topic, prebuilt, _img, seed = await m._resolve_scheduled_slot(p_key, raw_slot)
+    topic, prebuilt, _img, seed = await m._resolve_scheduled_slot(p_key, raw_slot, when=when)
     kind = (seed or {}).get("_kind", "")
     if prebuilt:
         return f"prebuilt · {topic[:60]}"
@@ -78,7 +78,7 @@ def main() -> int:
                 raw = topics.get(t)
             if raw is None:
                 raw = "Свободная тема"
-            preview = asyncio.run(_resolve_preview(p_key, raw, wd))
+            preview = asyncio.run(_resolve_preview(p_key, raw, day))
             flag = ""
             if isinstance(raw, dict):
                 st = raw.get("type", "")

@@ -1,6 +1,6 @@
 const API_BASE = "/tasks/api/planning";
 const TOKEN_KEY = "empire_planning_token";
-const APP_VER = "39";
+const APP_VER = "47";
 const OFFLINE_SNAPSHOT_KEY = "empire_offline_snapshot";
 const REPEAT_MAP = {
   daily: { freq: "daily", interval: 1 },
@@ -29,6 +29,8 @@ const state = {
   workoutDiaryDate: todayStr(),
   calendarMonth: todayStr().slice(0, 8) + "01",
   calendarDay: null,
+  datePickerMonth: null,
+  datePickerSelected: null,
   googleCalendarUrl: "",
   settingsSection: "notifications",
   settingsReturnView: "today",
@@ -44,6 +46,8 @@ const state = {
   taskView: "today",
   healthView: "measurements",
   currentView: "today",
+  hideDoneInLists: localStorage.getItem("empire_hide_done") === "1",
+  inboxOnly: false,
   projectFilter: null,
   editingId: null,
   creatingTask: false,
@@ -60,7 +64,7 @@ const TITLES = {
   search: "Поиск",
   projects: "Проекты",
   lists: "Чеклисты",
-  "finance-model": "Финмодель",
+  "finance-model": "Пайплайн",
   done: "Вся история",
   "task-stats": "Статистика задач",
   insights: "ИИ-выводы",
@@ -84,6 +88,36 @@ const SETTINGS_SECTIONS = [
 const TASK_VIEWS = new Set(["today", "week", "calendar", "cal-day", "matrix", "all-tasks", "search", "projects", "lists", "finance-model", "done", "task-stats", "insights", "detail", "project-tasks"]);
 const SPLIT_TASK_VIEWS = new Set(["today", "week", "cal-day", "search", "all-tasks", "project-tasks", "done"]);
 const HEALTH_VIEWS = new Set(["measurements", "workouts", "program", "health-stats"]);
+
+const PIPELINE_TABS = [
+  { view: "today", icon: "today", title: "Сегодня" },
+  { view: "calendar", icon: "calendar", title: "Календарь" },
+  { view: "matrix", icon: "matrix", title: "Матрица" },
+  { view: "search", icon: "search", title: "Поиск" },
+  { view: "finance-model", icon: "pipeline", title: "Пайплайн" },
+];
+
+const HEALTH_TABS = [
+  { view: "measurements", icon: "measurements", title: "Замеры" },
+  { view: "workouts", icon: "workouts", title: "Тренировки" },
+  { view: "program", icon: "program", title: "Программа" },
+  { view: "health-stats", icon: "health-stats", title: "Статистика" },
+  { view: "health-notify", icon: "bell", title: "Напомин.", action: "open-settings-notify" },
+];
+
+function getTabbarMode(view = state.currentView) {
+  return HEALTH_VIEWS.has(view) ? "health" : "pipeline";
+}
+
+function isTabActive(tabView, currentView = state.currentView) {
+  if (tabView === currentView) return true;
+  if (tabView === "calendar" && currentView === "cal-day") return true;
+  if (tabView === "today" && ["week", "all-tasks", "project-tasks", "projects", "lists", "detail", "done"].includes(currentView)) {
+    return true;
+  }
+  if (tabView === "finance-model" && ["finance-model", "task-stats", "insights"].includes(currentView)) return true;
+  return false;
+}
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const PROJECT_COLORS = ["#f97316", "#ec4899", "#3b82f6", "#22c55e", "#a855f7", "#14b8a6", "#eab308"];
@@ -128,6 +162,333 @@ function formatTaskDateShort(iso) {
   return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
+function formatTaskMetaDate(t) {
+  if (!t?.due_date) return { text: "", overdue: false, today: false };
+  const today = todayStr();
+  const tomorrow = addDays(1);
+  let datePart = formatTaskDateShort(t.due_date);
+  if (t.due_date === today) datePart = "Сегодня";
+  else if (t.due_date === tomorrow) datePart = "Завтра";
+  const timePart = t.due_time ? `, ${String(t.due_time).slice(0, 5)}` : "";
+  return {
+    text: datePart + timePart,
+    overdue: t.due_date < today && t.status !== "done",
+    today: t.due_date === today,
+  };
+}
+
+function formatSheetDueLine(dueDate, dueTime) {
+  if (!dueDate) return "";
+  const today = todayStr();
+  const tomorrow = addDays(1);
+  const d = new Date(`${dueDate}T12:00:00`);
+  let dateLabel = d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  if (dueDate === today) dateLabel = "Сегодня";
+  else if (dueDate === tomorrow) dateLabel = "Завтра";
+  if (dueDate < today) {
+    let overdueDays = 0;
+    let cur = dueDate;
+    while (cur < today) {
+      cur = addDaysToDateStr(cur, 1);
+      overdueDays += 1;
+    }
+    dateLabel = `${dateLabel}, Просрочено ${overdueDays}`;
+  }
+  if (dueTime) dateLabel += `, ${String(dueTime).slice(0, 5)}`;
+  return dateLabel;
+}
+
+function dueDisplayText(dueDate, dueTime) {
+  if (!dueDate) return "Без даты — нажмите для выбора";
+  return formatSheetDueLine(dueDate, dueTime);
+}
+
+function openDatePicker() {
+  const due = document.getElementById("tf-due-date")?.value || "";
+  state.datePickerSelected = due || null;
+  state.datePickerMonth = due ? `${due.slice(0, 7)}-01` : monthStartFromToday();
+  document.getElementById("dp-due-time").value = document.getElementById("tf-due-time")?.value || "";
+  document.getElementById("dp-remind").value = document.getElementById("tf-remind")?.value || "";
+  document.getElementById("dp-repeat").value = document.getElementById("tf-repeat")?.value || "";
+  const sheet = document.getElementById("date-picker-sheet");
+  if (!sheet) return;
+  sheet.classList.remove("hidden");
+  sheet.setAttribute("aria-hidden", "false");
+  renderDatePickerCalendar();
+}
+
+function closeDatePicker() {
+  const sheet = document.getElementById("date-picker-sheet");
+  sheet.classList.add("hidden");
+  sheet.setAttribute("aria-hidden", "true");
+}
+
+function renderDatePickerCalendar() {
+  state.datePickerMonth = state.datePickerMonth || monthStartFromToday();
+  const range = calendarGridRange(state.datePickerMonth);
+  const label = document.getElementById("dp-month-label");
+  if (label) {
+    label.textContent = new Date(`${state.datePickerMonth}T12:00:00`).toLocaleDateString("ru-RU", {
+      month: "long",
+      year: "numeric",
+    });
+  }
+  const selected = state.datePickerSelected || document.getElementById("tf-due-date")?.value || "";
+  const today = todayStr();
+  const days = [];
+  let cur = range.gridStart;
+  while (cur <= range.gridEnd) {
+    days.push(cur);
+    cur = addDaysToDateStr(cur, 1);
+  }
+  const grid = document.getElementById("dp-calendar-grid");
+  if (!grid) return;
+  grid.innerHTML = days
+    .map((day) => {
+      const outside = !day.startsWith(range.monthKey);
+      const isToday = day === today;
+      const isSelected = day === selected;
+      return `<button type="button" class="dp-day${outside ? " outside" : ""}${isToday ? " today" : ""}${isSelected ? " selected" : ""}" data-action="dp-pick-day" data-date="${day}">${Number(day.slice(8, 10))}</button>`;
+    })
+    .join("");
+}
+
+async function applyScheduleFromPicker({ persist = true } = {}) {
+  const dueDate =
+    state.datePickerSelected != null
+      ? state.datePickerSelected
+      : document.getElementById("tf-due-date")?.value || "";
+  const dueTime = document.getElementById("dp-due-time")?.value || "";
+  const remindOff = document.getElementById("dp-remind")?.value ?? "";
+  const repeatKey = document.getElementById("dp-repeat")?.value || "";
+  document.getElementById("tf-due-date").value = dueDate;
+  document.getElementById("tf-due-time").value = dueTime;
+  document.getElementById("tf-remind").value = remindOff;
+  document.getElementById("tf-repeat").value = repeatKey;
+  syncSheetMetaDisplay();
+  if (!persist) return;
+  const id = document.getElementById("tf-id")?.value;
+  if (!id) return;
+  const body = {
+    due_date: dueDate || null,
+    due_time: dueTime || null,
+    clear_due: !dueDate,
+    clear_time: !dueTime,
+    repeat_rule: repeatKey ? REPEAT_MAP[repeatKey] : null,
+    clear_repeat: !repeatKey,
+    remind_at: computeRemindAt(dueDate, dueTime, remindOff),
+    clear_remind: remindOff === "" || remindOff == null,
+  };
+  await api(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  await loadAll();
+  if (state.editingId) {
+    const t = [...state.tasks, ...state.doneTasks].find((x) => x.id === state.editingId);
+    if (t) await openSheet(t);
+  }
+  showToast(dueDate ? "Дата обновлена" : "Дата снята");
+}
+
+async function confirmDatePicker() {
+  await applyScheduleFromPicker({ persist: true });
+  closeDatePicker();
+}
+
+async function clearDatePickerSelection() {
+  state.datePickerSelected = "";
+  document.getElementById("tf-due-date").value = "";
+  document.getElementById("dp-due-time").value = "";
+  document.getElementById("dp-remind").value = "";
+  document.getElementById("tf-due-time").value = "";
+  document.getElementById("tf-remind").value = "";
+  await applyScheduleFromPicker({ persist: true });
+  closeDatePicker();
+}
+
+function taskMetaIconsHtml(t) {
+  const parts = [];
+  if (t.remind_at) parts.push('<span class="task-icon task-icon--remind" aria-hidden="true"></span>');
+  if (t.repeat_label && t.repeat_label !== "Без повтора") {
+    parts.push('<span class="task-icon task-icon--repeat" aria-hidden="true"></span>');
+  }
+  return parts.join("");
+}
+
+function tagPillsHtml(tags, { limit = 3 } = {}) {
+  const list = (tags || []).filter(Boolean).slice(0, limit);
+  if (!list.length) return "";
+  return `<div class="tag-pills tag-pills--inline">${list
+    .map((tag) => `<span class="tag-pill">#${escapeHtml(tag)}</span>`)
+    .join("")}</div>`;
+}
+
+function renderTagPillsFromInput() {
+  const el = document.getElementById("tf-tag-pills");
+  const input = document.getElementById("tf-tags");
+  if (!el || !input) return;
+  const tags = input.value
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  el.innerHTML = tags.length
+    ? tags.map((tag) => `<span class="tag-pill">#${escapeHtml(tag)}</span>`).join("")
+        + `<button type="button" class="tag-pill tag-pill--add" data-action="focus-field" data-target="tf-tags">+</button>`
+    : `<button type="button" class="tag-pill tag-pill--add tag-pill--empty" data-action="focus-field" data-target="tf-tags">+ тег</button>`;
+}
+
+function syncSheetMetaDisplay() {
+  const dueDate = document.getElementById("tf-due-date")?.value || "";
+  const dueTime = document.getElementById("tf-due-time")?.value || "";
+  const dueEl = document.getElementById("tf-due-display");
+  const repeatEl = document.getElementById("tf-repeat-display");
+  const projEl = document.getElementById("tf-project-label");
+  const priority = Number(document.getElementById("tf-priority")?.value || 0);
+  const flagBtn = document.getElementById("tf-priority-flag");
+  if (projEl) {
+    const pid = document.getElementById("tf-project")?.value;
+    const p = state.projects.find((x) => String(x.id) === String(pid));
+    projEl.textContent = p?.title || "Входящие";
+  }
+  if (dueEl) {
+    const line = dueDisplayText(dueDate, dueTime);
+    dueEl.textContent = line;
+    dueEl.className = "tt-due-display tt-due-display--clickable mobile-only";
+    if (dueDate) {
+      if (dueDate < todayStr()) dueEl.classList.add("overdue");
+      else if (dueDate === todayStr()) dueEl.classList.add("today");
+      else dueEl.classList.add("future");
+    } else {
+      dueEl.classList.add("empty");
+    }
+  }
+  const dueText = document.getElementById("tf-due-display-text");
+  const dueBtn = document.getElementById("tf-due-picker-btn");
+  if (dueText) {
+    dueText.textContent = dueDisplayText(dueDate, dueTime);
+  }
+  if (dueBtn) {
+    dueBtn.classList.toggle("overdue", !!(dueDate && dueDate < todayStr()));
+    dueBtn.classList.toggle("today", dueDate === todayStr());
+    dueBtn.classList.toggle("empty", !dueDate);
+  }
+  if (repeatEl) {
+    const repeatKey = document.getElementById("tf-repeat")?.value || "";
+    const labels = {
+      daily: "Ежедневно",
+      weekdays: "По будням",
+      weekly: "Еженедельно",
+      biweekly: "Каждые 2 недели",
+      monthly: "Ежемесячно",
+      yearly: "Ежегодно",
+    };
+    repeatEl.textContent = labels[repeatKey] || "";
+    repeatEl.classList.toggle("hidden", !repeatKey);
+  }
+  if (flagBtn) {
+    flagBtn.classList.toggle("active", priority >= 2);
+    flagBtn.classList.toggle("high", priority >= 3);
+    flagBtn.title = priority >= 3 ? "Высокий приоритет" : priority >= 2 ? "Средний приоритет" : "Обычный приоритет";
+  }
+  renderTagPillsFromInput();
+  hydrateNavIcons(document.getElementById("task-sheet"));
+}
+
+function syncTabbar() {
+  renderMobileTabbar();
+}
+
+function renderMobileTabbar() {
+  const el = document.getElementById("mobile-tabbar");
+  if (!el) return;
+  const mode = getTabbarMode();
+  el.dataset.mode = mode;
+  const tabs = mode === "health" ? HEALTH_TABS : PIPELINE_TABS;
+  el.innerHTML = tabs
+    .map((tab) => {
+      const active = tab.action ? false : isTabActive(tab.view);
+      if (tab.action) {
+        return `<button class="tab tab-icon${active ? " active" : ""}" type="button" title="${escapeHtml(tab.title)}" data-action="${tab.action}"><span class="tab-icon-svg" data-icon="${tab.icon}"></span></button>`;
+      }
+      return `<button class="tab tab-icon${active ? " active" : ""}" data-view="${tab.view}" type="button" title="${escapeHtml(tab.title)}"><span class="tab-icon-svg" data-icon="${tab.icon}"></span></button>`;
+    })
+    .join("");
+  hydrateNavIcons(el);
+}
+
+function drawerNavRow(view, label, count, { action, icon } = {}) {
+  const active = view
+    ? state.currentView === view || (view === "calendar" && state.currentView === "cal-day")
+    : false;
+  if (action) {
+    return `<button class="drawer-row" type="button" data-action="${action}" data-drawer-close="1">${window.NavIcons ? NavIcons.badge(icon || "settings") : ""}<span class="drawer-row-label">${escapeHtml(label)}</span></button>`;
+  }
+  const iconKey = NAV_ICON_KEYS[view] || view;
+  const countHtml = count != null && count !== "" ? `<span class="drawer-row-count">${count}</span>` : "";
+  return `<button class="drawer-row${active ? " active" : ""}" data-view="${view}" type="button" data-drawer-close="1">${window.NavIcons ? NavIcons.badge(iconKey) : ""}<span class="drawer-row-label">${escapeHtml(label)}</span>${countHtml}</button>`;
+}
+
+function renderMobileDrawer() {
+  const nav = document.getElementById("mobile-drawer-nav");
+  if (!nav) return;
+  const c = taskNavCounts();
+  const inboxCount = activeTasks().filter((t) => !t.project_id).length;
+  nav.innerHTML = [
+    drawerNavRow("today", "Сегодня", c.todayNav || ""),
+    drawerNavRow("week", "Следующие 7 дней", c.weekNav || ""),
+    drawerNavRow("all-tasks", "Все задачи", c.all || ""),
+    `<button class="drawer-row${state.inboxOnly && state.currentView === "all-tasks" ? " active" : ""}" type="button" data-view="all-tasks" data-inbox="1" data-drawer-close="1">${window.NavIcons ? NavIcons.badge("inbox") : ""}<span class="drawer-row-label">Входящие</span><span class="drawer-row-count">${inboxCount || ""}</span></button>`,
+    drawerNavRow("done", "История", ""),
+    `<div class="drawer-divider" aria-hidden="true"></div>`,
+    drawerNavRow("projects", "Проекты", state.projects.length || ""),
+    drawerNavRow("lists", "Чеклисты", state.checklists.length || ""),
+    `<div class="drawer-divider" aria-hidden="true"></div>`,
+    drawerNavRow("measurements", "Здоровье", "", { icon: "health" }),
+    drawerNavRow(null, "Настройки", "", { action: "open-settings", icon: "settings" }),
+  ].join("");
+  hydrateNavIcons(nav);
+}
+
+function closeMobileDrawer() {
+  const drawer = document.getElementById("mobile-drawer");
+  if (!drawer) return;
+  drawer.classList.add("hidden");
+  drawer.setAttribute("aria-hidden", "true");
+}
+
+function toggleMobileDrawer() {
+  const drawer = document.getElementById("mobile-drawer");
+  if (!drawer) return;
+  closeOverflowMenu();
+  if (drawer.classList.contains("hidden")) {
+    renderMobileDrawer();
+    drawer.classList.remove("hidden");
+    drawer.setAttribute("aria-hidden", "false");
+  } else {
+    closeMobileDrawer();
+  }
+}
+
+function closeOverflowMenu() {
+  const menu = document.getElementById("view-overflow-menu");
+  if (!menu) return;
+  menu.classList.add("hidden");
+  menu.setAttribute("aria-hidden", "true");
+}
+
+function toggleOverflowMenu() {
+  const menu = document.getElementById("view-overflow-menu");
+  if (!menu) return;
+  closeMobileDrawer();
+  syncOverflowHideDoneLabel();
+  const willHide = !menu.classList.contains("hidden");
+  menu.classList.toggle("hidden", willHide);
+  menu.setAttribute("aria-hidden", willHide ? "true" : "false");
+}
+
+function syncOverflowHideDoneLabel() {
+  const el = document.getElementById("overflow-hide-done-label");
+  if (el) el.textContent = state.hideDoneInLists ? "Показать выполненные" : "Скрыть выполненные";
+}
+
 function quickAddHtml() {
   return `<button type="button" class="quick-add" data-action="quick-add">+ Новая задача</button>`;
 }
@@ -142,7 +503,7 @@ function renderCollapsibleGroup(title, items, { open = true, cls = "", footer = 
   const body = items.length
     ? renderTaskList(items)
     : `<div class="task-group-empty">Пусто</div>`;
-  return `<details class="task-group ${cls}"${open ? " open" : ""}>
+  return `<details class="task-group task-card ${cls}"${open ? " open" : ""}>
     <summary class="disclosure-toggle">${DISCLOSURE_CHEVRON}<span class="task-group-title">${escapeHtml(title)}</span><span class="task-group-count">${items.length}</span></summary>
     ${body}
     ${footer ? `<div class="task-group-footer">${footer}</div>` : ""}
@@ -204,15 +565,7 @@ function renderSidebarNav() {
     ].join("");
   }
   const mobileMain = document.getElementById("more-menu-main");
-  if (mobileMain) {
-    mobileMain.innerHTML = [
-      navRowHtml("today", "Сегодня", c.todayNav || ""),
-      navRowHtml("week", "Следующие 7 дней", c.weekNav || ""),
-      navRowHtml("matrix", "Матрица", ""),
-      navRowHtml("all-tasks", "Все задачи", c.all || ""),
-      navRowHtml("search", "Поиск", ""),
-    ].join("");
-  }
+  if (mobileMain) mobileMain.innerHTML = "";
   const listsCount = document.getElementById("nav-count-lists");
   if (listsCount) listsCount.textContent = String(state.checklists.length || 0);
 
@@ -248,6 +601,8 @@ function renderSidebarNav() {
     btn.classList.toggle("active", match);
   });
   hydrateNavIcons(document.getElementById("sidebar"));
+  hydrateNavIcons(document.getElementById("mobile-tabbar"));
+  renderMobileDrawer();
 }
 
 function token() {
@@ -370,9 +725,15 @@ async function deleteTaskImage(taskId) {
   await api(`/tasks/${taskId}/image`, { method: "DELETE" });
 }
 
+function dateToIsoLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function todayStr() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
+  return dateToIsoLocal(new Date());
 }
 
 function addDays(n) {
@@ -382,7 +743,7 @@ function addDays(n) {
 function addDaysToDateStr(iso, days) {
   const d = new Date(`${iso}T12:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return dateToIsoLocal(d);
 }
 
 function formatDiaryDate(iso) {
@@ -617,11 +978,19 @@ function renderFinanceModel() {
       const cl = checklistByRef(b.checklistRef);
       const pct = checklistPct(cl);
       const clId = cl?.id || "";
+      const codes = [b.code, b.tracker].filter(Boolean).join(" · ");
+      const links = (b.links || [])
+        .map((c) => `<span class="fm-code-chip">${escapeHtml(c)}</span>`)
+        .join("");
+      const fullDesc = b.fullDesc ? `<p class="fm-block-full">${formatPlainText(b.fullDesc)}</p>` : "";
       return `<button type="button" class="fm-block" data-goto-checklist="${clId}" ${clId ? "" : "disabled"}>
         <span class="fm-block-num">${escapeHtml(b.num)}</span>
+        <span class="fm-block-codes">${escapeHtml(codes)}${b.weight ? ` · ${escapeHtml(b.weight)}` : ""}</span>
         <span class="fm-block-title">${escapeHtml(b.title)}</span>
         <span class="fm-block-period">${escapeHtml(b.period)}</span>
         <span class="fm-block-text">${escapeHtml(b.text)}</span>
+        ${fullDesc}
+        ${links ? `<span class="fm-block-links">${links}</span>` : ""}
         ${pct != null ? `<span class="fm-block-pct">${pct}%</span>` : ""}
       </button>`;
     })
@@ -632,16 +1001,39 @@ function renderFinanceModel() {
       const cl = checklistByRef(ph.key);
       const pct = checklistPct(cl);
       const clId = cl?.id || "";
+      const codeLine = [ph.code, ph.quarter].filter(Boolean).join(" · ");
+      const fullDesc = ph.fullDesc ? `<p class="fm-phase-desc">${escapeHtml(ph.fullDesc)}</p>` : "";
       return `<div class="fm-phase card">
         <div class="fm-phase-head">
+          <span class="fm-phase-code">${escapeHtml(codeLine)}</span>
           <strong>${escapeHtml(ph.label)}</strong>
-          <span class="hint">${escapeHtml(ph.dates)}</span>
+          <span class="fm-phase-dates">${escapeHtml(ph.dates)}</span>
           ${pct != null ? `<span class="fm-phase-pct">${pct}%</span>` : ""}
         </div>
-        <p class="hint">${escapeHtml(ph.focus)}</p>
+        <p class="fm-phase-focus">${escapeHtml(ph.focus)}</p>
+        ${fullDesc}
         ${clId ? `<button type="button" class="btn small" data-goto-checklist="${clId}">Чеклист фазы →</button>` : ""}
       </div>`;
     })
+    .join("");
+
+  const modulesLegendHtml = (FM.modulesLegend || [])
+    .map(
+      (group) => `<details class="fm-module-group card">
+        <summary class="fm-module-summary">${escapeHtml(group.title)}</summary>
+        ${group.intro ? `<p class="fm-module-intro">${escapeHtml(group.intro)}</p>` : ""}
+        <dl class="fm-module-list">
+          ${(group.items || [])
+            .map(
+              (item) => `<div class="fm-module-item">
+                <dt><span class="fm-module-code">${escapeHtml(item.code)}</span> ${escapeHtml(item.name)}</dt>
+                <dd>${escapeHtml(item.text)}</dd>
+              </div>`
+            )
+            .join("")}
+        </dl>
+      </details>`
+    )
     .join("");
 
   const milestoneTasks = state.tasks
@@ -706,6 +1098,10 @@ function renderFinanceModel() {
       ${bridgeHtml}
       <p class="hint">Срок: до ${escapeHtml(formatDateRu(bridge.deadline))} · задача в календаре и в проекте «Финмодель»</p>
     </div>
+
+    <div class="section-title">Расшифровка модулей</div>
+    <p class="fm-hint">Коды из аудита Empire (R0–R5, блоки A–G, фазы Ф0–Ф3) и будущего проекта «Снегири».</p>
+    <div class="fm-modules">${modulesLegendHtml}</div>
 
     <div class="section-title">Пайплайн к цели (6 блоков)</div>
     <p class="hint fm-hint">Нажмите на блок — откроется связанный чеклист. Отмечайте пункты там, чтобы видеть процент.</p>
@@ -1468,11 +1864,14 @@ function bindPeriodChips(container, target) {
 }
 
 function renderAllTasks() {
-  const items = activeTasks();
-  const groups = groupTasks(state.tasks);
-  const total = state.summary?.tasks_todo ?? items.length;
-  const hint =
-    total > items.length
+  let items = activeTasks();
+  if (state.inboxOnly) items = items.filter((t) => !t.project_id);
+  const sourceTasks = state.inboxOnly ? state.tasks.filter((t) => !t.project_id) : state.tasks;
+  const groups = groupTasks(sourceTasks);
+  const total = state.inboxOnly ? items.length : (state.summary?.tasks_todo ?? items.length);
+  const hint = state.inboxOnly
+    ? `<p class="sheet-hint">Входящие — задачи без проекта (${items.length}).</p>`
+    : total > items.length
       ? `<p class="sheet-hint">Показано ${items.length} из ${total}. Используйте поиск или фильтр по проекту.</p>`
       : "";
   document.getElementById("view-all-tasks").innerHTML =
@@ -1512,6 +1911,9 @@ function fillExerciseSelect(selected) {
 }
 
 function closeAllSheets() {
+  closeDatePicker();
+  closeMobileDrawer();
+  closeOverflowMenu();
   closeSheet();
   closeMeasurementSheet();
   closeWorkoutSheet();
@@ -1629,22 +2031,29 @@ function taskRowHtml(t, { compact = false } = {}) {
   const overdue = t.due_date && t.due_date < todayStr() && !done;
 
   if (compact) {
-    const dateLabel = t.due_date ? formatTaskDateShort(t.due_date) : "";
     const projectName = t.project_title || "Входящие";
     const projectHtml = t.project_id
       ? `<span class="task-project"><span class="project-dot" style="background:${projectColor(t.project_id)}"></span>${escapeHtml(projectName)}</span>`
       : `<span class="task-project">${escapeHtml(projectName)}</span>`;
-    const dateCls = overdue ? "task-date overdue" : "task-date";
+    const metaDate = formatTaskMetaDate(t);
+    const dateCls = metaDate.overdue ? "task-date overdue" : metaDate.today ? "task-date today" : "task-date";
     const selected = state.editingId === t.id ? " task-row--selected" : "";
+    const priorityCls = (t.priority || 0) >= 3 ? " task-row--priority-high" : "";
+    const icons = taskMetaIconsHtml(t);
+    const tagsHtml = tagPillsHtml(t.tags, { limit: 2 });
+    const metaHtml =
+      metaDate.text || projectName || tagsHtml
+        ? `<div class="task-meta-line">
+            ${metaDate.text ? `<span class="${dateCls}">${icons}${escapeHtml(metaDate.text)}</span>` : "<span></span>"}
+            ${projectHtml}
+          </div>${tagsHtml}`
+        : tagsHtml;
     return `
-    <div class="task-row task-row--compact${done ? " task-row--done" : ""}${selected}" data-task-id="${t.id}">
+    <div class="task-row task-row--compact${done ? " task-row--done" : ""}${selected}${priorityCls}" data-task-id="${t.id}">
       <button type="button" class="${checkCls}" data-action="toggle-task" data-id="${t.id}" data-status="${t.status}">${checkMark}</button>
       <div class="task-body" data-action="open-task" data-id="${t.id}">
         <div class="task-title${done ? " done-text" : ""}">${escapeHtml(t.title)}</div>
-      </div>
-      <div class="task-aside">
-        ${projectHtml}
-        ${dateLabel ? `<span class="${dateCls}">${escapeHtml(dateLabel)}</span>` : ""}
+        ${metaHtml}
       </div>
     </div>`;
   }
@@ -1715,15 +2124,19 @@ function renderToday() {
   const doneOpen = localStorage.getItem("empire_group_done_open") !== "0";
   const parts = [
     quickAddHtml(),
-    groups.overdue.length ? renderTaskList(groups.overdue) : "",
+    groups.overdue.length
+      ? renderCollapsibleGroup("Просрочено", groups.overdue, { open: true, cls: "overdue" })
+      : "",
     renderCollapsibleGroup("Сегодня", groups.today, { open: true, cls: "today" }),
-    renderCollapsibleGroup("Выполнено", completedToday, {
-      open: doneOpen,
-      cls: "done",
-      footer: completedToday.length
-        ? `<button type="button" class="btn linkish" data-action="show-done-history">Вся история →</button>`
-        : "",
-    }),
+    state.hideDoneInLists
+      ? ""
+      : renderCollapsibleGroup("Выполнено", completedToday, {
+          open: doneOpen,
+          cls: "done",
+          footer: completedToday.length
+            ? `<button type="button" class="btn linkish" data-action="show-done-history">Вся история →</button>`
+            : "",
+        }),
   ].filter(Boolean);
   const el = document.getElementById("view-today");
   el.innerHTML = parts.join("") || `${quickAddHtml()}<div class="empty">Нет активных задач</div>`;
@@ -1745,8 +2158,7 @@ function renderWeek() {
   });
   const parts = [quickAddHtml()];
   if (overdue.length) {
-    parts.push('<div class="task-group-label overdue">Просрочено</div>');
-    parts.push(renderTaskList(overdue));
+    parts.push(renderCollapsibleGroup("Просрочено", overdue, { open: true, cls: "overdue" }));
   }
   Object.entries(byDay).forEach(([day, items]) => {
     if (!items.length) return;
@@ -1817,8 +2229,8 @@ function calendarGridRange(monthStart) {
   return {
     monthStart,
     monthLabel: first.toLocaleDateString("ru-RU", { month: "long", year: "numeric" }),
-    gridStart: gridStart.toISOString().slice(0, 10),
-    gridEnd: gridEnd.toISOString().slice(0, 10),
+    gridStart: dateToIsoLocal(gridStart),
+    gridEnd: dateToIsoLocal(gridEnd),
     monthKey: monthStart.slice(0, 7),
   };
 }
@@ -2586,6 +2998,8 @@ function bindSettings(root) {
 
 function updateChromeForView(name) {
   const isSettings = name === "settings";
+  document.getElementById("btn-mobile-menu")?.classList.toggle("hidden", isSettings);
+  document.getElementById("btn-overflow")?.classList.toggle("hidden", isSettings);
   document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
     const match = btn.dataset.view === name || (name === "cal-day" && btn.dataset.view === "calendar");
     btn.classList.toggle("active", !isSettings && match);
@@ -2702,6 +3116,11 @@ async function openSheet(task = null) {
   state.pendingTaskImage = null;
   state.pendingTaskImageRemove = false;
   renderTaskImagePreview(task);
+  syncSheetMetaDisplay();
+  const details = document.getElementById("sheet-fields-details");
+  if (details && !usesDesktopTaskSplit()) {
+    details.open = state.creatingTask;
+  }
   document.getElementById("tf-title").focus();
   syncSplitTaskLayout();
 }
@@ -2728,22 +3147,18 @@ function closeSheet() {
 async function loadSubtasks(parentId) {
   const data = await api(`/tasks/${parentId}`);
   const list = document.getElementById("subtasks-list");
-  list.innerHTML = (data.subtasks || []).map(taskRowHtml).join("") || '<div class="empty" style="padding:8px">Нет подзадач</div>';
+  list.innerHTML = (data.subtasks || []).map((t) => taskRowHtml(t, { compact: true })).join("")
+    || '<div class="empty" style="padding:8px">Нет подзадач</div>';
 }
 
 function showView(name) {
-  if (name === "more") {
-    document.getElementById("more-menu").classList.toggle("hidden");
-    return;
-  }
   closeAllSheets();
-  document.getElementById("more-menu")?.classList.add("hidden");
   if (name === "settings") {
     state.currentView = "settings";
     document.getElementById("app")?.classList.add("settings-mode");
     document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
     document.getElementById("view-settings").classList.add("active");
-    document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]").forEach((n) => {
+    document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .drawer-row[data-view]").forEach((n) => {
       n.classList.remove("active");
     });
     document.getElementById("page-title").textContent = TITLES.settings;
@@ -2760,19 +3175,18 @@ function showView(name) {
   if (HEALTH_VIEWS.has(name)) {
     state.section = "health";
     state.healthView = name;
+    state.inboxOnly = false;
   } else if (TASK_VIEWS.has(name)) {
     state.section = "tasks";
     state.taskView = name;
+    if (name !== "all-tasks") state.inboxOnly = false;
   }
   document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
-  document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]").forEach((n) => {
+  document.querySelectorAll(".nav-row[data-view], .nav-item[data-view], .drawer-row[data-view]").forEach((n) => {
     const match = n.dataset.view === name || (name === "cal-day" && n.dataset.view === "calendar");
     n.classList.toggle("active", match);
   });
-  document.querySelectorAll(".tab[data-section]").forEach((t) => {
-    const sec = t.dataset.section;
-    t.classList.toggle("active", (sec === "tasks" && TASK_VIEWS.has(name)) || (sec === "health" && HEALTH_VIEWS.has(name)));
-  });
+  syncTabbar();
   const map = {
     today: "view-today",
     week: "view-week",
@@ -2797,23 +3211,32 @@ function showView(name) {
   };
   document.getElementById(map[name] || "view-today").classList.add("active");
   document.getElementById("page-title").textContent =
-    name === "cal-day" ? formatDayTitle(state.calendarDay || todayStr()) : (TITLES[name] || "Empire");
+    name === "cal-day"
+      ? formatDayTitle(state.calendarDay || todayStr())
+      : name === "all-tasks" && state.inboxOnly
+        ? "Входящие"
+        : (TITLES[name] || "Empire");
   const mainEl = document.getElementById("main");
   if (mainEl) mainEl.scrollTop = 0;
   document.getElementById("search-bar").classList.toggle("hidden", name !== "search");
   document.getElementById("metrics")?.classList.toggle("hidden", name === "settings");
   const addBtn = document.getElementById("btn-add-header");
   const isHealth = HEALTH_VIEWS.has(name);
-  const isStats = name === "task-stats" || name === "health-stats" || name === "insights" || name === "finance-model";
-  addBtn.classList.toggle("hidden", isStats);
+  const isStats = name === "task-stats" || name === "health-stats" || name === "insights";
+  const isPipelineHub = name === "finance-model";
+  addBtn.classList.toggle("hidden", isStats || isPipelineHub);
   updateChromeForView(name);
-  if (!isStats) {
+  if (!isStats && !isPipelineHub) {
     if (name === "measurements") addBtn.textContent = "+ Замер";
     else if (name === "workouts") addBtn.textContent = "+ Тренировка";
     else if (name === "program") addBtn.textContent = "Дневник";
     else addBtn.textContent = "+ Задача";
   }
-  document.getElementById("fab-add").classList.toggle("hidden", isStats);
+  const showFab =
+    !isStats &&
+    !isPipelineHub &&
+    (isHealth ? ["measurements", "workouts"].includes(name) : !["settings", "task-stats", "insights", "program", "health-stats"].includes(name));
+  document.getElementById("fab-add").classList.toggle("hidden", !showFab);
   document.getElementById("fab-add").setAttribute(
     "aria-label",
     name === "measurements" ? "Новый замер" : name === "workouts" ? "Новая тренировка" : name === "program" ? "Дневник" : "Новая задача"
@@ -2832,7 +3255,9 @@ function showView(name) {
   if (name === "health-stats") renderHealthStats();
   renderMetrics();
   renderSidebarNav();
+  renderMobileDrawer();
   syncSplitTaskLayout();
+  syncTabbar();
 }
 
 function showSection(section) {
@@ -3009,17 +3434,25 @@ function bindEvents() {
     const settingsBtn = e.target.closest("[data-action^='open-settings']");
     if (settingsBtn) {
       e.preventDefault();
+      closeMobileDrawer();
+      closeOverflowMenu();
       const action = settingsBtn.dataset.action;
       if (action === "open-settings-notify") openSettings("notifications");
       else if (action === "open-settings-calendar") openSettings("calendar");
       else openSettings();
       return;
     }
-    const navBtn = e.target.closest(".nav-row[data-view], .nav-item[data-view], .more-menu [data-view], .more-calendar-item[data-view]");
-    if (navBtn && !navBtn.dataset.projectId) {
+    const navBtn = e.target.closest(".nav-row[data-view], .nav-item[data-view], .drawer-row[data-view]");
+    if (navBtn && !navBtn.dataset.projectId && navBtn.dataset.view) {
       e.preventDefault();
       e.stopPropagation();
-      showView(navBtn.dataset.view);
+      if (navBtn.dataset.inbox === "1") {
+        state.inboxOnly = true;
+        showView("all-tasks");
+      } else {
+        showView(navBtn.dataset.view);
+      }
+      if (navBtn.dataset.drawerClose) closeMobileDrawer();
       return;
     }
     const projBtn = e.target.closest("[data-view='project-tasks'][data-project-id]");
@@ -3031,18 +3464,25 @@ function bindEvents() {
       renderProjectTasks(state.projectFilter);
     }
   });
-  document.querySelectorAll(".tab[data-section]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      showSection(btn.dataset.section);
-    });
-  });
-  document.querySelector(".tab[data-view='more']")?.addEventListener("click", (e) => {
+  document.getElementById("mobile-tabbar")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab[data-view]");
+    if (!btn) return;
     e.preventDefault();
     e.stopPropagation();
-    showView("more");
+    const view = btn.dataset.view;
+    if (view === "search") {
+      document.getElementById("search-bar")?.classList.remove("hidden");
+      showView("search");
+      document.getElementById("search-input")?.focus();
+      return;
+    }
+    showView(view);
   });
+
+  ["tf-due-date", "tf-due-time", "tf-repeat", "tf-project", "tf-priority", "tf-remind"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", () => syncSheetMetaDisplay());
+  });
+  document.getElementById("tf-tags")?.addEventListener("input", () => syncSheetMetaDisplay());
 
   document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -3060,16 +3500,7 @@ function bindEvents() {
     showView(state.settingsReturnView || "today");
   });
 
-  document.getElementById("btn-search-toggle")?.addEventListener("click", () => {
-    const bar = document.getElementById("search-bar");
-    bar.classList.toggle("hidden");
-    if (!bar.classList.contains("hidden")) {
-      showView("search");
-      document.getElementById("search-input").focus();
-    }
-  });
-
-  document.getElementById("btn-refresh").addEventListener("click", () => loadAll().catch((e) => showToast(e.message)));
+  document.getElementById("btn-refresh")?.addEventListener("click", () => loadAll().catch((e) => showToast(e.message)));
   document.getElementById("fab-add").addEventListener("click", () => onPrimaryAdd());
   document.getElementById("btn-add-header").addEventListener("click", () => onPrimaryAdd());
   document.getElementById("task-form").addEventListener("submit", (e) => saveTaskForm(e).catch((err) => showToast(err.message)));
@@ -3137,6 +3568,7 @@ function bindEvents() {
     else if (kind === "tomorrow") dateEl.value = addDays(1);
     else if (kind === "week") dateEl.value = addDays(7);
     else dateEl.value = "";
+    syncSheetMetaDisplay();
   });
 
   document.getElementById("search-input").addEventListener("input", (e) => renderSearch(e.target.value));
@@ -3164,21 +3596,24 @@ function bindEvents() {
   document.getElementById("import-csv").addEventListener("change", onCsvPick);
   document.getElementById("import-csv-mobile").addEventListener("change", onCsvPick);
 
-  document.getElementById("main").addEventListener("click", async (e) => {
+  document.addEventListener("click", async (e) => {
     const actionEl = e.target.closest("[data-action]");
     if (actionEl) {
       const action = actionEl.dataset.action;
       if (action === "toggle-task") {
+        if (!actionEl.closest("#main")) return;
         e.stopPropagation();
         try { await toggleTask(+actionEl.dataset.id, actionEl.dataset.status); } catch (err) { showToast(err.message); }
         return;
       }
       if (action === "open-task") {
+        if (!actionEl.closest("#main")) return;
         const t = state.tasks.find((x) => x.id === +actionEl.dataset.id) || state.doneTasks.find((x) => x.id === +actionEl.dataset.id);
         if (t) await openSheet(t);
         return;
       }
       if (action === "toggle-item") {
+        if (!actionEl.closest("#main")) return;
         try {
           const item = actionEl;
           const next = item.classList.contains("done") ? "todo" : "done";
@@ -3192,80 +3627,189 @@ function bindEvents() {
         return;
       }
       if (action === "add-measurement-now") {
+        if (!actionEl.closest("#main")) return;
         openMeasurementSheet();
         return;
       }
       if (action === "open-measurement") {
+        if (!actionEl.closest("#main")) return;
         const m = state.measurements.find((x) => x.id === +actionEl.dataset.id);
         if (m) openMeasurementSheet(m);
         return;
       }
       if (action === "open-workout") {
+        if (!actionEl.closest("#main")) return;
         const w = state.workouts.find((x) => x.id === +actionEl.dataset.id);
         if (w) openWorkoutSheet(w);
         return;
       }
-      if (action === "back-lists") showView("lists");
-      if (action === "back-projects") { state.projectFilter = null; showView("projects"); }
-      if (action === "show-all-tasks") showView("all-tasks");
-      if (action === "show-done-history") showView("done");
+      if (action === "back-lists") { if (!actionEl.closest("#main")) return; showView("lists"); }
+      if (action === "back-projects") { if (!actionEl.closest("#main")) return; state.projectFilter = null; showView("projects"); }
+      if (action === "show-all-tasks") { if (!actionEl.closest("#main")) return; showView("all-tasks"); }
+      if (action === "show-done-history") { if (!actionEl.closest("#main")) return; showView("done"); }
       if (action === "quick-add") {
+        if (!actionEl.closest("#main")) return;
         openSheet(null);
         if (state.currentView === "cal-day" && state.calendarDay) {
           document.getElementById("tf-due-date").value = state.calendarDay;
+          syncSheetMetaDisplay();
         }
         return;
       }
       if (action === "cal-back-month") {
+        if (!actionEl.closest("#main")) return;
         showView("calendar");
         return;
       }
       if (action === "cal-day-prev") {
+        if (!actionEl.closest("#main")) return;
         state.calendarDay = addDaysToDateStr(state.calendarDay || todayStr(), -1);
         renderCalendarDay();
         return;
       }
       if (action === "cal-day-next") {
+        if (!actionEl.closest("#main")) return;
         state.calendarDay = addDaysToDateStr(state.calendarDay || todayStr(), 1);
         renderCalendarDay();
         return;
       }
       if (action === "cal-day-today") {
+        if (!actionEl.closest("#main")) return;
         openCalendarDay(todayStr());
+        return;
+      }
+      if (action === "toggle-mobile-drawer") {
+        toggleMobileDrawer();
+        return;
+      }
+      if (action === "close-mobile-drawer") {
+        closeMobileDrawer();
+        return;
+      }
+      if (action === "toggle-overflow-menu") {
+        toggleOverflowMenu();
+        return;
+      }
+      if (action === "toggle-hide-done") {
+        state.hideDoneInLists = !state.hideDoneInLists;
+        localStorage.setItem("empire_hide_done", state.hideDoneInLists ? "1" : "0");
+        syncOverflowHideDoneLabel();
+        closeOverflowMenu();
+        if (state.currentView === "today") renderToday();
+        if (state.currentView === "week") renderWeek();
+        return;
+      }
+      if (action === "overflow-view-sort") {
+        closeOverflowMenu();
+        showToast("Сортировка — в разработке");
+        return;
+      }
+      if (action === "overflow-goto") {
+        closeOverflowMenu();
+        showView(actionEl.dataset.view);
+        return;
+      }
+      if (action === "overflow-refresh") {
+        closeOverflowMenu();
+        loadAll().catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "open-date-picker") {
+        e.preventDefault();
+        e.stopPropagation();
+        openDatePicker();
+        return;
+      }
+      if (action === "close-date-picker") {
+        closeDatePicker();
+        return;
+      }
+      if (action === "confirm-date-picker") {
+        confirmDatePicker().catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "dp-prev-month") {
+        state.datePickerMonth = addMonthsToMonthStart(state.datePickerMonth || monthStartFromToday(), -1);
+        renderDatePickerCalendar();
+        return;
+      }
+      if (action === "dp-next-month") {
+        state.datePickerMonth = addMonthsToMonthStart(state.datePickerMonth || monthStartFromToday(), 1);
+        renderDatePickerCalendar();
+        return;
+      }
+      if (action === "dp-pick-day") {
+        state.datePickerSelected = actionEl.dataset.date;
+        renderDatePickerCalendar();
+        return;
+      }
+      if (action === "dp-quick") {
+        const offset = Number(actionEl.dataset.offset || 0);
+        state.datePickerSelected = addDaysToDateStr(todayStr(), offset);
+        state.datePickerMonth = `${state.datePickerSelected.slice(0, 7)}-01`;
+        renderDatePickerCalendar();
+        return;
+      }
+      if (action === "dp-clear-date") {
+        clearDatePickerSelection().catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "focus-field") {
+        const targetId = actionEl.dataset.target;
+        const details = document.getElementById("sheet-fields-details");
+        if (details) details.open = true;
+        const field = document.getElementById(targetId);
+        field?.focus();
+        field?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (action === "toggle-sheet-fields") {
+        const details = document.getElementById("sheet-fields-details");
+        if (details) details.open = !details.open;
+        return;
+      }
+      if (action === "cycle-priority") {
+        const sel = document.getElementById("tf-priority");
+        if (!sel) return;
+        const order = [0, 2, 3, 0];
+        const cur = Number(sel.value || 0);
+        const idx = order.indexOf(cur >= 2 ? cur : 0);
+        sel.value = String(order[(idx + 1) % order.length]);
+        syncSheetMetaDisplay();
         return;
       }
     }
 
     const mRow = e.target.closest("[data-measurement-id]");
-    if (mRow && !e.target.closest("[data-action]")) {
+    if (mRow && mRow.closest("#main") && !e.target.closest("[data-action]")) {
       const m = state.measurements.find((x) => x.id === +mRow.dataset.measurementId);
       if (m) openMeasurementSheet(m);
       return;
     }
 
     const wRow = e.target.closest("[data-workout-id]");
-    if (wRow && !e.target.closest("[data-action]")) {
+    if (wRow && wRow.closest("#main") && !e.target.closest("[data-action]")) {
       const w = state.workouts.find((x) => x.id === +wRow.dataset.workoutId);
       if (w) openWorkoutSheet(w);
       return;
     }
 
     const row = e.target.closest("[data-task-id]");
-    if (row && !e.target.closest("[data-action='toggle-task']")) {
+    if (row && row.closest("#main") && !e.target.closest("[data-action='toggle-task']")) {
       const t = [...state.tasks, ...state.doneTasks].find((x) => x.id === +row.dataset.taskId);
       if (t) await openSheet(t);
       return;
     }
 
     const clRow = e.target.closest("[data-checklist-id]");
-    if (clRow) {
+    if (clRow && clRow.closest("#main")) {
       showView("detail");
       await renderDetail(+clRow.dataset.checklistId);
       return;
     }
 
     const pRow = e.target.closest("[data-project-id]");
-    if (pRow) {
+    if (pRow && pRow.closest("#main")) {
       state.projectFilter = +pRow.dataset.projectId;
       showView("project-tasks");
       renderProjectTasks(state.projectFilter);
@@ -3306,7 +3850,12 @@ async function init() {
   }
   bindEvents();
   bindColumnResizers();
+  renderMobileTabbar();
+  syncOverflowHideDoneLabel();
   hydrateNavIcons();
+  if (window.matchMedia("(min-width: 900px)").matches) {
+    document.getElementById("sheet-fields-details")?.setAttribute("open", "");
+  }
   window.addEventListener("resize", () => syncSplitTaskLayout());
   document.addEventListener("keydown", (e) => {
     if (state.currentView !== "calendar") return;

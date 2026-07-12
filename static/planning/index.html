@@ -10,7 +10,7 @@
   <title>Empire</title>
   <link rel="manifest" href="/tasks/assets/manifest.json">
   <link rel="apple-touch-icon" href="/tasks/assets/icon-192.png">
-    <link rel="stylesheet" href="/tasks/assets/styles.css?v=36">
+    <link rel="stylesheet" href="/tasks/assets/styles.css?v=42">
 </head>
 <body>
   <div id="app">
@@ -105,13 +105,14 @@
     <div class="content-col">
       <header class="topbar">
         <div class="topbar-inner">
+          <button id="btn-mobile-menu" class="icon-btn icon-btn-svg mobile-only" type="button" title="Меню" aria-label="Меню" data-action="toggle-mobile-drawer"><span data-icon="menu"></span></button>
           <button id="btn-back-view" class="icon-btn icon-btn-svg hidden" type="button" title="Назад" aria-label="Назад"><span data-icon="back"></span></button>
           <h1 id="page-title">Сегодня</h1>
           <div class="topbar-actions">
-            <button id="btn-settings" class="icon-btn icon-btn-svg mobile-only" type="button" title="Настройки" data-action="open-settings"><span data-icon="settings"></span></button>
-            <button id="btn-search-toggle" class="icon-btn icon-btn-svg mobile-only" type="button" title="Поиск"><span data-icon="search"></span></button>
-            <button id="btn-add-header" class="btn-header" type="button">+ Добавить</button>
-            <button id="btn-refresh" class="icon-btn icon-btn-svg" type="button" aria-label="Обновить"><span data-icon="refresh"></span></button>
+            <button id="btn-overflow" class="icon-btn icon-btn-svg mobile-only" type="button" title="Ещё" aria-label="Ещё" data-action="toggle-overflow-menu"><span data-icon="overflow"></span></button>
+            <button id="btn-settings" class="icon-btn icon-btn-svg desktop-only" type="button" title="Настройки" data-action="open-settings"><span data-icon="settings"></span></button>
+            <button id="btn-add-header" class="btn-header desktop-only" type="button">+ Добавить</button>
+            <button id="btn-refresh" class="icon-btn icon-btn-svg desktop-only" type="button" aria-label="Обновить"><span data-icon="refresh"></span></button>
           </div>
         </div>
         <div id="search-bar" class="search-bar hidden">
@@ -143,38 +144,39 @@
         <section id="view-settings" class="view"></section>
       </main>
 
-      <button id="fab-add" class="fab mobile-only" type="button" aria-label="Добавить">+</button>
+      <button id="fab-add" class="fab mobile-only" type="button" aria-label="Новая задача"><span data-icon="add"></span></button>
 
-      <nav class="tabbar mobile-only">
-        <button class="tab active" data-section="tasks" type="button">Задачи</button>
-        <button class="tab" data-section="health" type="button">Здоровье</button>
-        <button class="tab" data-view="more" type="button">Ещё</button>
-      </nav>
-      <div id="more-menu" class="more-menu mobile-only hidden">
-        <div id="more-menu-main"></div>
-        <div class="more-menu-label">Ещё</div>
-        <button data-view="lists" type="button">Чеклисты</button>
-        <button data-view="finance-model" type="button">Финмодель</button>
-        <button data-view="done" type="button">Вся история</button>
-        <button data-view="task-stats" type="button">Статистика задач</button>
-        <button data-view="insights" type="button">ИИ-выводы</button>
-        <div class="nav-divider nav-divider-menu" aria-hidden="true"></div>
-        <div class="more-menu-label more-menu-label-calendar">Календарь</div>
-        <button class="more-calendar-item" data-view="calendar" type="button">Обзор месяца</button>
-        <div class="nav-divider nav-divider-menu" aria-hidden="true"></div>
-        <div class="more-menu-label more-menu-label-health">Здоровье</div>
-        <button class="more-health-item" data-view="measurements" type="button">Замеры</button>
-        <button class="more-health-item" data-view="workouts" type="button">Тренировки</button>
-        <button class="more-health-item" data-view="program" type="button">Программа 2026</button>
-        <button class="more-health-item" data-view="health-stats" type="button">Статистика здоровья</button>
-        <button class="more-menu-settings block" type="button" data-action="open-settings">
-          <span class="nav-icon nav-icon--settings nav-icon--sm" data-icon="settings" aria-hidden="true"></span>
-          Настройки
+      <nav id="mobile-tabbar" class="tabbar mobile-only" aria-label="Навигация" data-mode="pipeline"></nav>
+
+      <div id="mobile-drawer" class="mobile-drawer mobile-only hidden" aria-hidden="true">
+        <div class="mobile-drawer-backdrop" data-action="close-mobile-drawer"></div>
+        <aside class="mobile-drawer-panel">
+          <div class="mobile-drawer-brand">
+            <img src="/tasks/assets/icon-192.png" alt="" width="28" height="28">
+            <span>Empire</span>
+          </div>
+          <nav id="mobile-drawer-nav" class="mobile-drawer-nav"></nav>
+          <div class="mobile-drawer-footer">
+            <label class="import-btn mobile-import">
+              <input id="import-csv-mobile" type="file" accept=".csv" hidden>
+              <span class="nav-icon nav-icon--import nav-icon--sm" data-icon="import" aria-hidden="true"></span>
+              Импорт TickTick
+            </label>
+          </div>
+        </aside>
+      </div>
+
+      <div id="view-overflow-menu" class="view-overflow-menu mobile-only hidden" aria-hidden="true">
+        <button type="button" class="overflow-item" data-action="toggle-hide-done">
+          <span id="overflow-hide-done-label">Скрыть выполненные</span>
         </button>
-        <label class="import-btn mobile-import">
-          <input id="import-csv-mobile" type="file" accept=".csv" hidden>
-          Импорт TickTick
-        </label>
+        <button type="button" class="overflow-item" data-action="overflow-view-sort">Вид и сортировка</button>
+        <div class="overflow-divider" aria-hidden="true"></div>
+        <button type="button" class="overflow-item" data-action="overflow-goto" data-view="task-stats">Статистика задач</button>
+        <button type="button" class="overflow-item" data-action="overflow-goto" data-view="insights">ИИ-выводы</button>
+        <button type="button" class="overflow-item" data-action="overflow-refresh">Обновить</button>
+        <div class="overflow-divider" aria-hidden="true"></div>
+        <button type="button" class="overflow-item" data-action="open-settings">Настройки</button>
       </div>
     </div>
     <div id="resizer-detail" class="col-resizer col-resizer-detail desktop-only hidden" role="separator" aria-orientation="vertical" aria-label="Ширина панели задачи" tabindex="0" title="Потяните для изменения ширины панели задачи"></div>
@@ -185,17 +187,43 @@
       <p class="task-detail-empty-title">Выберите задачу</p>
       <p class="task-detail-empty-hint">Клик по строке в списке — детали справа</p>
     </div>
-    <div class="sheet-panel">
+    <div class="sheet-panel task-sheet-panel">
       <button type="button" class="detail-close desktop-only" data-action="close-sheet" aria-label="Закрыть панель">×</button>
       <div class="sheet-handle mobile-only"></div>
-      <form id="task-form">
-        <input type="hidden" id="tf-id">
-        <div class="sheet-row check-row">
-          <button type="button" id="tf-complete" class="check large" aria-label="Выполнить"></button>
-          <input id="tf-title" class="sheet-title" placeholder="Задача" required>
+      <div class="tt-mobile-head mobile-only">
+        <div class="tt-sheet-header">
+          <span id="tf-project-label" class="tt-sheet-folder">Входящие</span>
+          <div class="tt-sheet-header-actions">
+            <button type="button" id="tf-priority-flag" class="tt-priority-flag" data-action="cycle-priority" aria-label="Приоритет" title="Приоритет"><span data-icon="flag"></span></button>
+            <button type="button" class="tt-sheet-menu" data-action="toggle-sheet-fields" aria-label="Параметры">⋯</button>
+          </div>
         </div>
-        <label class="field-label">Заметка</label>
-        <textarea id="tf-note" rows="3" placeholder="Описание…"></textarea>
+        <button type="button" id="tf-due-display" class="tt-due-display tt-due-display--clickable mobile-only" data-action="open-date-picker">Без даты</button>
+        <div id="tf-repeat-display" class="tt-repeat-display"></div>
+      </div>
+      <button type="button" id="tf-due-picker-btn" class="tt-due-picker-btn desktop-only" data-action="open-date-picker">
+        <span class="tt-due-picker-icon" aria-hidden="true">📅</span>
+        <span id="tf-due-display-text" class="tt-due-display-text">Без даты — нажмите для выбора</span>
+      </button>
+      <form id="task-form" class="task-form-tt">
+        <input type="hidden" id="tf-id">
+        <div class="sheet-row check-row tt-title-row">
+          <button type="button" id="tf-complete" class="check large" aria-label="Выполнить"></button>
+          <input id="tf-title" class="sheet-title" placeholder="Название задачи" required>
+        </div>
+        <div id="tf-tag-pills" class="tag-pills"></div>
+        <textarea id="tf-note" class="tt-note-field" rows="4" placeholder="Описание"></textarea>
+        <div id="subtasks-block" class="tt-subtasks hidden">
+          <label class="field-label">Подзадачи</label>
+          <div id="subtasks-list"></div>
+          <div class="subtask-add">
+            <input id="subtask-new" type="text" placeholder="Подзадача">
+            <button type="button" id="subtask-add-btn" class="btn small">+</button>
+          </div>
+        </div>
+        <details class="sheet-fields-details" id="sheet-fields-details">
+          <summary class="sheet-fields-summary">Дата, повтор, проект…</summary>
+          <div class="sheet-fields-inner">
         <label class="field-label">Картинка</label>
         <div id="tf-image-block" class="task-image-block">
           <div id="tf-image-preview" class="task-image-preview hidden"></div>
@@ -253,13 +281,13 @@
         <select id="tf-project"><option value="">—</option></select>
         <label class="field-label">Теги (через запятую)</label>
         <input id="tf-tags" type="text" placeholder="дом, работа">
-        <div id="subtasks-block" class="hidden">
-          <label class="field-label">Подзадачи</label>
-          <div id="subtasks-list"></div>
-          <div class="subtask-add">
-            <input id="subtask-new" type="text" placeholder="Подзадача">
-            <button type="button" id="subtask-add-btn" class="btn small">+</button>
           </div>
+        </details>
+        <div class="tt-sheet-toolbar mobile-only">
+          <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-project" title="Проект"><span data-icon="projects"></span></button>
+          <button type="button" class="tt-toolbar-btn" data-action="open-date-picker" title="Дата"><span data-icon="calendar"></span></button>
+          <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-remind" title="Напоминание"><span data-icon="bell"></span></button>
+          <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-tags" title="Теги"><span data-icon="tag"></span></button>
         </div>
         <div class="sheet-actions">
           <button type="submit" class="btn primary">Сохранить</button>
@@ -267,6 +295,61 @@
         </div>
       </form>
     </div>
+    </div>
+  </div>
+
+  <div id="date-picker-sheet" class="sheet date-picker-sheet hidden" aria-hidden="true">
+    <div class="sheet-backdrop" data-action="close-date-picker"></div>
+    <div class="sheet-panel date-picker-panel">
+      <div class="dp-header">
+        <button type="button" class="dp-icon-btn" data-action="close-date-picker" aria-label="Закрыть">×</button>
+        <span class="dp-title">Дата</span>
+        <button type="button" class="dp-icon-btn dp-confirm" data-action="confirm-date-picker" aria-label="Готово">✓</button>
+      </div>
+      <div class="dp-quick">
+        <button type="button" class="dp-chip" data-action="dp-quick" data-offset="0">Сегодня</button>
+        <button type="button" class="dp-chip" data-action="dp-quick" data-offset="1">Завтра</button>
+        <button type="button" class="dp-chip" data-action="dp-quick" data-offset="7">+7 дней</button>
+      </div>
+      <div class="dp-month-nav">
+        <button type="button" class="dp-nav-arrow" data-action="dp-prev-month" aria-label="Предыдущий месяц">‹</button>
+        <span id="dp-month-label" class="dp-month-label"></span>
+        <button type="button" class="dp-nav-arrow" data-action="dp-next-month" aria-label="Следующий месяц">›</button>
+      </div>
+      <div class="dp-dow-row">
+        <span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>вс</span>
+      </div>
+      <div id="dp-calendar-grid" class="dp-calendar-grid"></div>
+      <div class="dp-options">
+        <label class="dp-option-row">
+          <span class="dp-option-label">⏰ Срок исполнения</span>
+          <input type="time" id="dp-due-time" class="dp-option-input">
+        </label>
+        <label class="dp-option-row">
+          <span class="dp-option-label">🔔 Уведомление</span>
+          <select id="dp-remind" class="dp-option-input">
+            <option value="">Нет</option>
+            <option value="0">Во время</option>
+            <option value="5">За 5 мин</option>
+            <option value="15">За 15 мин</option>
+            <option value="60">За 1 час</option>
+            <option value="1440">За 1 день</option>
+          </select>
+        </label>
+        <label class="dp-option-row">
+          <span class="dp-option-label">🔁 Повтор</span>
+          <select id="dp-repeat" class="dp-option-input">
+            <option value="">Не повторять</option>
+            <option value="daily">Ежедневно</option>
+            <option value="weekdays">По будням</option>
+            <option value="weekly">Еженедельно</option>
+            <option value="biweekly">Каждые 2 недели</option>
+            <option value="monthly">Ежемесячно</option>
+            <option value="yearly">Ежегодно</option>
+          </select>
+        </label>
+      </div>
+      <button type="button" class="dp-clear" data-action="dp-clear-date">Очистить</button>
     </div>
   </div>
 
@@ -356,8 +439,8 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/tasks/assets/finance_model_content.js?v=1"></script>
-  <script src="/tasks/assets/nav-icons.js?v=1" defer></script>
-  <script src="/tasks/assets/app.js?v=39" defer></script>
+  <script src="/tasks/assets/finance_model_content.js?v=2"></script>
+  <script src="/tasks/assets/nav-icons.js?v=3" defer></script>
+  <script src="/tasks/assets/app.js?v=47" defer></script>
 </body>
 </html>

@@ -26,7 +26,8 @@
       "danilkin_1870_1887_068",
       "film_documentary",
       "film_sergeant",
-      "film_lenin_april"
+      "film_lenin_april",
+      "film_documentary"
     ],
     "art": [
       "art_kuzma_petrograd",
@@ -43,6 +44,7 @@
       "art_monument_volgograd",
       "art_serov_sketch",
       "art_kuzma_petrograd",
+      "art_monument_volgograd",
       "art_monument_volgograd"
     ],
     "biography": [
@@ -61,7 +63,8 @@
       "danilkin_1905_1905_1907_044",
       "danilkin_1897_1900_069",
       "danilkin_1889_1893_065",
-      "danilkin_1900_1902_059"
+      "danilkin_1900_1902_059",
+      "danilkin_1917_014"
     ],
     "literature": [
       "lit_bulgakov",
@@ -87,8 +90,9 @@
       "danilkin_1908_1912_008",
       "danilkin_frag_057",
       "lit_solzhenitsyn",
-      "danilkin_1908_1912_008"
+      "danilkin_1908_1912_008",
+      "danilkin_1912_1914_038"
     ]
   },
-  "last": "2026-07-08T09:00:12.920723"
+  "last": "2026-07-12T09:00:12.567583"
 }

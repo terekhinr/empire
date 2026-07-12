@@ -1,0 +1,11 @@
+[Unit]
+Description=Empire status digest 07:00 and 20:00 MSK (04:02 / 17:02 UTC)
+
+[Timer]
+OnCalendar=*-*-* 04:02:00
+OnCalendar=*-*-* 17:02:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

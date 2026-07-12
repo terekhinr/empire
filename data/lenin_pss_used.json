@@ -1,16 +1,16 @@
 {
   "ids": [
-    "pss_youth",
     "pss_peasant_land",
-    "pss_cooperatives",
-    "pss_army_supply",
-    "pss_imperialism_trade",
-    "pss_international",
-    "pss_labor_productivity",
     "pss_trade_unions",
-    "pss_state_apparatus",
     "pss_electricity",
+    "pss_state_apparatus",
+    "pss_army_supply",
+    "pss_cooperatives",
+    "pss_international",
+    "pss_imperialism_trade",
+    "pss_youth",
     "pss_education",
-    "pss_labor_productivity"
+    "pss_labor_productivity",
+    "pss_international"
   ]
 }

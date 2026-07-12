@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="ИИ-контроль техники · McGill → гиря · школа Штерна">
+  <title>Снегири не гири</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/logo-splash.png?v=9" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=9">
+</head>
+<body>
+  <div class="app-shell" role="application" aria-label="Снегири не гири">
+
+    <section id="screen-splash" class="screen active screen-textured">
+      <div class="splash-logo">
+        <picture>
+          <source srcset="assets/logo-splash.webp?v=9" type="image/webp">
+          <img class="splash-mark-img" src="assets/logo-splash.png?v=9" alt="Снегирь на гире" width="128" height="128">
+        </picture>
+        <p class="splash-title">Снегири<br>не гири</p>
+        <p class="sub">Школа Штерна · спина → сила</p>
+        <button type="button" class="btn" data-goto="disclaimer">Начать</button>
+      </div>
+    </section>
+
+    <section id="screen-disclaimer" class="screen screen-textured">
+      <header class="topbar"><span class="topbar-brand">Штерн</span></header>
+      <div class="content">
+        <h1>Перед стартом</h1>
+        <p class="lead">Обучение движению. Не медицинская консультация.</p>
+        <div class="card">
+          <p class="card-desc legal">
+            Не начинайте при острой боли, онемении, недавней травме, обострении грыжи без согласования с врачом.
+            При ухудшении — прекратите и обратитесь к специалисту.
+          </p>
+        </div>
+        <form id="disclaimer-form">
+          <button type="submit" class="btn">Понимаю риски</button>
+          <button type="button" class="btn btn-ghost" data-goto="splash">Назад</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-profile" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-back aria-label="Назад">←</button>
+        <span class="topbar-brand">Профиль</span><span></span>
+      </header>
+      <div class="content">
+        <h1>Базовые данные</h1>
+        <p class="sub">Для прогресса и подбора нагрузки.</p>
+        <form id="profile-form" class="stack-form">
+          <label class="form-row">Вес, кг<input name="weight" type="number" min="40" max="200" step="0.1" required placeholder="85"></label>
+          <label class="form-row">Талия, см<input name="waist" type="number" min="50" max="200" step="0.1" required placeholder="90"></label>
+          <label class="form-row">Опыт
+            <select name="experience" required>
+              <option value="beginner">Новичок</option>
+              <option value="1-2y">1–2 года</option>
+              <option value="3y+">3+ года</option>
+            </select>
+          </label>
+          <label class="form-row">Гиря дома
+            <select name="kettle" required>
+              <option value="16">16 кг</option>
+              <option value="24">24 кг</option>
+              <option value="0">Пока нет</option>
+            </select>
+          </label>
+          <button type="submit" class="btn">Дальше</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-consent" class="screen screen-textured">
+      <header class="topbar"><span class="topbar-brand">Видео</span></header>
+      <div class="content">
+        <h1>Согласие на видео</h1>
+        <p class="sub">Разбор работает только с вашими записями подходов.</p>
+        <form id="consent-form" class="stack-form">
+          <label class="check-row">
+            <input type="checkbox" name="consent" required>
+            <span>Согласен на загрузку видео на сервер в РФ для анализа. Удалю по запросу в поддержку.</span>
+          </label>
+          <button type="submit" class="btn">Продолжить</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-goal" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-back>←</button>
+        <span class="topbar-brand">Цель</span><span></span>
+      </header>
+      <div class="content">
+        <h1>С чего начнём?</h1>
+        <p class="sub">Гиря — после стабильности корпуса или сразу, если спина в порядке.</p>
+        <form id="goal-form">
+          <input type="hidden" name="goal" id="goal-input" value="both">
+          <div class="card card-select selected" data-goal="spine">
+            <div class="card-tag">Трек S</div>
+            <div class="card-title">Укрепить спину</div>
+            <div class="card-desc">Big 3 Макгилла · 4 недели · ИИ-разбор</div>
+          </div>
+          <div class="card card-select" data-goal="kettle">
+            <div class="card-tag">Трек K</div>
+            <div class="card-title">Гиря дома</div>
+            <div class="card-desc">Свинг · рывок · толчок</div>
+          </div>
+          <div class="card card-select" data-goal="both">
+            <div class="card-tag">Оба</div>
+            <div class="card-title">Спина, затем гиря</div>
+            <div class="card-desc">Рекомендуемый путь школы</div>
+          </div>
+          <label class="check-row" id="spine-ok-row" hidden>
+            <input type="checkbox" name="spineOk">
+            <span>Спина в порядке — готов сразу к гирям (на свой риск)</span>
+          </label>
+          <button type="submit" class="btn">В программу</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="screen-home" class="screen">
+      <header class="topbar">
+        <span class="topbar-brand">Снегири</span>
+        <div class="topbar-actions">
+          <span class="badge badge-ok" id="home-week-badge">Нед 1/4</span>
+          <button type="button" class="topbar-icon" data-goto="settings" aria-label="Настройки">⚙</button>
+        </div>
+      </header>
+      <div class="content" id="home-root"></div>
+      <nav class="bottomnav">
+        <button type="button" class="nav-item active" data-goto="home">День</button>
+        <button type="button" class="nav-item" data-goto="progress">Прогресс</button>
+        <button type="button" class="nav-item" data-goto="subscribe">Подписка</button>
+      </nav>
+    </section>
+
+    <section id="screen-workout" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-back>←</button>
+        <span class="topbar-brand">Тренировка</span><span></span>
+      </header>
+      <div class="content" id="workout-root"></div>
+    </section>
+
+    <section id="screen-record" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-back>←</button>
+        <span class="topbar-brand">Запись</span>
+        <span class="record-dot" aria-hidden="true"></span>
+      </header>
+      <div class="content">
+        <div class="camera-frame camera-frame--live">
+          <video id="camera-live" class="camera-live" playsinline muted autoplay></video>
+          <div class="camera-grid"></div>
+          <span class="camera-hint" id="record-hint">REC</span>
+        </div>
+        <p class="record-timer" id="record-timer">00:00</p>
+        <button type="button" class="btn btn-err" id="record-stop">■ Стоп · отправить</button>
+        <div id="camera-fallback" class="card" hidden>
+          <p class="card-desc">Камера недоступна. Загрузите видео подхода:</p>
+          <label class="btn btn-ghost file-label">
+            Выбрать файл
+            <input type="file" id="upload-input" accept="video/*" hidden>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-analyzing" class="screen screen-textured">
+      <header class="topbar"><span class="topbar-brand">ИИ</span></header>
+      <div class="content analyzing-content">
+        <picture class="analyzing-visual">
+          <source srcset="assets/app-analyze.webp?v=9" type="image/webp">
+          <img src="assets/app-analyze.png?v=9" alt="" width="360" height="640">
+        </picture>
+        <p class="card-tag">MediaPipe</p>
+        <h2>Разбор видео…</h2>
+        <p class="sub analyzing-status">Загрузка…</p>
+        <div class="progress-bar analyzing-bar"><div class="progress-fill analyzing-fill"></div></div>
+      </div>
+    </section>
+
+    <section id="screen-result" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-goto="home">←</button>
+        <span class="topbar-brand">Разбор</span>
+      </header>
+      <div class="content" id="result-root"></div>
+    </section>
+
+    <section id="screen-progress" class="screen">
+      <header class="topbar"><span class="topbar-brand">Прогресс</span></header>
+      <div class="content" id="progress-root"></div>
+      <nav class="bottomnav">
+        <button type="button" class="nav-item" data-goto="home">День</button>
+        <button type="button" class="nav-item active" data-goto="progress">Прогресс</button>
+        <button type="button" class="nav-item" data-goto="subscribe">Подписка</button>
+      </nav>
+    </section>
+
+    <section id="screen-subscribe" class="screen">
+      <header class="topbar"><span class="topbar-brand">Подписка</span></header>
+      <div class="content" id="subscribe-root"></div>
+      <nav class="bottomnav">
+        <button type="button" class="nav-item" data-goto="home">День</button>
+        <button type="button" class="nav-item" data-goto="progress">Прогресс</button>
+        <button type="button" class="nav-item active" data-goto="subscribe">Подписка</button>
+      </nav>
+    </section>
+
+    <section id="screen-settings" class="screen">
+      <header class="topbar">
+        <button type="button" class="topbar-back" data-back>←</button>
+        <span class="topbar-brand">Настройки</span><span></span>
+      </header>
+      <div class="content" id="settings-root"></div>
+    </section>
+  </div>
+
+  <script src="js/program.js?v=9"></script>
+  <script src="js/store.js?v=9"></script>
+  <script src="js/api.js?v=9"></script>
+  <script src="js/camera.js?v=9"></script>
+  <script src="js/ui.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
+</body>
+</html>

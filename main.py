@@ -80,6 +80,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 MSK_TZ = pytz.timezone("Europe/Moscow")
 
+
+def msk_now() -> datetime:
+    """Europe/Moscow — единая TZ для слотов расписания и weekday()."""
+    return datetime.now(MSK_TZ)
+
+
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 EMPIRE_ROOT = Path(__file__).resolve().parent
@@ -1876,9 +1882,14 @@ async def _resolve_slot_topic(p_key: str, slot_value) -> str:
 
 
 async def _resolve_scheduled_slot(
-    p_key: str, slot_value
+    p_key: str,
+    slot_value,
+    *,
+    when: datetime | None = None,
 ) -> tuple[str, str | None, str | None, dict | None]:
     """(topic_raw, prebuilt_text, prebuilt_image, rubric_seed). prebuilt — без LLM."""
+    when = when or msk_now()
+    weekday = when.weekday()
     if isinstance(slot_value, dict) and slot_value.get("type") == "spy_inspired":
         if p_key in ("gdepar", "stern"):
             async with async_session() as session:
@@ -1896,19 +1907,13 @@ async def _resolve_scheduled_slot(
         )
         return t, pb, img, None
     if p_key == "lenin" and lenin_content:
-        from datetime import datetime as _dt
-
-        wd = _dt.now().weekday()
         recent_lenin = await _recent_post_bodies("lenin", days=28, limit=12)
         return await lenin_content.resolve_lenin_slot(
-            slot_value, weekday=wd, recent_bodies=recent_lenin
+            slot_value, weekday=weekday, recent_bodies=recent_lenin
         )
     if p_key == "stern" and stern_content:
-        from datetime import datetime as _dt
-
-        wd = _dt.now().weekday()
         return await stern_content.resolve_stern_slot(
-            slot_value, weekday=wd, resolve_topic_fn=_resolve_slot_topic_plain
+            slot_value, weekday=weekday, resolve_topic_fn=_resolve_slot_topic_plain
         )
     if p_key == "garden" and garden_content:
         t, pb, img = await garden_content.resolve_garden_slot(
@@ -4740,7 +4745,7 @@ async def _refresh_pending_obsidian_images() -> None:
 async def check_scheduler():
     import scheduler_slots as sched_guard
 
-    now = datetime.now(MSK_TZ)
+    now = msk_now()
     time_str = now.strftime("%H:%M")
     day_idx = str(now.weekday())
 
@@ -4773,7 +4778,7 @@ async def check_scheduler():
                 raw_slot = "Свободная тема"
 
             topic, prebuilt, prebuilt_img, rubric_seed = await _resolve_scheduled_slot(
-                p_key, raw_slot
+                p_key, raw_slot, when=now
             )
 
             # Скаут — общий, держит свежие заголовки для всех «новостных» персон.

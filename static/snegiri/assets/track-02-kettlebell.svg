@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  <ellipse cx="200" cy="120" rx="28" ry="20" stroke="#fff" stroke-width="3"/>
+  <path d="M172 120h56" stroke="#fff" stroke-width="3"/>
+  <rect x="188" y="100" width="24" height="12" stroke="#fff" stroke-width="2"/>
+  <text x="200" y="260" text-anchor="middle" fill="#666" font-family="IBM Plex Mono, monospace" font-size="12">PLACEHOLDER · SWING</text>
+</svg>

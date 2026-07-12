@@ -67,11 +67,26 @@
     refresh() {
       return `<svg viewBox="0 0 24 24" ${S}><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>`;
     },
+    tag() {
+      return `<svg viewBox="0 0 24 24" ${S}><path d="M5 5h6l8 8-6 6-8-8V5z"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>`;
+    },
+    flag() {
+      return `<svg viewBox="0 0 24 24" ${S}><path d="M6 4v16M6 4h10l-2 4 2 4H6"/></svg>`;
+    },
     add() {
       return `<svg viewBox="0 0 24 24" ${S}><path d="M12 5v14M5 12h14"/></svg>`;
     },
     back() {
       return `<svg viewBox="0 0 24 24" ${S}><path d="M15 6l-6 6 6 6"/></svg>`;
+    },
+    menu() {
+      return `<svg viewBox="0 0 24 24" ${S}><path d="M4 7h16M4 12h16M4 17h16"/></svg>`;
+    },
+    overflow() {
+      return `<svg viewBox="0 0 24 24" ${S}><circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>`;
+    },
+    pipeline() {
+      return `<svg viewBox="0 0 24 24" ${S}><path d="M4 6h6v4H4zM14 6h6v4h-6zM9 14h6v4H9z"/><path d="M10 10v2M14 12H12v2"/></svg>`;
     },
   };
 

@@ -131,7 +131,7 @@ if rclone listremotes 2>/dev/null | grep -q "^${REMOTE}:$"; then
       age_days="$(( ($(date +%s) - $(date -d "$latest_day" +%s 2>/dev/null || echo 0)) / 86400 ))"
       if [[ "$age_days" -gt "$YANDEX_BACKUP_MAX_AGE_DAYS" ]]; then
         add_issue "последний Yandex-бэкап $latest_day (старше ${YANDEX_BACKUP_MAX_AGE_DAYS}d)"
-      elif pgrep -f 'empire_night_pipeline|vps_backup_to_yandex|tox1-yandex' >/dev/null 2>&1; then
+      elif pgrep -f 'empire_night_pipeline|vps_backup_to_yandex|tox1-yandex|rclone copyto.*TOX1' >/dev/null 2>&1; then
         add_ok "Yandex-бэкап в процессе (пайплайн/TOX1)"
       else
         add_warn "сегодняшний Yandex-бэкап ещё не завершён (latest=$latest_day)"

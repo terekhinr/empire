@@ -127,3 +127,39 @@ def send_if_changed(key: str, text: str, *, min_interval_sec: int = 3600) -> boo
         alerts[key] = {"text": text, "ts": now}
         save_state(st)
     return ok
+
+
+def _digest_slot(now: float | None = None) -> str | None:
+    """Утро/вечер MSK (UTC+3): 07:00 и 20:00 → окна 04–05 и 17–18 UTC."""
+    import datetime
+
+    ts = now if now is not None else time.time()
+    dt = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
+    day = dt.strftime("%Y-%m-%d")
+    if 4 <= dt.hour < 6:
+        return f"{day}:morning"
+    if 17 <= dt.hour < 19:
+        return f"{day}:evening"
+    return None
+
+
+def send_twice_daily(key: str, text: str, *, force: bool = False) -> bool:
+    """Telegram не чаще 2×/сутки: утренний и вечерний digest (07/20 MSK)."""
+    slot = _digest_slot()
+    if not slot and not force:
+        return False
+    st = _load_state()
+    slots = st.setdefault("digest_slots", {})
+    slot_key = slot or f"forced:{int(time.time())}"
+    full_key = f"{key}:{slot_key}"
+    if not force and slots.get(full_key) == text:
+        return False
+    ok = send(text)
+    if ok:
+        slots[full_key] = text
+        # храним только последние 4 слота
+        if len(slots) > 8:
+            for old in sorted(slots)[:-8]:
+                slots.pop(old, None)
+        save_state(st)
+    return ok

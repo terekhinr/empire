@@ -33,9 +33,10 @@ def main() -> int:
     max_len = int(os.getenv("EMPIRE_AUDIT_TELEGRAM_MAX", "3500"))
     if len(text) > max_len:
         text = text[: max_len - 20] + "\n… (обрезано)"
-    key = f"audit:{args.status}:{args.issues}:{args.warnings}"
-    ok = notify.send_if_changed(key, text, min_interval_sec=1800) or notify.send(text)
-    return 0 if ok else 1
+    if os.getenv("EMPIRE_AUDIT_NO_TELEGRAM"):
+        return 0
+    # Аудит уходит в утренний/вечерний digest, не отдельным сообщением
+    return 0
 
 
 if __name__ == "__main__":

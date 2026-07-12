@@ -69,17 +69,23 @@ upload_tox1_yandex() {
     dd if="$img" of="$chunk" bs=1M skip=$((offset / 1048576)) \
       count=$(((this_size + 1048575) / 1048576)) status=progress
 
+    # Без timeout: 2 ГБ при ~50 KiB/s ≈ 11–14 ч; 12h timeout сбрасывал part001 с нуля
     rclone copyto "$chunk" "${remote}/parts/${name}" \
+      --ignore-checksum --size-only \
       --progress --stats 1m --stats-one-line \
-      --retries 15 --low-level-retries 30 \
-      --timeout 30m -v
+      --retries 10 --low-level-retries 20 \
+      --timeout 0 -v
+
+    csz="$(rclone lsl "${remote}/parts/${name}" 2>/dev/null | awk '{print $1}' | head -1)"
+    csz="${csz:-0}"
+    if [[ "$csz" -lt "$this_size" ]]; then
+      log "ERROR: ${name} не залит (${csz}/${this_size})"
+      rm -f "$chunk"
+      exit 1
+    fi
     rm -f "$chunk"
     uploaded=$((uploaded + 1))
     log "OK ${name} залит (${uploaded}/${total_parts})"
-    if [[ -x "$ROOT/scripts/empire_tox1_part_notify.sh" ]]; then
-      "$ROOT/scripts/empire_tox1_part_notify.sh" "${LOG_DIR}/large-files-cloud-${STAMP}.log" \
-        "$((part_num + 1))" "$total_parts" 2>/dev/null || true
-    fi
     offset=$((offset + this_size))
     part_num=$((part_num + 1))
   done
@@ -87,8 +93,8 @@ upload_tox1_yandex() {
   local cloud_n
   cloud_n="$(rclone lsf "${remote}/parts/" 2>/dev/null | grep -c "${prefix}" || true)"
   log "Частей на облаке: ${cloud_n}/${total_parts}"
-  if [[ "$cloud_n" -lt 10 ]]; then
-    log "ERROR: ожидалось ≥10 частей, получено ${cloud_n}"
+  if [[ "$cloud_n" -lt "$total_parts" ]]; then
+    log "ERROR: ожидалось ${total_parts} частей, получено ${cloud_n}"
     exit 1
   fi
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#0a0a0a"/>
+  <rect x="120" y="140" width="160" height="8" fill="#fff" opacity="0.9"/>
+  <line x1="200" y1="140" x2="200" y2="100" stroke="#fff" stroke-width="3"/>
+  <line x1="140" y1="148" x2="120" y2="180" stroke="#fff" stroke-width="3"/>
+  <line x1="260" y1="148" x2="280" y2="180" stroke="#fff" stroke-width="3"/>
+  <text x="200" y="260" text-anchor="middle" fill="#666" font-family="IBM Plex Mono, monospace" font-size="12">PLACEHOLDER · SIDE PLANK</text>
+</svg>

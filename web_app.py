@@ -43,6 +43,7 @@ from sqlalchemy.orm import sessionmaker
 from empire_models import DATABASE_URL, PostDraft
 from health_connect_ingest import ingest_health_connect_payload
 from pension_metrics import append_waitlist_email, waitlist_count
+from snegiri_kb.routes import router as snegiri_router
 
 BASE_DIR = Path(__file__).parent
 CANONICAL_HOST = os.getenv("EMPIRE_CANONICAL_HOST", "neverretire.ru").strip() or "neverretire.ru"
@@ -75,6 +76,8 @@ BOOK_PDF_PRICE_RUB = int(os.getenv("PENSION_BOOK_PRICE_RUB", "990") or "990")
 HEALTH_INGEST_TOKEN = os.getenv("HEALTH_INGEST_TOKEN", "").strip()
 
 app = FastAPI(title=SITE_TITLE, docs_url=None, redoc_url=None)
+
+app.include_router(snegiri_router, prefix="/api/snegiri")
 
 os.makedirs(BASE_DIR / "static", exist_ok=True)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")

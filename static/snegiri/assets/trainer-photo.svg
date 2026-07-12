@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800" fill="none">
+  <rect width="600" height="800" fill="#111"/>
+  <path d="M300 120c-40 80-60 160-60 240 0 80 20 160 60 240" stroke="#444" stroke-width="2"/>
+  <ellipse cx="300" cy="520" rx="80" ry="24" stroke="#fff" stroke-width="2"/>
+  <rect x="260" y="480" width="80" height="40" stroke="#fff" stroke-width="2"/>
+  <text x="300" y="720" text-anchor="middle" fill="#666" font-family="IBM Plex Mono, monospace" font-size="14">PLACEHOLDER · TRAINER</text>
+</svg>

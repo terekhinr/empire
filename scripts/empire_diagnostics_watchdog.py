@@ -143,8 +143,11 @@ def pipeline_running() -> bool:
 
 
 def tox1_uploading() -> bool:
-    code, out = run(["pgrep", "-af", "tox1-emmc-android|tox1-yandex"], timeout=10)
-    return code == 0 and bool(out.strip())
+    for pat in ("vps_large_files_to_cloud.sh tox1-yandex", "rclone copyto.*TOX1/parts/"):
+        code, out = run(["pgrep", "-af", pat], timeout=10)
+        if code == 0 and out.strip():
+            return True
+    return False
 
 
 def stuck_yandex_rclone_h() -> float | None:
@@ -168,6 +171,19 @@ def tox1_cloud_parts() -> int:
     if code != 0:
         return -1
     return sum(1 for ln in out.splitlines() if ".img.part" in ln)
+
+
+def remediate_tox1_supervisor(st: dict) -> bool:
+    if tox1_uploading():
+        return False
+    attempts = st.setdefault("remediation", {}).get("tox1_sup", 0)
+    if attempts >= 3:
+        return False
+    log("REMEDIATE: empire_tox1_supervisor.sh")
+    code, _ = run(["bash", str(ROOT / "scripts/empire_tox1_supervisor.sh")], timeout=60)
+    st.setdefault("remediation", {})["tox1_sup"] = attempts + 1
+    save_state(st)
+    return code == 0
 
 
 def remediate_unblock(st: dict) -> bool:
@@ -340,6 +356,9 @@ def main() -> int:
     if Path("/root/tox1-backup/tox1-emmc-android-20260606.img").is_file() and not tox1_uploading():
         if tox1_n == 0:
             problems.append("TOX1 образ 30 ГБ на VPS, выгрузка не идёт")
+        sup = ROOT / "scripts/empire_tox1_supervisor.sh"
+        if sup.is_file() and remediate_tox1_supervisor(st):
+            actions.append("запущен empire_tox1_supervisor.sh")
 
     yday = yandex_latest_day()
     if yday:
@@ -368,21 +387,15 @@ def main() -> int:
         problems=problems,
     )
 
-    # Telegram: при проблемах / автопочинке — сразу; иначе heartbeat раз в 12ч
-    key = "watchdog:" + ("issues" if problems else "ok")
-    min_iv = 3600 if problems or actions else 43200
     text_hash = str(hash(report))
-    prev = st.get("last_report_hash")
-    changed = prev != text_hash
     st["last_report_hash"] = text_hash
+    st["pending_digest"] = report
+    st["pending_digest_ts"] = time.time()
     save_state(st)
 
     sent = False
     if not os.getenv("EMPIRE_DIAG_NO_TELEGRAM"):
-        if problems or actions or changed:
-            sent = notify.send_if_changed(key, report, min_interval_sec=min_iv)
-        if not sent and problems:
-            sent = notify.send(report)
+        sent = notify.send_twice_daily("watchdog", report)
 
     log(f"done problems={len(problems)} actions={len(actions)} telegram={sent}")
     if os.getenv("EMPIRE_DIAG_PRINT_REPORT"):

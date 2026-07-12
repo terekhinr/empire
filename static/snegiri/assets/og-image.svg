@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#000"/>
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  <rect width="1200" height="630" filter="url(#n)" opacity="0.08"/>
+  <text x="600" y="280" text-anchor="middle" fill="#fff" font-family="IBM Plex Sans, sans-serif" font-size="56" font-weight="800">5;57> B@51C5B B5E=8:8.</text>
+  <rect x="340" y="310" width="520" height="72" fill="#000" stroke="#FF3300" stroke-width="2"/>
+  <text x="600" y="360" text-anchor="middle" fill="#fff" font-family="IBM Plex Sans, sans-serif" font-size="40" font-weight="800"> 5Q AB028B.</text>
+  <text x="600" y="440" text-anchor="middle" fill="#888" font-family="IBM Plex Mono, monospace" font-size="18">snegirinegiri.ru</text>
+</svg>

@@ -1,0 +1,24 @@
+{
+  "name": "Снегири не гири",
+  "short_name": "Снегири",
+  "description": "ИИ-контроль техники · школа Штерна · спина → сила",
+  "start_url": "./app.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "assets/logo-channel-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/logo-header.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ]
+}

@@ -248,7 +248,7 @@ FINANCE_MODEL_TASKS: list[tuple[str, str, int, list[str], str, str]] = [
     ),
     (
         "ФМ: Ритуал KPI недели (empire_weekly_kpi)",
-        "2026-07-07",
+        "2026-07-06",
         2,
         ["empire", "финмодель", "метрики"],
         "fm:kpi-weekly",

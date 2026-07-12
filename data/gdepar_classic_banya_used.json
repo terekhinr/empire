@@ -68,9 +68,13 @@
     "ma_sholohov_kazachya",
     "ia_bunin_banya",
     "ln_andreev_ekzistentsialnyy",
-    "vg_rasputin_banya_2"
+    "vg_rasputin_banya_2",
+    "me_saltykov_schedrin_instruktsiya",
+    "as_pushkin_pisma",
+    "fa_abramov_zhenskiy",
+    "yuk_olesha_kult"
   ],
-  "last": "2026-07-08T12:00:22.384883",
+  "last": "2026-07-12T12:00:00.011328",
   "last_by_id": {
     "sholokhov_don": "2026-06-07T12:00:16.922077",
     "dostoevsky_poor": "2026-06-07T12:00:16.922077",
@@ -140,6 +144,10 @@
     "ma_sholohov_kazachya": "2026-07-05T12:00:00.012701",
     "ia_bunin_banya": "2026-07-06T12:00:00.007165",
     "ln_andreev_ekzistentsialnyy": "2026-07-07T12:00:00.010266",
-    "vg_rasputin_banya_2": "2026-07-08T12:00:22.384883"
+    "vg_rasputin_banya_2": "2026-07-08T12:00:22.384883",
+    "me_saltykov_schedrin_instruktsiya": "2026-07-09T12:00:00.008565",
+    "as_pushkin_pisma": "2026-07-10T12:00:00.008252",
+    "fa_abramov_zhenskiy": "2026-07-11T12:00:00.800778",
+    "yuk_olesha_kult": "2026-07-12T12:00:00.011328"
   }
 }
