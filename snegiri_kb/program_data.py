@@ -1,14 +1,14 @@
-"""Программа v2: трек S (12 нед) + трек K (24 нед), фазы и разблокировки."""
+"""Программа v3.1: трек S (12 нед) + трек K (~27 нед), Блуд / Руднев / Денисов / SF."""
 
 from __future__ import annotations
 
-TRACK_DAYS = {"S": 84, "K": 168}
+TRACK_DAYS = {"S": 84, "K": 187}
 PHASE_UNLOCK_MIN_SESSIONS = 8
 PHASE_UNLOCK_MIN_SCORE = 7.0
 PHASE_UNLOCK_BOSS_MIN = 3
 
 EXERCISES: dict[str, dict] = {
-    # --- Track S ---
+    # --- Track S (без изменений) ---
     "S1": {
         "id": "S1",
         "slug": "curl_up",
@@ -72,105 +72,186 @@ EXERCISES: dict[str, dict] = {
         "camera": "front",
         "hint": "Камера спереди. Осанка, шаг без шарканья.",
     },
-    # --- Track K ---
+    # --- Track K: подводящие → баллистика → стойка → жим → TGU → рывок → толчок ---
     "K1": {
         "id": "K1",
         "slug": "hip_hinge",
         "track": "K",
-        "name": "Hip hinge",
+        "name": "Наклон тазом (hip hinge)",
         "cv": True,
         "camera": "side",
-        "hint": "Камера сбоку 90°. Наклон от таза, спина нейтральна.",
+        "hint": "Камера сбоку 90°. Наклон от таза, спина нейтральна. Без маха.",
+        "step": 1,
     },
     "K2": {
         "id": "K2",
-        "slug": "goblet_squat",
+        "slug": "dead_stop",
         "track": "K",
-        "name": "Goblet squat",
+        "name": "Мёртвая остановка в наклоне",
         "cv": True,
         "camera": "side",
-        "hint": "Камера сбоку. Грудь открыта, пятки на полу.",
+        "hint": "Камера сбоку. Опустились — пауза 2 сек — подъём. Блуд: база до свинга.",
+        "step": 2,
     },
     "K3": {
         "id": "K3",
+        "slug": "goblet_squat",
+        "track": "K",
+        "name": "Присед с гирей у груди (goblet)",
+        "cv": True,
+        "camera": "side",
+        "hint": "Камера сбоку. Грудь открыта, пятки на полу.",
+        "step": 3,
+    },
+    "K4": {
+        "id": "K4",
+        "slug": "halo",
+        "track": "K",
+        "name": "Кольцо вокруг головы (halo)",
+        "cv": False,
+        "camera": "front",
+        "hint": "Лёгкий вес. Плавное кольцо — мобility плеч перед стойкой.",
+        "step": 4,
+    },
+    "K5": {
+        "id": "K5",
+        "slug": "rack_hold",
+        "track": "K",
+        "name": "Удержание в стойке",
+        "cv": True,
+        "camera": "front",
+        "hint": "Камера 45° спереди. Локти на корпус, запястья прямые. Алферова: треугольник локтей.",
+        "step": 5,
+    },
+    "K6": {
+        "id": "K6",
         "slug": "swing",
         "track": "K",
         "name": "Свинг двуручный",
         "cv": True,
         "camera": "side",
         "hint": "Камера сбоку. Хип-хиндж, импульс от бёдер.",
+        "step": 6,
     },
-    "K4": {
-        "id": "K4",
+    "K7": {
+        "id": "K7",
         "slug": "one_arm_swing",
         "track": "K",
         "name": "Свинг одноручный",
         "cv": True,
         "camera": "side",
         "hint": "Камера сбоку. Кор не крутится, мах от таза.",
+        "step": 7,
     },
-    "K5": {
-        "id": "K5",
+    "K8": {
+        "id": "K8",
+        "slug": "hand_switch",
+        "track": "K",
+        "name": "Смена рук на махе",
+        "cv": True,
+        "camera": "side",
+        "hint": "Камера сбоку. Смена в верхней «мёртвой точке» — гиря перед собой на уровне пояса. Руднев / классика ФГОС.",
+        "step": 8,
+    },
+    "K9": {
+        "id": "K9",
         "slug": "clean",
         "track": "K",
-        "name": "Заброс (clean)",
+        "name": "Заброс в стойку (clean)",
         "cv": True,
         "camera": "front",
-        "hint": "Камера 45° спереди. Мягкий приём в стойку.",
+        "hint": "Камера 45° спереди. Мягкий приём, локоть близко.",
+        "step": 9,
     },
-    "K6": {
-        "id": "K6",
+    "K10": {
+        "id": "K10",
+        "slug": "front_squat",
+        "track": "K",
+        "name": "Присед из стойки",
+        "cv": True,
+        "camera": "side",
+        "hint": "Камера сбоку. Локти высоко, корпус вертикален.",
+        "step": 10,
+    },
+    "K11": {
+        "id": "K11",
         "slug": "press",
         "track": "K",
         "name": "Жим из стойки",
         "cv": True,
         "camera": "front",
         "hint": "Камера 45° спереди. Корпус вертикально, без прогиба.",
+        "step": 11,
     },
-    "K7": {
-        "id": "K7",
+    "K12": {
+        "id": "K12",
+        "slug": "push_press",
+        "track": "K",
+        "name": "Push press",
+        "cv": True,
+        "camera": "front",
+        "hint": "Камера 45°. Небольшой толчок ногами, затем жим.",
+        "step": 12,
+    },
+    "K13": {
+        "id": "K13",
         "slug": "tgu_partial",
         "track": "K",
-        "name": "Турлиш ½",
+        "name": "Турлиш до сидения",
         "cv": True,
         "camera": "side",
         "hint": "Камера сбоку. Локоть прямой, взгляд на гирю.",
+        "step": 13,
     },
-    "K8": {
-        "id": "K8",
+    "K14": {
+        "id": "K14",
         "slug": "tgu_full",
         "track": "K",
         "name": "Турлиш полный",
         "cv": True,
         "camera": "side",
         "hint": "Камера сбоку. Контроль каждого сегмента.",
+        "step": 14,
     },
-    "K9": {
-        "id": "K9",
+    "K15": {
+        "id": "K15",
+        "slug": "high_pull",
+        "track": "K",
+        "name": "Высокий подъём (подводка к рывку)",
+        "cv": True,
+        "camera": "side",
+        "hint": "Камера сбоку. Локоть вверх, гиря у груди — без фиксации над головой.",
+        "step": 15,
+    },
+    "K16": {
+        "id": "K16",
         "slug": "snatch",
         "track": "K",
         "name": "Рывок",
         "cv": True,
         "camera": "side",
-        "hint": "Камера сбоку. Фиксация вверху.",
+        "hint": "Камера сбоку. Фиксация вверху. Просов кисти — см. подсказку Руднева.",
+        "step": 16,
     },
-    "K10": {
-        "id": "K10",
+    "K17": {
+        "id": "K17",
         "slug": "jerk",
         "track": "K",
-        "name": "Толчок / push press",
+        "name": "Толчок",
         "cv": True,
         "camera": "side",
-        "hint": "Камера сбоку. Чистый цикл.",
+        "hint": "Камера сбоку. Чистый цикл из стойки.",
+        "step": 17,
     },
-    "K11": {
-        "id": "K11",
+    "K18": {
+        "id": "K18",
         "slug": "complex",
         "track": "K",
-        "name": "Комplex (свинг→clean→жим)",
+        "name": "Связка (заброс→жим→присед)",
         "cv": True,
         "camera": "front",
-        "hint": "Камера 45°. Плавные переходы без рывка.",
+        "hint": "Камера 45°. Плавные переходы. Каширин: круговой комплекс.",
+        "step": 18,
     },
 }
 
@@ -235,113 +316,210 @@ PHASES: dict[str, list[dict]] = {
         {
             "num": 1,
             "id": "K-P1",
-            "name": "Углы без импульса",
+            "name": "Наклон",
             "dayStart": 1,
-            "dayEnd": 28,
-            "bossExerciseId": "K1",
+            "dayEnd": 17,
+            "bossExerciseId": "K2",
             "exerciseIds": ["K1", "K2"],
             "rotation": [
                 ["K1"],
-                ["K1", "K2"],
-                ["K2"],
-                ["K1", "K2"],
                 ["K1"],
+                ["K1", "K2"],
+                ["K1", "K2"],
                 ["K2"],
                 ["K1", "K2"],
+                ["K2"],
             ],
         },
         {
             "num": 2,
             "id": "K-P2",
-            "name": "Баллистика",
-            "dayStart": 29,
-            "dayEnd": 56,
+            "name": "Присед и кольцо",
+            "dayStart": 18,
+            "dayEnd": 34,
             "bossExerciseId": "K3",
-            "exerciseIds": ["K3", "K4"],
+            "exerciseIds": ["K3", "K4", "K1"],
             "rotation": [
                 ["K3"],
                 ["K3", "K4"],
                 ["K3"],
+                ["K3", "K1"],
                 ["K3", "K4"],
                 ["K3"],
-                ["K3", "K4"],
                 ["K3", "K4"],
             ],
         },
         {
             "num": 3,
             "id": "K-P3",
-            "name": "Заброс и жим",
-            "dayStart": 57,
-            "dayEnd": 84,
+            "name": "Стойка",
+            "dayStart": 35,
+            "dayEnd": 51,
             "bossExerciseId": "K5",
-            "exerciseIds": ["K5", "K6"],
+            "exerciseIds": ["K5", "K4", "K1"],
             "rotation": [
                 ["K5"],
-                ["K5", "K6"],
+                ["K5", "K4"],
                 ["K5"],
-                ["K5", "K6"],
+                ["K5", "K1"],
                 ["K5"],
-                ["K5", "K6"],
-                ["K5", "K6"],
+                ["K5", "K4"],
+                ["K5"],
             ],
         },
         {
             "num": 4,
             "id": "K-P4",
-            "name": "Турлиш",
-            "dayStart": 85,
-            "dayEnd": 112,
-            "bossExerciseId": "K8",
-            "exerciseIds": ["K7", "K8"],
+            "name": "Свинг двуручный",
+            "dayStart": 52,
+            "dayEnd": 68,
+            "bossExerciseId": "K6",
+            "exerciseIds": ["K6", "K2", "K1"],
             "rotation": [
-                ["K7"],
-                ["K7", "K8"],
-                ["K7"],
-                ["K7", "K8"],
-                ["K8"],
-                ["K7", "K8"],
-                ["K8"],
+                ["K6"],
+                ["K6", "K2"],
+                ["K6"],
+                ["K6", "K1"],
+                ["K6", "K2"],
+                ["K6"],
+                ["K6", "K2"],
             ],
         },
         {
             "num": 5,
             "id": "K-P5",
-            "name": "Рывок и толчок",
-            "dayStart": 113,
-            "dayEnd": 140,
-            "bossExerciseId": "K9",
-            "exerciseIds": ["K9", "K10"],
+            "name": "Свинг одноручный",
+            "dayStart": 69,
+            "dayEnd": 85,
+            "bossExerciseId": "K7",
+            "exerciseIds": ["K7", "K6"],
             "rotation": [
-                ["K9"],
-                ["K9", "K10"],
-                ["K9"],
-                ["K9", "K10"],
-                ["K9"],
-                ["K9", "K10"],
-                ["K9", "K10"],
+                ["K7"],
+                ["K7", "K6"],
+                ["K7"],
+                ["K7", "K6"],
+                ["K7"],
+                ["K7", "K6"],
+                ["K7"],
             ],
         },
         {
             "num": 6,
             "id": "K-P6",
-            "name": "Комplex / Flow",
-            "dayStart": 141,
-            "dayEnd": 168,
+            "name": "Смена рук",
+            "dayStart": 86,
+            "dayEnd": 102,
+            "bossExerciseId": "K8",
+            "exerciseIds": ["K8", "K7", "K6"],
+            "rotation": [
+                ["K8"],
+                ["K8", "K7"],
+                ["K8"],
+                ["K8", "K6"],
+                ["K8", "K7"],
+                ["K8"],
+                ["K8", "K7"],
+            ],
+        },
+        {
+            "num": 7,
+            "id": "K-P7",
+            "name": "Заброс",
+            "dayStart": 103,
+            "dayEnd": 119,
+            "bossExerciseId": "K9",
+            "exerciseIds": ["K9", "K10", "K5"],
+            "rotation": [
+                ["K9"],
+                ["K9", "K5"],
+                ["K9"],
+                ["K9", "K10"],
+                ["K9", "K5"],
+                ["K9", "K10"],
+                ["K9"],
+            ],
+        },
+        {
+            "num": 8,
+            "id": "K-P8",
+            "name": "Жим",
+            "dayStart": 120,
+            "dayEnd": 136,
             "bossExerciseId": "K11",
-            "exerciseIds": ["K11", "K3", "K5"],
+            "exerciseIds": ["K11", "K12", "K5"],
             "rotation": [
                 ["K11"],
-                ["K11", "K3"],
-                ["K11"],
                 ["K11", "K5"],
+                ["K11", "K12"],
                 ["K11"],
-                ["K11", "K3", "K5"],
-                ["K11"],
+                ["K11", "K12"],
+                ["K11", "K5"],
+                ["K11", "K12"],
+            ],
+        },
+        {
+            "num": 9,
+            "id": "K-P9",
+            "name": "Турлиш",
+            "dayStart": 137,
+            "dayEnd": 153,
+            "bossExerciseId": "K14",
+            "exerciseIds": ["K13", "K14", "K5"],
+            "rotation": [
+                ["K13"],
+                ["K13", "K5"],
+                ["K13", "K14"],
+                ["K14"],
+                ["K13", "K14"],
+                ["K14"],
+                ["K13", "K14"],
+            ],
+        },
+        {
+            "num": 10,
+            "id": "K-P10",
+            "name": "Рывок",
+            "dayStart": 154,
+            "dayEnd": 170,
+            "bossExerciseId": "K16",
+            "exerciseIds": ["K15", "K16", "K6"],
+            "rotation": [
+                ["K15"],
+                ["K15", "K6"],
+                ["K15", "K16"],
+                ["K16"],
+                ["K15", "K16"],
+                ["K16"],
+                ["K15", "K16"],
+            ],
+        },
+        {
+            "num": 11,
+            "id": "K-P11",
+            "name": "Толчок и связка",
+            "dayStart": 171,
+            "dayEnd": 187,
+            "bossExerciseId": "K18",
+            "exerciseIds": ["K17", "K18", "K9", "K11"],
+            "rotation": [
+                ["K17"],
+                ["K17", "K11"],
+                ["K17", "K18"],
+                ["K18"],
+                ["K17", "K18"],
+                ["K18", "K9"],
+                ["K18"],
             ],
         },
     ],
 }
+
+
+def _phase_week_bounds(phase: dict, day: int) -> tuple[int, int]:
+    phase_len = phase["dayEnd"] - phase["dayStart"] + 1
+    week_max = max(1, (phase_len + 6) // 7)
+    week = (day - phase["dayStart"]) // 7 + 1
+    return min(max(1, week), week_max), week_max
 
 
 def calendar_phase(track: str, day: int) -> dict:
@@ -394,20 +572,26 @@ def _meta_for_exercise(eid: str, track: str, phase_week: int) -> str:
         if eid in ("S2", "S3", "S5"):
             meta += " / сторона"
         return meta
-    # Track K
-    emom = phase_week >= 3
-    if eid in ("K1", "K2"):
+
+    slug = EXERCISES[eid]["slug"]
+    if slug in ("hip_hinge", "dead_stop", "goblet_squat"):
         return f"{st}×{_kb_reps(phase_week, 6)} повт."
-    if eid in ("K3", "K4"):
-        reps = _kb_reps(phase_week, 10)
-        return f"{'EMOM ' if emom else ''}{st}×{reps} повт."
-    if eid in ("K5", "K6"):
+    if slug == "halo":
+        return f"{st}×{5 + phase_week} повт. · лёгкий вес"
+    if slug == "rack_hold":
+        return f"{st}×{_hold_sec(phase_week)} сек"
+    if slug in ("swing", "one_arm_swing", "hand_switch"):
+        emom = "EMOM " if phase_week >= 2 else ""
+        base = 8 if slug == "hand_switch" else 10
+        return f"{emom}{st}×{_kb_reps(phase_week, base)} повт."
+    if slug in ("clean", "front_squat", "press", "push_press", "high_pull"):
         return f"{st}×{3 + phase_week} повт."
-    if eid in ("K7", "K8"):
-        return f"{st}×{1 if eid == 'K8' else 2} / сторона"
-    if eid in ("K9", "K10"):
+    if slug in ("tgu_partial", "tgu_full"):
+        reps = 1 if slug == "tgu_full" else 2
+        return f"{st}×{reps} / сторона"
+    if slug in ("snatch", "jerk"):
         return f"{st}×{5 + phase_week} повт."
-    if eid == "K11":
+    if slug == "complex":
         return f"{st} раундов · 3–5 повт. в связке"
     return f"{st}×10 повт."
 
@@ -419,11 +603,7 @@ def build_day(day: int, *, track: str = "S", unlocked_phase: int = 99) -> dict:
     day = max(1, min(day, max_day))
     cal = calendar_phase(track, day)
     phase = effective_phase(track, day, unlocked_phase)
-    phase_week = (day - phase["dayStart"]) // 7 + 1
-    if phase_week < 1:
-        phase_week = 1
-    if phase_week > 4:
-        phase_week = 4
+    phase_week, phase_week_max = _phase_week_bounds(phase, day)
     dow = (day - 1) % 7
     ids = phase["rotation"][dow]
     waiting = cal["num"] > phase["num"]
@@ -440,7 +620,8 @@ def build_day(day: int, *, track: str = "S", unlocked_phase: int = 99) -> dict:
                 "meta": _meta_for_exercise(eid, track, phase_week),
                 "hint": ex["hint"],
                 "sets": _sets(phase_week),
-                "holdSec": _hold_sec(phase_week) if track == "S" and eid not in ("S4", "S6", "S7") else None,
+                "holdSec": _hold_sec(phase_week) if ex["slug"] == "rack_hold" else None,
+                "step": ex.get("step"),
             }
         )
     total_phases = len(PHASES[track])
@@ -451,11 +632,15 @@ def build_day(day: int, *, track: str = "S", unlocked_phase: int = 99) -> dict:
         "phaseId": phase["id"],
         "phaseName": phase["name"],
         "phaseWeek": phase_week,
+        "phaseWeekMax": phase_week_max,
         "bossExerciseId": phase["bossExerciseId"],
         "waitingUnlock": waiting,
         "track": track,
         "title": f"День {day}",
-        "weekLabel": f"Фаза {phase['num']}/{total_phases} · {phase['name']} · нед {phase_week}/4",
+        "weekLabel": (
+            f"Фаза {phase['num']}/{total_phases} · {phase['name']} · "
+            f"нед {phase_week}/{phase_week_max}"
+        ),
         "exercises": items,
     }
 

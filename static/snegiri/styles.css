@@ -232,6 +232,31 @@ h2 {
 .exercise-name { font-weight: 600; font-size: 14px; }
 .exercise-meta { font-size: 12px; color: var(--muted); }
 
+.comic-etalon { margin-bottom: 12px; overflow: hidden; }
+
+.comic-frame {
+  display: block;
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+.comic-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-height: 120px;
+  object-fit: contain;
+}
+
+.comic-caption { font-size: 11px; color: var(--muted); margin: 0; }
+
+.comic-pending { display: none; font-size: 12px; margin: 0; }
+
+.comic-etalon--pending .comic-frame { display: none; }
+
+.comic-etalon--pending .comic-pending { display: block; }
+
 .badge {
   font: 10px var(--mono);
   padding: 3px 8px;

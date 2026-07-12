@@ -40,7 +40,7 @@
     if (!s.trackKUnlocked) {
       kBlock =
         '<div class="card track-lock"><div class="card-tag">Трек K</div>' +
-        '<div class="card-title">Гиря · лестница 24 нед</div>' +
+        '<div class="card-title">Гиря · 18 шагов · ~27 нед</div>' +
         '<div class="card-desc">Откроется после 3 нед McGill или при самооценке спины. Дальше: hinge → свинг → заброс → турлиш → complex.</div></div>';
     } else if (track === "S" && s.profile.goal !== "spine") {
       kBlock =
@@ -130,6 +130,34 @@
       kBlock;
   }
 
+  function comicBlockHtml(slug) {
+    const refs = global.SnegiriExerciseRefs;
+    if (!refs) return "";
+    const ref = refs.bySlug(slug);
+    if (!ref || !ref.comic) return "";
+    const src = refs.comicSrc(ref);
+    const pk = refs.performerKey();
+    const label = pk === "f" ? "женщина" : "мужчина";
+    return (
+      '<div class="card comic-etalon" data-comic-slug="' +
+      slug +
+      '">' +
+      '<div class="card-tag">Эталон · мультик · ' +
+      label +
+      "</div>" +
+      '<picture class="comic-frame">' +
+      '<img src="' +
+      src +
+      '" alt="Эталон выполнения" loading="lazy" decoding="async" ' +
+      'onerror="this.closest(\'.comic-etalon\').classList.add(\'comic-etalon--pending\')">' +
+      "</picture>" +
+      '<p class="card-desc comic-pending">Мультик генерируется. Пока ориентируйтесь на подсказку и камеру.</p>' +
+      '<p class="card-desc comic-caption">Панелей: ' +
+      (ref.comic.panels || 4) +
+      " · стиль Снегири · CV-линии</p></div>"
+    );
+  }
+
   function renderWorkout(root, exerciseId) {
     const ex = global.SnegiriProgram.getExercise(exerciseId);
     const plan = currentDayPlan();
@@ -152,6 +180,7 @@
       '<p class="sub">' +
       item.meta +
       "</p>" +
+      comicBlockHtml(ex.slug) +
       '<div class="card"><p class="card-desc instr">' +
       ex.hint +
       "<br><br>① Поставьте телефон на штатив.<br>② Выполните подход.<br>③ Отправьте видео — разбор ~30 сек.</p></div>" +

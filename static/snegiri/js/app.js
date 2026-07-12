@@ -2,6 +2,9 @@
  * Снегири не гири — PWA v1.0
  */
 (function () {
+  if (window.SnegiriExerciseRefs) {
+    window.SnegiriExerciseRefs.load();
+  }
   const screens = document.querySelectorAll(".screen");
   const history = [];
   let activeExerciseId = null;
@@ -77,6 +80,7 @@
         waistCm: parseFloat(fd.get("waist")),
         experience: fd.get("experience"),
         kettleKg: parseInt(fd.get("kettle"), 10),
+        performer: fd.get("performer") === "f" ? "f" : "m",
       });
       show("consent");
     });

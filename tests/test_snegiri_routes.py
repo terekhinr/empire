@@ -41,15 +41,48 @@ def test_snegiri_session_and_program(client: TestClient) -> None:
 
     r4 = client.get("/api/snegiri/exercises")
     assert r4.status_code == 200
-    assert len(r4.json()["items"]) >= 15
+    assert len(r4.json()["items"]) >= 20
 
 
 def test_snegiri_program_k_phase(client: TestClient) -> None:
     r = client.get("/api/snegiri/program", params={"track": "K", "day": 1, "unlocked_phase": 1})
     body = r.json()
-    assert body["phaseName"] == "Углы без импульса"
+    assert body["phaseName"] == "Наклон"
     slugs = {e["slug"] for e in body["exercises"]}
-    assert "hip_hinge" in slugs or "goblet_squat" in slugs
+    assert "hip_hinge" in slugs
+
+
+def test_snegiri_program_k_swing_phase(client: TestClient) -> None:
+    r = client.get("/api/snegiri/program", params={"track": "K", "day": 52, "unlocked_phase": 4})
+    body = r.json()
+    assert body["phaseName"] == "Свинг двуручный"
+    assert any(e["slug"] == "swing" for e in body["exercises"])
+
+
+def test_snegiri_program_k_hand_switch_phase(client: TestClient) -> None:
+    r = client.get("/api/snegiri/program", params={"track": "K", "day": 86, "unlocked_phase": 6})
+    body = r.json()
+    assert body["phaseName"] == "Смена рук"
+    assert any(e["slug"] == "hand_switch" for e in body["exercises"])
+
+
+def test_snegiri_program_k_track_length(client: TestClient) -> None:
+    from snegiri_kb.program_data import TRACK_DAYS, build_day
+
+    assert TRACK_DAYS["K"] == 187
+    day = build_day(187, track="K", unlocked_phase=11)
+    assert day["phase"] == 11
+    assert any(e["slug"] == "complex" for e in day["exercises"])
+
+
+def test_snegiri_exercise_refs(client: TestClient) -> None:
+    r = client.get("/api/snegiri/exercise-refs")
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) >= 25
+    slugs = {i["slug"] for i in items}
+    assert "hand_switch" in slugs
+    assert "curl_up" in slugs
 
 
 def test_snegiri_analyze_short_video_rejected(client: TestClient) -> None:

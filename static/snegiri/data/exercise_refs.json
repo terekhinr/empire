@@ -1,0 +1,265 @@
+{
+  "_comment": "YouTube — внешние ссылки (лендинг). Мультик — только в приложении.",
+  "curl_up": {
+    "slug": "curl_up",
+    "ids": ["S1"],
+    "name": "Скручивание Макгилла",
+    "track": "S",
+    "comic": { "id": "comic_s1_curl_up", "panels": 4, "assets": { "m": "assets/comics/curl_up_m.webp", "f": "assets/comics/curl_up_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=Gj5t98qZaFY", "title": "McGill curl-up", "channel": "Back Mechanic", "lang": "en" }
+    ]
+  },
+  "side_plank": {
+    "slug": "side_plank",
+    "ids": ["S2"],
+    "name": "Боковая планка",
+    "track": "S",
+    "comic": { "id": "comic_s2_side_plank", "panels": 4, "assets": { "m": "assets/comics/side_plank_m.webp", "f": "assets/comics/side_plank_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=K2VljzCC16g", "title": "Side plank", "channel": "Back Mechanic", "lang": "en" }
+    ]
+  },
+  "bird_dog": {
+    "slug": "bird_dog",
+    "ids": ["S3"],
+    "name": "Bird-dog",
+    "track": "S",
+    "comic": { "id": "comic_s3_bird_dog", "panels": 4, "assets": { "m": "assets/comics/bird_dog_m.webp", "f": "assets/comics/bird_dog_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=wiFNA3sqjCA", "title": "Bird dog", "channel": "Back Mechanic", "lang": "en" }
+    ]
+  },
+  "pallof_press": {
+    "slug": "pallof_press",
+    "ids": ["S4"],
+    "name": "Pallof press",
+    "track": "S",
+    "comic": { "id": "comic_s4_pallof", "panels": 3, "assets": { "m": "assets/comics/pallof_press_m.webp", "f": "assets/comics/pallof_press_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=AH8mF0-qgTk", "title": "Pallof press", "channel": "Athlean-X", "lang": "en" }
+    ]
+  },
+  "plank_shoulder_tap": {
+    "slug": "plank_shoulder_tap",
+    "ids": ["S5"],
+    "name": "Планка с касанием плеч",
+    "track": "S",
+    "comic": { "id": "comic_s5_shoulder_tap", "panels": 4, "assets": { "m": "assets/comics/plank_shoulder_tap_m.webp", "f": "assets/comics/plank_shoulder_tap_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=foYfePkJ-eQ", "title": "Plank shoulder taps", "channel": "Mind Pump TV", "lang": "en" }
+    ]
+  },
+  "suitcase_carry": {
+    "slug": "suitcase_carry",
+    "ids": ["S6"],
+    "name": "Suitcase carry",
+    "track": "S",
+    "comic": { "id": "comic_s6_suitcase", "panels": 3, "assets": { "m": "assets/comics/suitcase_carry_m.webp", "f": "assets/comics/suitcase_carry_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=Fkzk_Rm_yEI", "title": "Farmer walk / carry", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "farmer_walk": {
+    "slug": "farmer_walk",
+    "ids": ["S7"],
+    "name": "Farmer's walk",
+    "track": "S",
+    "comic": { "id": "comic_s7_farmer", "panels": 3, "assets": { "m": "assets/comics/farmer_walk_m.webp", "f": "assets/comics/farmer_walk_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=Fkzk_Rm_yEI", "title": "Farmer walk", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "hip_hinge": {
+    "slug": "hip_hinge",
+    "ids": ["K1"],
+    "name": "Наклон тазом (hip hinge)",
+    "track": "K",
+    "comic": { "id": "comic_k1_hinge", "panels": 4, "assets": { "m": "assets/comics/hip_hinge_m.webp", "f": "assets/comics/hip_hinge_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=VL5Ab0T07e4", "title": "Deadlift setup / hinge", "channel": "Alan Thrall", "lang": "en" },
+      { "url": "https://www.youtube.com/watch?v=FDn96TMfxbM", "title": "Swing masterclass (hinge)", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "dead_stop": {
+    "slug": "dead_stop",
+    "ids": ["K2"],
+    "name": "Мёртвая остановка в наклоне",
+    "track": "K",
+    "comic": { "id": "comic_k2_dead_stop", "panels": 4, "assets": { "m": "assets/comics/dead_stop_m.webp", "f": "assets/comics/dead_stop_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=FDn96TMfxbM", "title": "Swing drills", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "goblet_squat": {
+    "slug": "goblet_squat",
+    "ids": ["K3"],
+    "name": "Goblet-присед",
+    "track": "K",
+    "comic": { "id": "comic_k3_goblet", "panels": 4, "assets": { "m": "assets/comics/goblet_squat_m.webp", "f": "assets/comics/goblet_squat_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=cKx8xE8jJZs", "title": "Enter the Kettlebell", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "halo": {
+    "slug": "halo",
+    "ids": ["K4"],
+    "name": "Кольцо (halo)",
+    "track": "K",
+    "comic": { "id": "comic_k4_halo", "panels": 3, "assets": { "m": "assets/comics/halo_m.webp", "f": "assets/comics/halo_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=7E0s4qKn8bA", "title": "Kettlebell halo", "channel": "Onnit", "lang": "en" }
+    ]
+  },
+  "rack_hold": {
+    "slug": "rack_hold",
+    "ids": ["K5"],
+    "name": "Удержание в стойке",
+    "track": "K",
+    "comic": { "id": "comic_k5_rack", "panels": 3, "assets": { "m": "assets/comics/rack_hold_m.webp", "f": "assets/comics/rack_hold_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=cKx8xE8jJZs", "title": "Rack position", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "swing": {
+    "slug": "swing",
+    "ids": ["K6"],
+    "name": "Свинг двуручный",
+    "track": "K",
+    "comic": { "id": "comic_k6_swing", "panels": 5, "assets": { "m": "assets/comics/swing_m.webp", "f": "assets/comics/swing_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=FDn96TMfxbM", "title": "Kettlebell swing masterclass", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Серия «Гири» — мах", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" }
+    ]
+  },
+  "one_arm_swing": {
+    "slug": "one_arm_swing",
+    "ids": ["K7"],
+    "name": "Свинг одноручный",
+    "track": "K",
+    "comic": { "id": "comic_k7_one_arm", "panels": 5, "assets": { "m": "assets/comics/one_arm_swing_m.webp", "f": "assets/comics/one_arm_swing_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=FDn96TMfxbM", "title": "One-arm swing", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Мах одной рукой", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" }
+    ]
+  },
+  "hand_switch": {
+    "slug": "hand_switch",
+    "ids": ["K8"],
+    "name": "Смена рук на махе",
+    "track": "K",
+    "comic": { "id": "comic_k8_hand_switch", "panels": 5, "assets": { "m": "assets/comics/hand_switch_m.webp", "f": "assets/comics/hand_switch_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Смена рук / маятник", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" },
+      { "url": "https://www.youtube.com/watch?v=_QczWhpXTp0", "title": "Гири №30 — рывок, сброс", "channel": "Сергей Руднев", "lang": "ru", "note": "механика перехвата" }
+    ]
+  },
+  "clean": {
+    "slug": "clean",
+    "ids": ["K9"],
+    "name": "Заброс в стойку (clean)",
+    "track": "K",
+    "comic": { "id": "comic_k9_clean", "panels": 5, "assets": { "m": "assets/comics/clean_m.webp", "f": "assets/comics/clean_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=92-xf--nx88", "title": "SFG clean", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@IvanDenisovKettlebellClub", "title": "Заброс на грудь", "channel": "Иван Денисов", "lang": "ru" }
+    ]
+  },
+  "front_squat": {
+    "slug": "front_squat",
+    "ids": ["K10"],
+    "name": "Присед из стойки",
+    "track": "K",
+    "comic": { "id": "comic_k10_front_squat", "panels": 4, "assets": { "m": "assets/comics/front_squat_m.webp", "f": "assets/comics/front_squat_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=v-mQm_droHg", "title": "Front squat", "channel": "Squat University", "lang": "en" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Присед из стойки", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" }
+    ]
+  },
+  "press": {
+    "slug": "press",
+    "ids": ["K11"],
+    "name": "Жим из стойки",
+    "track": "K",
+    "comic": { "id": "comic_k11_press", "panels": 4, "assets": { "m": "assets/comics/press_m.webp", "f": "assets/comics/press_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=92-xf--nx88", "title": "Military press", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@IvanDenisovKettlebellClub", "title": "Жим / толчок", "channel": "Иван Денисов", "lang": "ru" }
+    ]
+  },
+  "push_press": {
+    "slug": "push_press",
+    "ids": ["K12"],
+    "name": "Push press",
+    "track": "K",
+    "comic": { "id": "comic_k12_push_press", "panels": 4, "assets": { "m": "assets/comics/push_press_m.webp", "f": "assets/comics/push_press_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=92-xf--nx88", "title": "Push press", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "tgu_partial": {
+    "slug": "tgu_partial",
+    "ids": ["K13"],
+    "name": "Турлиш до сидения",
+    "track": "K",
+    "comic": { "id": "comic_k13_tgu_partial", "panels": 5, "assets": { "m": "assets/comics/tgu_partial_m.webp", "f": "assets/comics/tgu_partial_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=0bWRPC49-KI", "title": "Turkish get-up basics", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "tgu_full": {
+    "slug": "tgu_full",
+    "ids": ["K14"],
+    "name": "Турлиш полный",
+    "track": "K",
+    "comic": { "id": "comic_k14_tgu_full", "panels": 6, "assets": { "m": "assets/comics/tgu_full_m.webp", "f": "assets/comics/tgu_full_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=0bWRPC49-KI", "title": "Full get-up", "channel": "StrongFirst", "lang": "en" }
+    ]
+  },
+  "high_pull": {
+    "slug": "high_pull",
+    "ids": ["K15"],
+    "name": "Высокий подъём",
+    "track": "K",
+    "comic": { "id": "comic_k15_high_pull", "panels": 4, "assets": { "m": "assets/comics/high_pull_m.webp", "f": "assets/comics/high_pull_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=92-xf--nx88", "title": "Snatch prep / high pull", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Подводка к рывку", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" }
+    ]
+  },
+  "snatch": {
+    "slug": "snatch",
+    "ids": ["K16"],
+    "name": "Рывок",
+    "track": "K",
+    "comic": { "id": "comic_k16_snatch", "panels": 5, "assets": { "m": "assets/comics/snatch_m.webp", "f": "assets/comics/snatch_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=92-xf--nx88", "title": "Snatch technique", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@IvanDenisovKettlebellClub", "title": "Рывок", "channel": "Иван Денисов", "lang": "ru" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Ошибки новичков в рывке", "channel": "Сергей Руднев", "lang": "ru" }
+    ]
+  },
+  "jerk": {
+    "slug": "jerk",
+    "ids": ["K17"],
+    "name": "Толчок",
+    "track": "K",
+    "comic": { "id": "comic_k17_jerk", "panels": 5, "assets": { "m": "assets/comics/jerk_m.webp", "f": "assets/comics/jerk_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=WhcSG9Fyfr4", "title": "Long cycle / jerk", "channel": "StrongFirst", "lang": "en" },
+      { "url": "https://www.youtube.com/@RUDNEVKETTLEBELLS", "title": "Толчок — техника", "channel": "RUDNEV & KETTLEBELLS", "lang": "ru" },
+      { "url": "https://www.youtube.com/@IvanDenisovKettlebellClub", "title": "Толчок", "channel": "Иван Денисов", "lang": "ru" }
+    ]
+  },
+  "complex": {
+    "slug": "complex",
+    "ids": ["K18"],
+    "name": "Связка clean→press→squat",
+    "track": "K",
+    "comic": { "id": "comic_k18_complex", "panels": 6, "assets": { "m": "assets/comics/complex_m.webp", "f": "assets/comics/complex_f.webp" } },
+    "youtube": [
+      { "url": "https://www.youtube.com/watch?v=cKx8xE8jJZs", "title": "Complex / flow", "channel": "StrongFirst", "lang": "en" }
+    ]
+  }
+}

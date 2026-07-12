@@ -215,8 +215,13 @@ I. **Рекомендация**: GO / PIVOT / NO-GO с числами
 
 | Док | Содержание |
 |-----|------------|
+| **[`snegiri_issledovanie_nulevaya_tochka.md`](snegiri_issledovanie_nulevaya_tochka.md)** | **Исследование с нуля: инвентарь, рынок, промпт Gemini, вывод** |
+| [`snegiri_issledovanie_otvety_gemini.md`](snegiri_issledovanie_otvety_gemini.md) | Ответы Gemini (1–7) |
+| [`snegiri_finmodel_v4.md`](snegiri_finmodel_v4.md) | Сводная finmodel |
+| [`snegiri_auditoriya_trafik_realist.md`](snegiri_auditoriya_trafik_realist.md) | **114 subs · трафик · McGill · эталоны-анимация** |
 | **[`snegiri_reshenie_polnyj_ru.md`](snegiri_reshenie_polnyj_ru.md)** | **Полное изложение на русском без жаргона** |
 | [`snegiri_naming_positioning_v1.md`](snegiri_naming_positioning_v1.md) | Rebrand закрыт |
+| [`snegiri_program_k_v3_ladder.md`](snegiri_program_k_v3_ladder.md) | **Трек K v3: 17 шагов, Блуд/Каширин** |
 | [`snegiri_program_retention_v1.md`](snegiri_program_retention_v1.md) | LTV/churn fix |
 | [`snegiri_landing_copy_v1.md`](snegiri_landing_copy_v1.md) | Продающие блоки |
 | [`snegiri_ads_creative_v1.md`](snegiri_ads_creative_v1.md) | Креативы |

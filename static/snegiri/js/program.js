@@ -1,6 +1,6 @@
-/** Каталог упражнений и генератор программы v2 (offline-first). */
+/** Каталог упражнений и генератор программы v3.1 (offline-first). */
 (function (global) {
-  const TRACK_DAYS = { S: 84, K: 168 };
+  const TRACK_DAYS = { S: 84, K: 187 };
   const PHASE_UNLOCK_MIN_SESSIONS = 8;
   const PHASE_UNLOCK_MIN_SCORE = 7;
   const PHASE_UNLOCK_BOSS_MIN = 3;
@@ -73,101 +73,182 @@
       id: "K1",
       slug: "hip_hinge",
       track: "K",
-      name: "Hip hinge",
+      name: "Наклон тазом (hip hinge)",
       cv: true,
       camera: "side",
-      hint: "Камера сбоку 90°. Наклон от таза, спина нейтральна.",
+      hint: "Камера сбоку 90°. Наклон от таза, спина нейтральна. Без маха.",
+      step: 1,
     },
-    K2: {
-      id: "K2",
-      slug: "goblet_squat",
+    K10: {
+      id: "K10",
+      slug: "front_squat",
       track: "K",
-      name: "Goblet squat",
+      name: "Присед из стойки",
       cv: true,
       camera: "side",
-      hint: "Камера сбоку. Грудь открыта, пятки на полу.",
+      hint: "Камера сбоку. Локти высоко, корпус вертикален.",
+      step: 10,
     },
-    K3: {
-      id: "K3",
-      slug: "swing",
-      track: "K",
-      name: "Свинг двуручный",
-      cv: true,
-      camera: "side",
-      hint: "Камера сбоку. Хип-хиндж, импульс от бёдер.",
-    },
-    K4: {
-      id: "K4",
-      slug: "one_arm_swing",
-      track: "K",
-      name: "Свинг одноручный",
-      cv: true,
-      camera: "side",
-      hint: "Камера сбоку. Кор не крутится.",
-    },
-    K5: {
-      id: "K5",
-      slug: "clean",
-      track: "K",
-      name: "Заброс (clean)",
-      cv: true,
-      camera: "front",
-      hint: "Камера 45° спереди. Мягкий приём в стойку.",
-    },
-    K6: {
-      id: "K6",
+    K11: {
+      id: "K11",
       slug: "press",
       track: "K",
       name: "Жим из стойки",
       cv: true,
       camera: "front",
-      hint: "Камера 45° спереди. Корпус вертикально.",
+      hint: "Камера 45° спереди. Корпус вертикально, без прогиба.",
+      step: 11,
     },
-    K7: {
-      id: "K7",
+    K12: {
+      id: "K12",
+      slug: "push_press",
+      track: "K",
+      name: "Push press",
+      cv: true,
+      camera: "front",
+      hint: "Камера 45°. Небольшой толчок ногами, затем жим.",
+      step: 12,
+    },
+    K13: {
+      id: "K13",
       slug: "tgu_partial",
       track: "K",
-      name: "Турлиш ½",
+      name: "Турлиш до сидения",
       cv: true,
       camera: "side",
       hint: "Камера сбоку. Локоть прямой, взгляд на гирю.",
+      step: 13,
     },
-    K8: {
-      id: "K8",
+    K14: {
+      id: "K14",
       slug: "tgu_full",
       track: "K",
       name: "Турлиш полный",
       cv: true,
       camera: "side",
       hint: "Камера сбоку. Контроль каждого сегмента.",
+      step: 14,
     },
-    K9: {
-      id: "K9",
+    K15: {
+      id: "K15",
+      slug: "high_pull",
+      track: "K",
+      name: "Высокий подъём (подводка к рывку)",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Локоть вверх, гиря у груди — без фиксации над головой.",
+      step: 15,
+    },
+    K16: {
+      id: "K16",
       slug: "snatch",
       track: "K",
       name: "Рывок",
       cv: true,
       camera: "side",
-      hint: "Камера сбоку. Фиксация вверху.",
+      hint: "Камера сбоку. Фиксация вверху. Просов кисти — см. подсказку Руднева.",
+      step: 16,
     },
-    K10: {
-      id: "K10",
+    K17: {
+      id: "K17",
       slug: "jerk",
       track: "K",
-      name: "Толчок / push press",
+      name: "Толчок",
       cv: true,
       camera: "side",
-      hint: "Камера сбоку. Чистый цикл.",
+      hint: "Камера сбоку. Чистый цикл из стойки.",
+      step: 17,
     },
-    K11: {
-      id: "K11",
+    K18: {
+      id: "K18",
       slug: "complex",
       track: "K",
-      name: "Комplex (свинг→clean→жим)",
+      name: "Связка (заброс→жим→присед)",
       cv: true,
       camera: "front",
-      hint: "Камера 45°. Плавные переходы.",
+      hint: "Камера 45°. Плавные переходы. Каширин: круговой комплекс.",
+      step: 18,
     },
+    K2: {
+      id: "K2",
+      slug: "dead_stop",
+      track: "K",
+      name: "Мёртвая остановка в наклоне",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Опустились — пауза 2 сек — подъём. Блуд: база до свинга.",
+      step: 2,
+    },
+    K3: {
+      id: "K3",
+      slug: "goblet_squat",
+      track: "K",
+      name: "Присед с гирей у груди (goblet)",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Грудь открыта, пятки на полу.",
+      step: 3,
+    },
+    K4: {
+      id: "K4",
+      slug: "halo",
+      track: "K",
+      name: "Кольцо вокруг головы (halo)",
+      cv: false,
+      camera: "front",
+      hint: "Лёгкий вес. Плавное кольцо — мобility плеч перед стойкой.",
+      step: 4,
+    },
+    K5: {
+      id: "K5",
+      slug: "rack_hold",
+      track: "K",
+      name: "Удержание в стойке",
+      cv: true,
+      camera: "front",
+      hint: "Камера 45° спереди. Локти на корпус, запястья прямые. Алферова: треугольник локтей.",
+      step: 5,
+    },
+    K6: {
+      id: "K6",
+      slug: "swing",
+      track: "K",
+      name: "Свинг двуручный",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Хип-хиндж, импульс от бёдер.",
+      step: 6,
+    },
+    K7: {
+      id: "K7",
+      slug: "one_arm_swing",
+      track: "K",
+      name: "Свинг одноручный",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Кор не крутится, мах от таза.",
+      step: 7,
+    },
+    K8: {
+      id: "K8",
+      slug: "hand_switch",
+      track: "K",
+      name: "Смена рук на махе",
+      cv: true,
+      camera: "side",
+      hint: "Камера сбоку. Смена в верхней «мёртвой точке» — гиря перед собой на уровне пояса. Руднев / классика ФГОС.",
+      step: 8,
+    },
+    K9: {
+      id: "K9",
+      slug: "clean",
+      track: "K",
+      name: "Заброс в стойку (clean)",
+      cv: true,
+      camera: "front",
+      hint: "Камера 45° спереди. Мягкий приём, локоть близко.",
+      step: 9,
+    }
   };
 
   const PHASES = {
@@ -231,109 +312,199 @@
       {
         num: 1,
         id: "K-P1",
-        name: "Углы без импульса",
+        name: "Наклон",
         dayStart: 1,
-        dayEnd: 28,
-        bossExerciseId: "K1",
+        dayEnd: 17,
+        bossExerciseId: "K2",
         exerciseIds: ["K1", "K2"],
         rotation: [
           ["K1"],
-          ["K1", "K2"],
-          ["K2"],
-          ["K1", "K2"],
           ["K1"],
+          ["K1", "K2"],
+          ["K1", "K2"],
           ["K2"],
           ["K1", "K2"],
+          ["K2"],
         ],
       },
       {
         num: 2,
         id: "K-P2",
-        name: "Баллистика",
-        dayStart: 29,
-        dayEnd: 56,
+        name: "Присед и кольцо",
+        dayStart: 18,
+        dayEnd: 34,
         bossExerciseId: "K3",
-        exerciseIds: ["K3", "K4"],
+        exerciseIds: ["K3", "K4", "K1"],
         rotation: [
           ["K3"],
           ["K3", "K4"],
           ["K3"],
+          ["K3", "K1"],
           ["K3", "K4"],
           ["K3"],
-          ["K3", "K4"],
           ["K3", "K4"],
         ],
       },
       {
         num: 3,
         id: "K-P3",
-        name: "Заброс и жим",
-        dayStart: 57,
-        dayEnd: 84,
+        name: "Стойка",
+        dayStart: 35,
+        dayEnd: 51,
         bossExerciseId: "K5",
-        exerciseIds: ["K5", "K6"],
+        exerciseIds: ["K5", "K4", "K1"],
         rotation: [
           ["K5"],
-          ["K5", "K6"],
+          ["K5", "K4"],
           ["K5"],
-          ["K5", "K6"],
+          ["K5", "K1"],
           ["K5"],
-          ["K5", "K6"],
-          ["K5", "K6"],
+          ["K5", "K4"],
+          ["K5"],
         ],
       },
       {
         num: 4,
         id: "K-P4",
-        name: "Турлиш",
-        dayStart: 85,
-        dayEnd: 112,
-        bossExerciseId: "K8",
-        exerciseIds: ["K7", "K8"],
+        name: "Свинг двуручный",
+        dayStart: 52,
+        dayEnd: 68,
+        bossExerciseId: "K6",
+        exerciseIds: ["K6", "K2", "K1"],
         rotation: [
-          ["K7"],
-          ["K7", "K8"],
-          ["K7"],
-          ["K7", "K8"],
-          ["K8"],
-          ["K7", "K8"],
-          ["K8"],
+          ["K6"],
+          ["K6", "K2"],
+          ["K6"],
+          ["K6", "K1"],
+          ["K6", "K2"],
+          ["K6"],
+          ["K6", "K2"],
         ],
       },
       {
         num: 5,
         id: "K-P5",
-        name: "Рывок и толчок",
-        dayStart: 113,
-        dayEnd: 140,
-        bossExerciseId: "K9",
-        exerciseIds: ["K9", "K10"],
+        name: "Свинг одноручный",
+        dayStart: 69,
+        dayEnd: 85,
+        bossExerciseId: "K7",
+        exerciseIds: ["K7", "K6"],
         rotation: [
-          ["K9"],
-          ["K9", "K10"],
-          ["K9"],
-          ["K9", "K10"],
-          ["K9"],
-          ["K9", "K10"],
-          ["K9", "K10"],
+          ["K7"],
+          ["K7", "K6"],
+          ["K7"],
+          ["K7", "K6"],
+          ["K7"],
+          ["K7", "K6"],
+          ["K7"],
         ],
       },
       {
         num: 6,
         id: "K-P6",
-        name: "Комplex / Flow",
-        dayStart: 141,
-        dayEnd: 168,
+        name: "Смена рук",
+        dayStart: 86,
+        dayEnd: 102,
+        bossExerciseId: "K8",
+        exerciseIds: ["K8", "K7", "K6"],
+        rotation: [
+          ["K8"],
+          ["K8", "K7"],
+          ["K8"],
+          ["K8", "K6"],
+          ["K8", "K7"],
+          ["K8"],
+          ["K8", "K7"],
+        ],
+      },
+      {
+        num: 7,
+        id: "K-P7",
+        name: "Заброс",
+        dayStart: 103,
+        dayEnd: 119,
+        bossExerciseId: "K9",
+        exerciseIds: ["K9", "K10", "K5"],
+        rotation: [
+          ["K9"],
+          ["K9", "K5"],
+          ["K9"],
+          ["K9", "K10"],
+          ["K9", "K5"],
+          ["K9", "K10"],
+          ["K9"],
+        ],
+      },
+      {
+        num: 8,
+        id: "K-P8",
+        name: "Жим",
+        dayStart: 120,
+        dayEnd: 136,
         bossExerciseId: "K11",
-        exerciseIds: ["K11", "K3", "K5"],
+        exerciseIds: ["K11", "K12", "K5"],
         rotation: [
           ["K11"],
-          ["K11", "K3"],
-          ["K11"],
           ["K11", "K5"],
+          ["K11", "K12"],
           ["K11"],
-          ["K11", "K3", "K5"],
-          ["K11"],
+          ["K11", "K12"],
+          ["K11", "K5"],
+          ["K11", "K12"],
+        ],
+      },
+      {
+        num: 9,
+        id: "K-P9",
+        name: "Турлиш",
+        dayStart: 137,
+        dayEnd: 153,
+        bossExerciseId: "K14",
+        exerciseIds: ["K13", "K14", "K5"],
+        rotation: [
+          ["K13"],
+          ["K13", "K5"],
+          ["K13", "K14"],
+          ["K14"],
+          ["K13", "K14"],
+          ["K14"],
+          ["K13", "K14"],
+        ],
+      },
+      {
+        num: 10,
+        id: "K-P10",
+        name: "Рывок",
+        dayStart: 154,
+        dayEnd: 170,
+        bossExerciseId: "K16",
+        exerciseIds: ["K15", "K16", "K6"],
+        rotation: [
+          ["K15"],
+          ["K15", "K6"],
+          ["K15", "K16"],
+          ["K16"],
+          ["K15", "K16"],
+          ["K16"],
+          ["K15", "K16"],
+        ],
+      },
+      {
+        num: 11,
+        id: "K-P11",
+        name: "Толчок и связка",
+        dayStart: 171,
+        dayEnd: 187,
+        bossExerciseId: "K18",
+        exerciseIds: ["K17", "K18", "K9", "K11"],
+        rotation: [
+          ["K17"],
+          ["K17", "K11"],
+          ["K17", "K18"],
+          ["K18"],
+          ["K17", "K18"],
+          ["K18", "K9"],
+          ["K18"],
         ],
       },
     ],
@@ -374,15 +545,26 @@
       if (eid === "S2" || eid === "S3" || eid === "S5") meta += " / сторона";
       return meta;
     }
-    const emom = phaseWeek >= 3;
-    if (eid === "K1" || eid === "K2") return st + "×" + kbReps(phaseWeek, 6) + " повт.";
-    if (eid === "K3" || eid === "K4") {
-      return (emom ? "EMOM " : "") + st + "×" + kbReps(phaseWeek, 10) + " повт.";
+    const ex = EXERCISES[eid];
+    const slug = ex ? ex.slug : "";
+    if (slug === "hip_hinge" || slug === "dead_stop" || slug === "goblet_squat") {
+      return st + "×" + kbReps(phaseWeek, 6) + " повт.";
     }
-    if (eid === "K5" || eid === "K6") return st + "×" + (3 + phaseWeek) + " повт.";
-    if (eid === "K7" || eid === "K8") return st + "×" + (eid === "K8" ? 1 : 2) + " / сторона";
-    if (eid === "K9" || eid === "K10") return st + "×" + (5 + phaseWeek) + " повт.";
-    if (eid === "K11") return st + " раундов · 3–5 повт. в связке";
+    if (slug === "halo") return st + "×" + (5 + phaseWeek) + " повт. · лёгкий вес";
+    if (slug === "rack_hold") return st + "×" + holdSec(phaseWeek) + " сек";
+    if (slug === "swing" || slug === "one_arm_swing" || slug === "hand_switch") {
+      const emom = phaseWeek >= 2 ? "EMOM " : "";
+      const base = slug === "hand_switch" ? 8 : 10;
+      return emom + st + "×" + kbReps(phaseWeek, base) + " повт.";
+    }
+    if (slug === "clean" || slug === "front_squat" || slug === "press" || slug === "push_press" || slug === "high_pull") {
+      return st + "×" + (3 + phaseWeek) + " повт.";
+    }
+    if (slug === "tgu_partial" || slug === "tgu_full") {
+      return st + "×" + (slug === "tgu_full" ? 1 : 2) + " / сторона";
+    }
+    if (slug === "snatch" || slug === "jerk") return st + "×" + (5 + phaseWeek) + " повт.";
+    if (slug === "complex") return st + " раундов · 3–5 повт. в связке";
     return st + "×10 повт.";
   }
 
@@ -393,9 +575,11 @@
     day = Math.max(1, Math.min(day, maxDay));
     const cal = calendarPhase(track, day);
     const phase = effectivePhase(track, day, unlockedPhase);
+    const phaseLen = phase.dayEnd - phase.dayStart + 1;
+    const phaseWeekMax = Math.max(1, Math.ceil(phaseLen / 7));
     let phaseWeek = Math.floor((day - phase.dayStart) / 7) + 1;
     if (phaseWeek < 1) phaseWeek = 1;
-    if (phaseWeek > 4) phaseWeek = 4;
+    if (phaseWeek > phaseWeekMax) phaseWeek = phaseWeekMax;
     const dow = (day - 1) % 7;
     const ids = phase.rotation[dow];
     const waiting = cal.num > phase.num;
@@ -423,7 +607,7 @@
       waitingUnlock: waiting,
       track: track,
       title: "День " + day,
-      weekLabel: "Фаза " + phase.num + "/" + totalPhases + " · " + phase.name + " · нед " + phaseWeek + "/4",
+      weekLabel: "Фаза " + phase.num + "/" + totalPhases + " · " + phase.name + " · нед " + phaseWeek + "/" + phaseWeekMax,
       exercises: exercises,
     };
   }

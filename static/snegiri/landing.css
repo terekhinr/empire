@@ -719,6 +719,96 @@ summary:focus-visible {
 .track-card h3 { font-size: 1.25rem; font-weight: 700; margin-bottom: 8px; }
 .track-card p { font-size: 0.9rem; color: var(--muted); }
 
+/* YouTube refs (лендинг) */
+.section-lead.refs-lead {
+  max-width: 42rem;
+  margin: 0 auto 2rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.section-lead.refs-lead strong { color: var(--fg); font-weight: 600; }
+
+.refs-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+@media (min-width: 769px) {
+  .refs-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.ref-track {
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.ref-track-title {
+  font: 600 0.75rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.ref-row {
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+}
+
+.ref-row summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  list-style: none;
+}
+
+.ref-row summary::-webkit-details-marker { display: none; }
+
+.ref-id {
+  font: 600 0.7rem var(--font-mono);
+  color: var(--muted);
+  margin-right: 0.35rem;
+}
+
+.ref-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding-left: 0.25rem;
+}
+
+.ref-yt-link {
+  font-size: 0.82rem;
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ref-yt-link:hover { color: var(--accent); }
+
+.ref-yt-meta {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.refs-disclaimer {
+  max-width: 42rem;
+  margin: 1.5rem auto 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ref-fallback { font-size: 0.9rem; color: var(--muted); text-align: center; }
+
 /* Trust pillars (science, CV, references) */
 .trust-pillars {
   display: grid;

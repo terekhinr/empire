@@ -12,6 +12,7 @@
       experience: "beginner",
       kettleKg: 16,
       goal: "both",
+      performer: "m",
       disclaimerOk: false,
       videoConsent: false,
       spineOk: false,
@@ -188,7 +189,7 @@
   }
 
   function advanceDayIfComplete(dayPlan, track) {
-    const maxDay = global.SnegiriProgram ? global.SnegiriProgram.TRACK_DAYS[track] : track === "S" ? 84 : 168;
+    const maxDay = global.SnegiriProgram ? global.SnegiriProgram.TRACK_DAYS[track] : track === "S" ? 84 : 187;
     const all = dayPlan.exercises.every(function (ex) {
       return isExerciseDone(dayPlan.day, ex.exerciseId, track);
     });

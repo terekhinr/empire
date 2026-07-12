@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from snegiri_kb import cv as cv_mod
 from snegiri_kb import db
+from snegiri_kb.exercise_refs import all_refs_list, ref_by_exercise_id, ref_by_slug
 from snegiri_kb.program_data import (
     EXERCISES,
     PHASES,
@@ -27,6 +28,7 @@ class ProfileIn(BaseModel):
     experience: str | None = None
     kettleKg: int | None = None
     goal: str | None = Field(None, description="spine | kettle | both")
+    performer: str | None = Field(None, description="m | f — модель в мультике")
     disclaimerOk: bool | None = None
     videoConsent: bool | None = None
     spineOk: bool | None = None
@@ -78,6 +80,21 @@ def patch_state(session_id: str, body: StateIn) -> dict:
     if not s:
         raise HTTPException(404, "session_not_found")
     return s
+
+
+@router.get("/exercise-refs")
+def exercise_refs_route(slug: str | None = None, exercise_id: str | None = None) -> dict:
+    if slug:
+        ref = ref_by_slug(slug)
+        if not ref:
+            raise HTTPException(404, "ref_not_found")
+        return {"item": ref}
+    if exercise_id:
+        ref = ref_by_exercise_id(exercise_id)
+        if not ref:
+            raise HTTPException(404, "ref_not_found")
+        return {"item": ref}
+    return {"items": all_refs_list()}
 
 
 @router.get("/exercises")
