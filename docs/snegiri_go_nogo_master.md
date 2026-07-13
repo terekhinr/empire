@@ -203,7 +203,7 @@ I. **Рекомендация**: GO / PIVOT / NO-GO с числами
 
 ## 9. Твой следующий шаг (1 действие)
 
-1. ~~Прогони промпт §7 в Gemini~~ → **сделано:** [`snegiri_finmodel_v3.md`](snegiri_finmodel_v3.md) + §J слепые зоны CV.
+1. ~~Прогони промпт §7 в Gemini~~ → **сделано:** [`snegiri_finmodel_v3.md`](snegiri_finmodel_v3.md) + §J слепые зоны CV. **Канон экономики:** [`snegiri_finmodel_v4.md`](snegiri_finmodel_v4.md). **Самопроверка:** [`snegiri_self_audit_2026-07-13.md`](snegiri_self_audit_2026-07-13.md).
 2. **Не кодить** новые фичи; **2 поста** Stern → бесплатный разбор; замерить funnel E на 500 визитах.
 3. Если идём дальше — **только** тех-чеклист §L (квота, queue, caps) перед paid.
 
@@ -215,7 +215,11 @@ I. **Рекомендация**: GO / PIVOT / NO-GO с числами
 
 | Док | Содержание |
 |-----|------------|
-| **[`snegiri_issledovanie_nulevaya_tochka.md`](snegiri_issledovanie_nulevaya_tochka.md)** | **Исследование с нуля: инвентарь, рынок, промпт Gemini, вывод** |
+| **[`snegiri_openrouter_RUN_SUMMARY.md`](snegiri_openrouter_RUN_SUMMARY.md)** | **Итог прогона OpenRouter + что дальше** |
+| [`snegiri_openrouter_sessions_meta.json`](snegiri_openrouter_sessions_meta.json) | Токены и $ по сессиям |
+| [`snegiri_gemini_session_0_audit.md`](snegiri_gemini_session_0_audit.md) | Сессия 0 (Cursor) |
+| [`snegiri_gemini_session_A_prelaunch.md`](snegiri_gemini_session_A_prelaunch.md) | Сессия A playbook |
+| [`snegiri_gemini_session_B_finmodel.md`](snegiri_gemini_session_B_finmodel.md) | Сессия B finmodel |
 | [`snegiri_issledovanie_otvety_gemini.md`](snegiri_issledovanie_otvety_gemini.md) | Ответы Gemini (1–7) |
 | [`snegiri_finmodel_v4.md`](snegiri_finmodel_v4.md) | Сводная finmodel |
 | [`snegiri_auditoriya_trafik_realist.md`](snegiri_auditoriya_trafik_realist.md) | **114 subs · трафик · McGill · эталоны-анимация** |

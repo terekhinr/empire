@@ -1,7 +1,9 @@
 # Промпты Gemini · мультики-эталоны «Снегири не гири»
 
 **Дата:** июль 2026  
-**Связано:** [`snegiri_brand_prompts.md`](snegiri_brand_prompts.md) · [`snegiri_program_k_schools_audit.md`](snegiri_program_k_schools_audit.md) · `snegiri_kb/exercise_refs_data.json`
+**Канон v2:** [`snegiri_comic_strategy_v2.md`](snegiri_comic_strategy_v2.md) · ошибки: [`snegiri_comic_errors_catalog.md`](snegiri_comic_errors_catalog.md) · Gemini: [`snegiri_comic_gemini_workflow.md`](snegiri_comic_gemini_workflow.md) · **мастер-сессии:** [`snegiri_gemini_master_sessions.md`](snegiri_gemini_master_sessions.md) · предзапуск: [`snegiri_product_prelaunch_methodology.md`](snegiri_product_prelaunch_methodology.md)
+
+> **Важно:** не копировать старые §5–6 вручную. Промпт: `render_comic_prompt.py`. Каталог — **по 1 упражнению**. Генератор: **Gemini**. **Сначала** прогнать [`snegiri_gemini_master_sessions.md`](snegiri_gemini_master_sessions.md) §0–G.
 
 ---
 
@@ -25,8 +27,16 @@
 - `#FFFFFF` — фигура, гиря, UI, скелет CV
 - `#FF3300` — **одна** линия ошибки / метка POOR (не декор)
 
-**Стиль:** brutalist · industrial gym · high-contrast **ч/б фото-эстетика** (не мультяшность, не pastel, не wellness-smile).  
+**Стиль:** brutalist · **industrial gym** (бетон, металл) **или** дом в A/B · high-contrast **ч/б фото-эстетика** (не мультяшность, не pastel, не wellness-smile).  
+**Формула:** тренируешься **дома**; эталон — industrial gym, в кадре **только гиря** — см. [`snegiri_comic_strategy_v2.md`](snegiri_comic_strategy_v2.md) §3.  
 **CV-оверлей:** тонкая белая сетка скелета; на панели «ошибка» — одна красная линия/угол на проблемной зоне (поясница, таз, локоть).
+
+**ЗАПРЕТ реквизита (критично для бренда):**
+- **НЕТ** штанги, грифа, блинов, стоек, скамьи, тренажёров, кроссовера, «зала с окнами»
+- **ТОЛЬКО** гиря(и) чугунные + коврик (S-трек) + резина для Pallof (S4)
+- Продукт = **дом + одна гиря 16 кг** на стартовый курс; вторая гиря — tier **advanced** (отдельные эталоны)
+
+**Tiers:** `scripts/render_comic_prompt.py --tier base|advanced` · канон в `comic_briefs_data.json`
 
 **Референсы стиля:** `static/snegiri/assets/hero-poster.png`, `ad-cv-scanner.png`, `app-analyze.png`.
 
@@ -38,7 +48,7 @@
 - 30–45 лет, athletic build, **не** бодибилдер
 - Чёрная футболка **oversize**, на груди **белый line-art снегирь на гире** (кибер-гравюра, 8–10 см)
 - Чёрные шорты/штаны, босиком или минималистичные кроссы
-- Фон: тёмный зал / бетон / минимум реквизита
+- Фон: **industrial_gym** (default) или `home_room` в A/B — **без** штанги и стоек в кадре
 
 ### F — женщина
 - 28–45 лет, athletic build
@@ -62,56 +72,44 @@
 
 ## 5. Мастер-промпт (первое сообщение в Gemini)
 
-Скопировать целиком. Прикрепить: `hero-poster.png` + `logo-final-square.png`.
+Скопировать целиком. Прикрепить: `hero-poster.png`.
+
+Или: `python3 scripts/render_comic_prompt.py --master`
 
 ```
-Ты — арт-директор приложения snegirinegiri.ru («Снегири не гири»).
+Ты — арт-директор snegirinegiri.ru («Снегири не гири»).
 
-ЗАДАЧА: серия эталонных КОМИКС-РАЗБОРОВ упражнений для домашних тренировок.
-Работаешь ПО ОДНОМУ упражнению. После каждого — имя файла и «следующий?».
+ПРОДУКТ: домашние тренировки. База: коврик + одна гиря 16 кг.
+ЗАПРЕТ: штанга, блины, стойки, тренажёры, «зал с окнами».
 
-ПАЛИТРА (строго):
-#000000 фон · #FFFFFF линии/тело/UI · #FF3300 ТОЛЬКО линия ошибки CV
+ПАЛИТРА: #000000 фон · #FFFFFF тело/гиря/скелет · #FF3300 ТОЛЬКО линия ERROR.
 
-СТИЛЬ: brutalist industrial gym, ч/б фото-эстетика, НЕ мультяшность, НЕ pastel.
-Поверх фигуры — белая CV-сетка (скелет). На панели ERROR — одна красная линия #FF3300.
+ПОРЯДОК:
+1. Сначала M (мужчина) — одно упражнение по brief.
+2. После QA — F (женщина) С РЕФЕРЕНСОМ утверждённого M (та же хореография).
 
-ПЕРСОНАЖ:
-- M или F (указано в задании)
-- Чёрная футболка, на груди белый line-art: снегирь сидит на гире (кибер-гравюра)
-- Гиря 16 кг чугунная, текстура реалистичная
+Подписи — ТОЛЬКО русский из brief (labels_ru). Без ST/DRIVE/TOP.
 
-ФОРМАТ: горизонталь 1920×1080, 4–6 панелей слева направо, подписи фаз мелким mono (IBM Plex Mono стиль): «1 ST», «2 DRIVE», «3 TOP», «4 ERROR»
-
-НЕ: watermark Gemini, логотипы StrongFirst/YouTube, цвет кроме #FF3300, улыбки stock-моделей.
-
-Начни с упражнения, которое я пришлю следующим сообщением.
+Жди brief следующим сообщением (дам slug + готовый промпт).
 ```
 
 ---
 
 ## 6. Шаблон одного упражнения
 
-Для каждого ниже — **два промпта** (M и F): заменить `{PERFORMER}` → «мужчина 35 лет» / «женщина 35 лет».
+**Не собирать вручную.** Brief → промпт:
 
+```bash
+python3 scripts/build_comic_briefs.py
+python3 scripts/render_comic_prompt.py --slug swing --performer m
+python3 scripts/render_comic_prompt.py --slug swing --performer f   # после QA M
 ```
-Упражнение: {NAME} · slug {SLUG} · comic_id {COMIC_ID}
-Камера: {CAMERA}
-Панели ({N}):
-1. {PHASE1}
-2. {PHASE2}
-3. {PHASE3}
-4. ERROR: {COMMON_ERROR} — красная линия #FF3300 на {ZONE}
 
-Промпт M/F:
-Horizontal 1920×1080 comic strip, 4 panels, black background #000000.
-{PERFORMER}, black t-shirt with white cyber-engraving bullfinch-on-kettlebell logo on chest,
-{ACTION_DESCRIPTION}.
-Panel 4: same athlete, common mistake — {ERROR_VISUAL}, single #FF3300 CV error line on {ZONE}.
-White skeleton overlay on athlete, industrial gym, brutalist, no color except #FF3300.
-Russian mono labels under panels: {LABELS_RU}.
-No watermark. File: {slug}_m.webp or {slug}_f.webp
-```
+Поля brief: `location`, `equipment`, `camera`, `labels_ru`, `panel_script`, `working_side`.
+
+A/B локации: `--ab-location home_garage|home_room` (см. [`snegiri_comic_ab_tests.md`](snegiri_comic_ab_tests.md)).
+
+<!-- legacy template removed: industrial gym + EN labels caused barbell/gym artifacts -->
 
 ---
 
@@ -393,14 +391,71 @@ No watermark. File: {slug}_m.webp or {slug}_f.webp
 
 ---
 
+## 11. Анимация фаз (статика + мультик)
+
+**Два режима в приложении** (`comic_player.js`):
+
+| Режим | Что | Когда |
+|-------|-----|-------|
+| **Статика** | Горизонтальная лента `{slug}_m.webp` | Первое знакомство — вся последовательность сразу |
+| **Анимация** | Кадры `frames/{slug}/m/01.webp…` + фиксация + подсказки | Разбор по фазам перед съёмкой |
+
+### Термины фаз (русская гиревая школа)
+
+Брать из субтитров / разборов **Руднев**, **Денисов**, **StrongFirst RU**, **ФГОС** — не англ. ST/DRIVE/TOP.
+
+| slug | Фазы (пример) | Источник |
+|------|---------------|----------|
+| swing | Замах → **Подрыв** → Маятник → Верхняя точка → ERROR | Руднев, Денисов |
+| hand_switch | Верх маха → **Мёртвая точка** → **Перехват** → Новый мах → ERROR | Руднев, ФГОС |
+| clean | Замах → **Подрыв** → **Заброс** в стойку → Фиксация → ERROR | Денисов («заброс на грудь») |
+
+Метаданные: `snegiri_kb/comic_phases_data.json` → `static/snegiri/data/comic_phases.json`
+
+### Пайплайн после генерации ленты в Gemini
+
+```bash
+# 1. Положить swing_m.webp / swing_f.webp в assets/comics/
+# 2. Нарезать на кадры фаз
+python3 scripts/slice_comic_strip.py --slug swing --slug hand_switch
+# 3. Синхронизировать JSON фаз
+./scripts/sync_snegiri_comic_phases.sh
+```
+
+Кадры: `assets/comics/frames/{slug}/m/01.webp` … `05.webp`
+
+### Промпт на ОТДЕЛЬНЫЕ кадры (если лента кривая)
+
+Для плавной анимации лучше генерировать **5 отдельных кадров 4:3** (одинаковый ракурс, освещение, поза персонажа), а не резать ленту:
+
+```
+Кадр {N}/5 упражнения {NAME}. Камера {CAMERA}. Фаза: «{TERM_RU}».
+Тот же персонаж, та же гиря 16 кг, тот же зал — как на референсе {slug}_m.webp панель {N}.
+Палитра #000 #FFF #FF3300 только на ERROR. Белая CV-сетка.
+Подпись mono внизу: «{TERM_RU}». Без watermark.
+File: frames/{slug}/m/{NN}.webp
+```
+
+На кадре ERROR — одна красная линия #FF3300 на зоне из `comic_phases_data.json`.
+
+### Просмотр
+
+- Галерея: `static/snegiri/comics.html`
+- В app: упражнение → вкладки **Статика | Анимация**
+
+---
+
 ## 10. Чеклист приёмки кадра
 
 - [ ] Только #000 / #FFF / #FF3300  
 - [ ] Снегирь на груди читается на превью 360px  
-- [ ] Ракурс совпадает с `hint` в program_data (side/front)  
-- [ ] Панель ERROR одна, красная линия на правильном сегменте  
-- [ ] Нет watermark / чужих логотипов  
-- [ ] WebP положен в `assets/comics/` · JSON refs не менять slug
+- [ ] Ракурс = `camera` в brief · локация = winner A/B  
+- [ ] **Нет** штанги / стоек / блинов / зала  
+- [ ] Число гирь = `equipment.kettlebell_count` · рука = `working_side`  
+- [ ] Подписи = `labels_ru`, **кириллица**, без EN  
+- [ ] Панель ERROR одна, красная линия на `error_zone`  
+- [ ] F: та же хореография, что M  
+- [ ] WebP в `assets/comics/` · `status: ok` в brief
 
 ---
 

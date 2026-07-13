@@ -103,10 +103,10 @@ def load_srw_creds(config_path: Path) -> tuple[str, str, str]:
         ip = ip or data.get("ip", "")
         key = key or data.get("local_key", "")
         ver = data.get("version") or ver
-    if key and ip:
+    if key and ip and ip not in ("0.0.0.0", ""):
         return ip, key, ver
 
-  # fetch via HA shell (runs inside homeassistant container)
+    # fetch via HA shell (runs inside homeassistant container)
     print("==> fetch local_key через Tuya Cloud на HA…")
     try:
         ha_request("POST", "/api/services/shell_command/balkon_srw_fetch_key", {})

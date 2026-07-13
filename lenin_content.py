@@ -168,11 +168,11 @@ def calendar_prompt_block(seed: dict) -> str:
 
 
 def build_revolutionary_calendar_post(when: datetime | None = None) -> tuple[str, str]:
-    """Fallback, если в файле календаря нет строки на дату."""
+    """Готовый пост календаря — факт из файла, без LLM."""
     when = when or datetime.now(_MSK)
-    topic = "[В этот день] Революционный календарь"
     line = revolutionary_calendar_line(when)
     if not line:
+        topic = "[#Вэтотдень] Революционный календарь"
         body = (
             "📅 <b>Революционный календарь</b>\n\n"
             f"На {when.day} {_MONTHS_RU_GEN[when.month - 1]} в файле календаря нет строки — "
@@ -183,21 +183,26 @@ def build_revolutionary_calendar_post(when: datetime | None = None) -> tuple[str
 
     m = re.match(r"(\d{2})\.(\d{2})\.(\d{4})\s*[—\-]\s*(.*)", line)
     if not m:
-        return topic, f"📅 <b>Революционный календарь</b>\n\n{line}\n\n#ленин #история #календарь"
+        return (
+            "[#Вэтотдень] Революционный календарь",
+            f"📅 <b>Революционный календарь</b>\n\n{line}\n\n#ленин #история #календарь",
+        )
 
     d, mo, y, event = m.groups()
     di, mi, yi = int(d), int(mo), int(y)
     old_date = calculate_old_style(di, mi, yi)
     event_clean = event.strip().rstrip(".")
-    new_date = f"{di} {_MONTHS_RU_GEN[mi - 1]} {yi} года"
+    month_name = _MONTHS_RU_GEN[mi - 1]
+    headline = f"Революционный календарь: {di} {month_name} {yi} года"
+    topic = f"[#Вэтотдень] {headline}"
     opening = (
-        f"В этот день {new_date} (по старому стилю — {old_date}) {event_clean}."
+        f"В этот день (по старому календарю {old_date}) {yi} года {event_clean}."
     )
     body = (
-        f"📅 <b>Революционный календарь</b>\n\n"
+        f"📅 <b>{headline}</b>\n\n"
         f"{opening}\n\n"
         f"<i>Источник: календарь «Ленин, соратники и эпоха СССР»</i>\n\n"
-        f"#ленин #история #календарь #революция #мысль"
+        f"#Вэтотдень #ленин #история #календарь"
     )
     return topic, body
 
@@ -751,9 +756,6 @@ async def resolve_lenin_slot(
         topic, text = build_channel_support_post()
         return topic, text, None, None
     if special in ("lenin_calendar", "revolutionary_calendar", "[SPECIAL:lenin_calendar]"):
-        seed = make_calendar_seed()
-        if seed:
-            return seed["topic"], None, None, seed
         topic, text = build_revolutionary_calendar_post()
         return topic, text, None, None
     if special in ("lenin_rubric", "curated_rubric", "[SPECIAL:lenin_rubric]"):
@@ -775,9 +777,6 @@ async def resolve_lenin_slot(
         angle = slot_value.get("angle") or slot_value.get("topic") or "современные события"
         return f"[Марксистский анализ] {angle}", None, None, None
     if isinstance(slot_value, str) and is_calendar_topic(slot_value):
-        seed = make_calendar_seed()
-        if seed:
-            return seed["topic"], None, None, seed
         topic, text = build_revolutionary_calendar_post()
         return topic, text, None, None
     return "Свободная тема", None, None, None

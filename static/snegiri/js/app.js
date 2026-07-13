@@ -5,6 +5,9 @@
   if (window.SnegiriExerciseRefs) {
     window.SnegiriExerciseRefs.load();
   }
+  if (window.SnegiriComicPhases) {
+    window.SnegiriComicPhases.load();
+  }
   const screens = document.querySelectorAll(".screen");
   const history = [];
   let activeExerciseId = null;
@@ -43,9 +46,21 @@
     if (id === "progress") SnegiriUi.renderProgress($("#progress-root"));
     if (id === "subscribe") SnegiriUi.renderSubscribe($("#subscribe-root"));
     if (id === "settings") SnegiriUi.renderSettings($("#settings-root"));
+    if (id === "profile") fillProfileForm();
     const plan = SnegiriUi.currentDayPlan();
     const badge = $("#home-week-badge");
     if (badge) badge.textContent = plan.weekLabel;
+  }
+
+  function fillProfileForm() {
+    const form = $("#profile-form");
+    if (!form) return;
+    const p = SnegiriStore.get().profile;
+    if (p.weightKg) form.weight.value = p.weightKg;
+    if (p.waistCm) form.waist.value = p.waistCm;
+    if (p.experience) form.experience.value = p.experience;
+    if (p.kettleKg != null) form.kettle.value = String(p.kettleKg);
+    if (p.performer) form.performer.value = p.performer === "f" ? "f" : "m";
   }
 
   function bindNav() {
@@ -161,6 +176,16 @@
         $("#goal-input").value = card.dataset.goal;
         $("#spine-ok-row").hidden = card.dataset.goal !== "kettle";
       });
+    });
+
+    document.body.addEventListener("change", function (e) {
+      const sel = e.target;
+      if (!sel.matches('[data-action="performer-select"]')) return;
+      SnegiriStore.patchProfile({ performer: sel.value === "f" ? "f" : "m" });
+      const wid = $("#workout-root");
+      if (wid && wid.dataset.exerciseId) {
+        SnegiriUi.renderWorkout(wid, wid.dataset.exerciseId);
+      }
     });
   }
 

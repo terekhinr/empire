@@ -257,6 +257,85 @@ h2 {
 
 .comic-etalon--pending .comic-pending { display: block; }
 
+.comic-player { margin-bottom: 12px; }
+
+.comic-mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+}
+
+.comic-mode-tab {
+  flex: 1;
+  font: 11px var(--mono);
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+}
+
+.comic-mode-tab.active {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.comic-anim-stage {
+  position: relative;
+  border: 1px solid var(--line);
+  background: #000;
+  overflow: hidden;
+}
+
+.comic-anim-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: opacity 0.45s ease;
+  min-height: 160px;
+  object-fit: contain;
+}
+
+.comic-anim-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  font: 11px var(--mono);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--line);
+  color: var(--fg);
+}
+
+.comic-hl--error { border-color: var(--err); color: var(--err); }
+.comic-hl--lumbar { border-color: var(--err); }
+.comic-hl--hips { border-color: #fff; }
+.comic-hl--core { border-color: #ccc; }
+
+.comic-phase-dots {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 6px;
+  flex-wrap: wrap;
+}
+
+.comic-phase-dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.comic-phase-dot.active { background: var(--fg); border-color: var(--fg); }
+.comic-phase-dot--err { border-color: var(--err); }
+.comic-phase-dot--err.active { background: var(--err); }
+
+.comic-phase-term { font-size: 15px; margin: 0 0 4px; }
+.comic-phase-controls { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
 .badge {
   font: 10px var(--mono);
   padding: 3px 8px;

@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly Empire content quality audit Sunday 09:00 MSK (06:00 UTC)
+
+[Timer]
+OnCalendar=Sun *-*-* 06:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

@@ -43,7 +43,7 @@ def test_rotation_five_rubrics():
     assert stern_content.rubric_key_for_weekday(4) == "sports_med"
 
 
-def test_resolve_rubric_returns_seed_for_llm():
+def test_resolve_rubric_returns_prebuilt_not_llm():
     async def _fake(_p, _s):
         return "should not run"
 
@@ -54,9 +54,10 @@ def test_resolve_rubric_returns_seed_for_llm():
             resolve_topic_fn=_fake,
         )
     )
-    assert prebuilt is None
-    assert seed
-    assert seed["rubric_key"] == "equipment"
+    assert seed is None
+    assert prebuilt
+    assert "<blockquote>" in prebuilt or "<b>" in prebuilt
+    assert "Гиря" not in prebuilt[:40] or "не просто" not in prebuilt
     assert "[Экипировка" in topic
 
 

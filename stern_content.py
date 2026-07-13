@@ -1,4 +1,4 @@
-"""Канал Штерн: рубрики (якорь JSON + разворот LLM; картинка Commons)."""
+"""Канал Штерн: рубрики (готовый текст из JSON + картинка Commons, без LLM)."""
 
 from __future__ import annotations
 
@@ -65,6 +65,13 @@ def format_rubric_post(rubric_key: str, entry: dict) -> str:
     )
 
 
+def rubric_body_html(rubric_key: str, entry: dict) -> str:
+    """Готовый пост рубрики — без LLM (цитата + источник из JSON)."""
+    if entry.get("body_html"):
+        return entry["body_html"].strip()
+    return format_rubric_post(rubric_key, entry)
+
+
 def rubric_expansion_rules() -> str:
     return (
         "Канал Штерн: не уходи в соревновательный гиревой спорт (разряды, помост, WKSF, биатлон), "
@@ -80,8 +87,6 @@ async def build_rubric_slot(
         import stern_athletic_legacy as sal
 
         return await sal.build_athletic_legacy_slot(weekday=weekday)
-    data = rubric_posts.load_json(_RUBRICS_PATH)
-    meta = (data.get("rubrics") or {}).get(key, {})
     entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
     tag = RUBRIC_TOPIC_TAGS.get(key, "[Штерн · рубрика]")
     if not entry:
@@ -89,14 +94,8 @@ async def build_rubric_slot(
         return f"{tag} fallback", body, None, None
     topic = f"{tag} {entry.get('source', '')} (id={entry.get('id', '')})"
     img = await rubric_posts.ensure_entry_image(entry, _RUBRICS_MEDIA, "_default_stern.jpg")
-    seed = rubric_posts.make_rubric_seed(
-        persona="stern",
-        rubric_key=key,
-        title=meta.get("title", key),
-        emoji=meta.get("emoji", "🏋️"),
-        entry=entry,
-    )
-    return topic, None, img, seed
+    body = rubric_body_html(key, entry)
+    return topic, body, img, None
 
 
 async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) -> tuple[str, str, str | None]:
@@ -107,7 +106,7 @@ async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) 
     entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
     if not entry:
         return topic, f"{topic}\n\nСегодня без выпуска.", img
-    return topic, format_rubric_post(key, entry), img
+    return topic, rubric_body_html(key, entry), img
 
 
 async def resolve_stern_slot(

@@ -70,6 +70,38 @@ def _strip_markdown_inline(text: str) -> str:
     return text
 
 
+_MOEX_NAMES = {
+    "PLZL": "Полюс",
+    "SBER": "Сбер",
+    "MDMG": "МД Медикал",
+}
+
+_ABBREV_SPEECH = (
+    (re.compile(r"\bт\.е\.\b", re.I), "то есть"),
+    (re.compile(r"\bт\. д\.\b", re.I), "так далее"),
+    (re.compile(r"\bт\.н\.\b", re.I), "так называемый"),
+    (re.compile(r"\bимхо\b", re.I), "по моему мнению"),
+    (re.compile(r"\bwindfall tax\b", re.I), "налог на сверхприбыли"),
+    (re.compile(r"\blook through\b", re.I), "не обращать внимания на"),
+    (re.compile(r"\bcredere\b", re.I), "кредере"),
+    (re.compile(r"\bGLDRUB_TOM\b"), "золото на бирже"),
+    (re.compile(r"\bЦБ\b"), "Центробанк"),
+    (re.compile(r"\bEBITDA\b"), "Эбитда"),
+    (re.compile(r"\bKPI\b"), "ключевой показатель"),
+    (re.compile(r"\bValue and Income\b"), "вэлью энд инкам"),
+)
+
+
+def _strip_urls(text: str) -> str:
+    text = re.sub(r"https?://\S+", "", text)
+    text = re.sub(r"\b(?:www\.)?[a-z0-9][-a-z0-9]*\.(?:ru|com|org)/\S*", "", text, flags=re.I)
+    text = re.sub(r"\bt\.me/\S+", "", text, flags=re.I)
+    text = re.sub(r"\bsponsr\.ru/\S+", "", text, flags=re.I)
+    text = re.sub(r"\bkremlin\.ru/\S+", "", text, flags=re.I)
+    text = re.sub(r"#\S+", "", text)
+    return text
+
+
 def _normalize_symbols(text: str) -> str:
     text = text.replace("\u00ad", "")  # soft hyphen
     text = text.replace("\ufe0f", "")  # variation selector
@@ -90,6 +122,21 @@ def _normalize_symbols(text: str) -> str:
     text = text.replace("−", "-")
     text = text.replace("²", " в квадрате")
     text = text.replace("₽", " рублей")
+    text = re.sub(r"\[Новостной деск\]\s*", "Новостной деск. ", text, flags=re.I)
+    text = re.sub(
+        r"\[MOEX:\s*([A-Z0-9_]+)\]",
+        lambda m: _MOEX_NAMES.get(m.group(1), f"тикер {m.group(1).replace('_', ' ')}"),
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"\$(\d+(?:[.,]\d+)?)", r"\1 долларов", text)
+    text = re.sub(r"(\d+(?:[.,]\d+)?)\s*%", r"\1 процентов", text)
+    text = re.sub(r"(\d+),(\d+)", r"\1 целая \2", text)
+    text = re.sub(r"(\d+)\s*тыс\.", r"\1 тысяч", text)
+    text = re.sub(r"км/ч", "километров в час", text)
+    text = _strip_urls(text)
+    for pat, repl in _ABBREV_SPEECH:
+        text = pat.sub(repl, text)
     text = re.sub(r"<\s*(\d)", r"меньше \1", text)
     text = re.sub(r">\s*(\d)", r"больше \1", text)
     text = re.sub(r"<[^>]+>", "", text)
@@ -120,7 +167,20 @@ _EDITORIAL_LINE_PATTERNS = (
 )
 
 
+def _is_url_only_line(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return False
+    if re.fullmatch(r"https?://\S+", s):
+        return True
+    if re.fullmatch(r"(?:t\.me|kremlin\.ru|sponsr\.ru|www\.\S+)\S*", s, flags=re.I):
+        return True
+    return bool(re.fullmatch(r"[a-z0-9][-a-z0-9./#?=&_%:-]+", s, flags=re.I) and "." in s)
+
+
 def _process_line(stripped: str) -> str | None:
+    if _is_url_only_line(stripped):
+        return None
     if any(p.search(stripped) for p in _SKIP_LINE_PATTERNS):
         return None
     if stripped.startswith(">"):

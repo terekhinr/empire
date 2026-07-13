@@ -231,29 +231,20 @@ views:
                         name: "%"
                         color: "#38bdf8"
                         y_axis: secondary
-                  - type: custom:mini-graph-card
-                    name: Балкон
+                  - type: custom:mushroom-template-card
+                    primary: Балкон
+                    secondary: >-
+                      {% set t = states('sensor.balkon_temperatura') %}
+                      {% if t in ['unknown', 'unavailable', 'none', ''] %}
+                        offline
+                      {% else %}
+                        {{ t }}° · {{ states('sensor.balkon_vlazhnost') }}%
+                      {% endif %}
                     icon: mdi:balcony
-                    hours_to_show: 24
-                    points_per_hour: 2
-                    line_width: 2
-                    font_size: 75
-                    animate: true
-                    show:
-                      name: true
-                      icon: true
-                      state: true
-                      legend: false
-                      graph: sparkline
-                      fill: fade
-                    entities:
-                      - entity: sensor.balkon_temperatura
-                        name: t°
-                        color: "#ef4444"
-                      - entity: sensor.balkon_vlazhnost
-                        name: "%"
-                        color: "#38bdf8"
-                        y_axis: secondary
+                    icon_color: >-
+                      {% set t = states('sensor.balkon_temperatura') %}
+                      {{ 'grey' if t in ['unknown', 'unavailable', 'none', ''] else '#ef4444' }}
+                    layout: vertical
                   - type: custom:mini-graph-card
                     name: Спальня
                     icon: mdi:bed
@@ -433,11 +424,39 @@ views:
             show_state: false
             show_name: true
             card_mod:
-              style: |
-                ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
+              style:
+                $: |
+                  video, img {
+                    transform: rotate(180deg) !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: cover !important;
+                  }
+                .: |
+                  ha-card { border: 1px solid rgba(56,189,248,0.4) !important; overflow: hidden !important; }
           - type: picture-entity
             entity: camera.ezviz_podezd
             name: Подъезд
+            camera_view: live
+            aspect_ratio: "16:9"
+            show_state: false
+            show_name: true
+            card_mod:
+              style: |
+                ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
+          - type: picture-entity
+            entity: camera.teckin_tc100
+            name: Кухня
+            camera_view: live
+            aspect_ratio: "16:9"
+            show_state: false
+            show_name: true
+            card_mod:
+              style: |
+                ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
+          - type: picture-entity
+            entity: camera.teckin_tc100_2
+            name: Комната Макса
             camera_view: live
             aspect_ratio: "16:9"
             show_state: false
@@ -473,23 +492,20 @@ views:
                 name: влажность
                 color: "#38bdf8"
                 y_axis: secondary
-          - type: custom:mini-graph-card
-            name: Балкон
+          - type: custom:mushroom-template-card
+            primary: Балкон
+            secondary: >-
+              {% set t = states('sensor.balkon_temperatura') %}
+              {% if t in ['unknown', 'unavailable', 'none', ''] %}
+                Датчик спит — нажмите кнопку на SRW-TH01
+              {% else %}
+                {{ t }} °C · {{ states('sensor.balkon_vlazhnost') }}%
+              {% endif %}
             icon: mdi:balcony
-            hours_to_show: 48
-            line_width: 2
-            show:
-              legend: true
-              fill: fade
-              graph: line
-            entities:
-              - entity: sensor.balkon_temperatura
-                name: t°
-                color: "#ef4444"
-              - entity: sensor.balkon_vlazhnost
-                name: влажность
-                color: "#38bdf8"
-                y_axis: secondary
+            icon_color: >-
+              {% set t = states('sensor.balkon_temperatura') %}
+              {{ 'grey' if t in ['unknown', 'unavailable', 'none', ''] else '#ef4444' }}
+            layout: horizontal
           - type: custom:mini-graph-card
             name: Спальня — 48 ч
             icon: mdi:bed

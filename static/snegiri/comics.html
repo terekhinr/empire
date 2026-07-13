@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Мультики · Снегири не гири</title>
+  <link rel="stylesheet" href="styles.css?v=11">
+  <style>
+    body { padding: 16px; max-width: 720px; margin: 0 auto; }
+    .comics-toolbar { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <p class="card-tag"><a href="app.html" style="color:inherit">← Приложение</a></p>
+  <h1>Эталоны · мультики</h1>
+  <p class="sub">Статика — вся лента. Анимация — фазы с фиксацией и подсказками (термины Руднев / Денисов).</p>
+
+  <div class="comics-toolbar">
+    <label class="form-row">Модель
+      <select id="performer">
+        <option value="m">Мужчина (M)</option>
+        <option value="f">Женщина (F)</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="comics-list"></div>
+
+  <script src="js/store.js?v=10"></script>
+  <script src="js/exercise_refs.js?v=2"></script>
+  <script src="js/comic_phases.js?v=1"></script>
+  <script src="js/comic_player.js?v=1"></script>
+  <script>
+    var SLUGS = [];
+
+    function renderAll() {
+      var list = document.getElementById("comics-list");
+      list.innerHTML = "";
+      SLUGS.forEach(function (slug, i) {
+        var wrap = document.createElement("div");
+        wrap.id = "comic-" + slug;
+        if (i > 0) {
+          var hr = document.createElement("hr");
+          hr.style.cssText = "border-color:var(--line);margin:24px 0";
+          list.appendChild(hr);
+        }
+        list.appendChild(wrap);
+        if (window.SnegiriComicPlayer) {
+          SnegiriComicPlayer.mount(wrap, slug);
+        }
+      });
+    }
+
+    document.getElementById("performer").addEventListener("change", function () {
+      try {
+        var raw = localStorage.getItem("snegiri_app_v1");
+        var st = raw ? JSON.parse(raw) : { profile: {} };
+        if (!st.profile) st.profile = {};
+        st.profile.performer = this.value;
+        localStorage.setItem("snegiri_app_v1", JSON.stringify(st));
+      } catch (e) {}
+      renderAll();
+    });
+
+    Promise.all([
+      SnegiriExerciseRefs.load(),
+      SnegiriComicPhases.load()
+    ]).then(function (loaded) {
+      var phases = loaded[1] || {};
+      SLUGS = Object.keys(phases).filter(function (k) { return k.charAt(0) !== "_"; });
+      SLUGS.sort(function (a, b) {
+        var ra = SnegiriExerciseRefs.bySlug(a);
+        var rb = SnegiriExerciseRefs.bySlug(b);
+        var ta = ra && ra.track ? ra.track : "Z";
+        var tb = rb && rb.track ? rb.track : "Z";
+        if (ta !== tb) return ta < tb ? -1 : 1;
+        var ia = ra && ra.ids && ra.ids[0] ? ra.ids[0] : a;
+        var ib = rb && rb.ids && rb.ids[0] ? rb.ids[0] : b;
+        return ia < ib ? -1 : ia > ib ? 1 : 0;
+      });
+      try {
+        var raw = localStorage.getItem("snegiri_app_v1");
+        if (raw) {
+          var st = JSON.parse(raw);
+          if (st.profile && st.profile.performer) {
+            document.getElementById("performer").value = st.profile.performer;
+          }
+        }
+      } catch (e) {}
+      renderAll();
+    });
+  </script>
+</body>
+</html>

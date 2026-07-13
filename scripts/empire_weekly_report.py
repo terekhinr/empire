@@ -151,6 +151,16 @@ def build_report() -> str:
 
     lines.extend(["", "── Постинг / продукты ──"])
     lines.extend(_posting_summary())
+    ca_path = LOG_DIR / "content-audit-latest.txt"
+    if ca_path.is_file():
+        ca_body = ca_path.read_text(encoding="utf-8", errors="replace")
+        first = ca_body.splitlines()[:8]
+        lines.extend(["", "── Аудит контента (вс 09:00) ──"])
+        lines.extend(first)
+        if "с замечаниями:" in ca_body:
+            m = re.search(r"с замечаниями: (\d+)", ca_body)
+            if m and int(m.group(1)) > 0:
+                lines.append("  (полный отчёт: content-audit-latest.txt)")
 
     lines.extend(
         [

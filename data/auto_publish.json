@@ -12,7 +12,7 @@
   },
   "personas": {
     "garden": {
-      "enabled": true,
+      "enabled": false,
       "min_body_chars": 350,
       "require_zero_regen": false,
       "max_selfcrit_issues": 3
@@ -34,7 +34,7 @@
       "require_zero_badimg": true
     },
     "lenin": {
-      "enabled": true,
+      "enabled": false,
       "min_body_chars": 350,
       "require_zero_regen": false,
       "max_selfcrit_issues": 3
@@ -211,6 +211,82 @@
         "[SPECIAL:promo_map]"
       ],
       "min_body_chars": 120,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "garden_bot_promo": {
+      "enabled": true,
+      "personas": [
+        "garden"
+      ],
+      "topic_markers": [
+        "[SPECIAL:bot_promo]"
+      ],
+      "min_body_chars": 120,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "lenin_calendar": {
+      "enabled": true,
+      "personas": [
+        "lenin"
+      ],
+      "topic_markers": [
+        "[#Вэтотдень]",
+        "[В этот день]"
+      ],
+      "min_body_chars": 120,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "lenin_pss": {
+      "enabled": true,
+      "personas": [
+        "lenin"
+      ],
+      "topic_markers": [
+        "[ПСС · фрагмент]"
+      ],
+      "min_body_chars": 200,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "lenin_book": {
+      "enabled": true,
+      "personas": [
+        "lenin"
+      ],
+      "topic_markers": [
+        "[Сказка на ночь]"
+      ],
+      "min_body_chars": 200,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "lenin_channel_support": {
+      "enabled": true,
+      "personas": [
+        "lenin"
+      ],
+      "topic_markers": [
+        "[SPECIAL:channel_support]"
+      ],
+      "min_body_chars": 80,
       "skip_body_floor": true,
       "require_image": false,
       "require_zero_regen": true,

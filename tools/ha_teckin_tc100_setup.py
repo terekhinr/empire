@@ -12,7 +12,7 @@ from pathlib import Path
 
 EMPIRE_DIR = Path(__file__).resolve().parents[1]
 
-CAMERA_IP = os.environ.get("TECKIN_IP", "192.168.1.84")
+CAMERA_IP = os.environ.get("TECKIN_IP", "192.168.1.34")
 CAMERA_NAME = os.environ.get("TECKIN_NAME", "Teckin TC100")
 CAMERA_USER = os.environ.get("TECKIN_USER", "root")
 CAMERA_PASS = os.environ.get("TECKIN_PASS", "pass")

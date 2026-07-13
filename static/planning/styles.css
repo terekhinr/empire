@@ -135,6 +135,7 @@ html, body {
 .nav-icon--search { background: rgba(161,161,170,0.12); color: var(--tt-search); }
 .nav-icon--calendar { background: rgba(168,85,247,0.16); color: var(--tt-calendar); }
 .nav-icon--lists { background: rgba(34,197,94,0.16); color: var(--tt-lists); }
+.nav-icon--tag { background: rgba(59,130,246,0.16); color: #60a5fa; }
 .nav-icon--finance { background: rgba(234,179,8,0.16); color: var(--tt-finance); }
 .nav-icon--insights { background: rgba(236,72,153,0.16); color: var(--tt-insights); }
 .nav-icon--stats { background: rgba(6,182,212,0.16); color: var(--tt-stats); }
@@ -858,12 +859,69 @@ main {
 .tag-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .tag-pills--inline { margin-top: 4px; }
 .tag-pill {
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border-radius: 999px;
   font-size: 0.78rem; font-weight: 500;
-  background: rgba(59,130,246,0.18); color: #93c5fd;
-  border: 1px solid rgba(59,130,246,0.25);
+  background: color-mix(in srgb, var(--tag-color, #3b82f6) 22%, transparent);
+  color: color-mix(in srgb, var(--tag-color, #93c5fd) 85%, white);
+  border: 1px solid color-mix(in srgb, var(--tag-color, #3b82f6) 35%, transparent);
 }
+.tag-pill--click,
+.tag-pill--sheet {
+  cursor: pointer;
+  font: inherit;
+}
+.tag-pill--click:hover,
+.tag-pill--sheet:hover { filter: brightness(1.08); }
+.tag-pill-x { opacity: 0.75; font-size: 0.9em; line-height: 1; }
+.badge-tag {
+  cursor: pointer;
+  font: inherit;
+  background: color-mix(in srgb, var(--tag-color, #3b82f6) 18%, transparent) !important;
+  color: color-mix(in srgb, var(--tag-color, #93c5fd) 90%, white) !important;
+  border: 1px solid color-mix(in srgb, var(--tag-color, #3b82f6) 30%, transparent);
+}
+.badge-tag:hover { filter: brightness(1.1); }
+.tag-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  display: inline-block;
+}
+.nav-row-tag .tag-dot { margin-right: 2px; }
+.nav-row-tag.active { background: rgba(59,130,246,0.14); font-weight: 600; }
+.nav-tags-block { margin-top: 2px; }
+.nav-tags-wrap > summary.disclosure-toggle { padding-left: 8px; }
+#sidebar-tags-list { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 8px; max-height: 280px; overflow-y: auto; }
+.nav-tags-empty { padding: 8px 12px; margin: 0; font-size: 0.82rem; }
+.tag-filter-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; margin-bottom: 10px; border-radius: 10px;
+  background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.22);
+  color: #dbeafe; font-size: 0.9rem;
+}
+.tt-tag-add-row { position: relative; margin: 4px 0 10px; }
+.tt-tag-add-input {
+  width: 100%; box-sizing: border-box;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04); color: var(--text);
+  font: inherit; font-size: 0.88rem;
+}
+.tt-tag-add-input:focus { outline: none; border-color: rgba(59,130,246,0.45); }
+.tag-suggestions {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; border-radius: 10px;
+  background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  max-height: 200px; overflow-y: auto;
+}
+.tag-suggestion {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 10px; border: none; border-radius: 8px;
+  background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.tag-suggestion:hover { background: rgba(255,255,255,0.06); }
+.tag-suggestion .hint { margin-left: auto; }
 .tag-pill--add {
   background: rgba(255,255,255,0.06); color: var(--muted);
   border: 1px dashed rgba(255,255,255,0.15); cursor: pointer;
@@ -1876,3 +1934,80 @@ main {
 }
 .btn-link { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; font: inherit; }
 .nav-row-finance .nav-row-label { font-weight: 600; }
+
+.nav-folder-wrap {
+  margin: 2px 0 6px;
+  padding: 0 0 0 4px;
+}
+.nav-folder-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fm-muted-soft, #9aa8b8);
+  padding: 6px 8px 4px;
+}
+.nav-folder-summary::-webkit-details-marker { display: none; }
+.nav-folder-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 4px;
+}
+
+/* Pipeline tabs: Empire | Снегири */
+.fm-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: #1a2230;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.fm-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--fm-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.fm-tab.active {
+  background: rgba(37,99,235,0.35);
+  color: #f8fafc;
+}
+.fm-block-static {
+  cursor: default;
+  text-align: left;
+}
+.fm-block-static:hover { border-color: rgba(255,255,255,0.08); }
+.fm-sn-steps { display: grid; gap: 8px; margin-bottom: 12px; }
+.fm-sn-step {
+  padding: 12px 14px;
+  background: #1a2230;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #dce3ec;
+}
+.fm-sn-step-num {
+  display: inline-block;
+  min-width: 1.4rem;
+  font-weight: 700;
+  color: #fdba74;
+  margin-right: 6px;
+}
+.fm-sn-step p { margin: 6px 0 0; font-size: 0.86rem; line-height: 1.45; color: var(--fm-muted); }
+.fm-sn-tracks { display: grid; gap: 8px; margin-bottom: 16px; }
+.fm-sn-track p { margin: 8px 0 0; font-size: 0.88rem; line-height: 1.5; color: var(--fm-muted); }
+.fm-sn-kills { display: grid; gap: 8px; margin-bottom: 16px; }
+.fm-sn-kill { padding: 12px 14px; border-left: 3px solid #ef4444; }
+.fm-sn-kill-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 6px; }
+.fm-sn-kill p { margin: 0; font-size: 0.88rem; line-height: 1.5; color: #dce3ec; }
+.fm-sn-verdict { border-left-color: #22c55e; }

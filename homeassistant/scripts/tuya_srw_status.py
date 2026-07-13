@@ -10,6 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "tinytuya_pkg"))
 import tinytuya  # noqa: E402
 
 DEVICE_ID = "bf86f3c7f53b7bb055f6x2"
+# Кандидаты, если UDP-scan пустой (батарейный SRW часто спит).
+# 192.168.1.143 — закрепить DHCP в Keenetic (MAC на наклейке SRW).
+CANDIDATE_IPS = ("192.168.1.143", "192.168.1.51")
 CREDS = Path(__file__).with_name(".tuya_cloud.json")
 LOCAL = Path(__file__).with_name(".srw_local.json")
 LOG = Path(__file__).with_name("tuya_last_error.txt")
@@ -29,8 +32,20 @@ def _pick(values: dict, keys: tuple[str, ...], default=0):
 
 
 def _parse_temp(raw) -> float:
+    if isinstance(raw, bool):
+        raise ValueError("pairing/config mode")
     val = float(raw)
     return round(val / 10.0, 1) if val > 100 else round(val, 1)
+
+
+def _valid_sensor_values(values: dict) -> bool:
+    if values.get("va_temperature") is True:
+        return False
+    try:
+        temp = _parse_temp(_pick(values, TEMP_KEYS))
+    except (TypeError, ValueError):
+        return False
+    return 5 <= temp <= 55
 
 
 def _fail(msg: str) -> int:
@@ -91,16 +106,34 @@ def _scan_ip() -> tuple[str | None, str | None]:
     return None, None
 
 
-def _localtuya_keys() -> list[tuple[str, str]]:
+def _localtuya_srw_key() -> tuple[str, str] | None:
     if not LOCALTUYA_STORE.exists():
-        return []
+        return None
     try:
         store = json.loads(LOCALTUYA_STORE.read_text())
         lt = next(e for e in store["data"]["entries"] if e.get("domain") == "localtuya")
-        return [(d.get("local_key", ""), d.get("protocol_version") or "3.3")
-                for d in lt["data"].get("devices", {}).values() if d.get("local_key")]
+        dev = lt["data"].get("devices", {}).get(DEVICE_ID, {})
+        key = dev.get("local_key", "")
+        if key:
+            return key, dev.get("protocol_version") or "3.3"
     except Exception:
-        return []
+        pass
+    return None
+
+
+def _srw_keys() -> list[tuple[str, str]]:
+    keys: list[tuple[str, str]] = []
+    if LOCAL.exists():
+        try:
+            cfg = json.loads(LOCAL.read_text())
+            if cfg.get("local_key"):
+                keys.append((cfg["local_key"], cfg.get("version") or "3.3"))
+        except Exception:
+            pass
+    lt = _localtuya_srw_key()
+    if lt and lt not in keys:
+        keys.append(lt)
+    return keys
 
 
 def _cloud_device_key(cloud: tinytuya.Cloud) -> tuple[str | None, str | None]:
@@ -138,15 +171,48 @@ def _probe_local(ip: str, local_key: str, version: str | None = None) -> dict | 
         if not ver:
             continue
         try:
-            return _read_values_local({"ip": ip, "local_key": local_key, "version": ver})
+            values = _read_values_local({"ip": ip, "local_key": local_key, "version": ver})
+            if _valid_sensor_values(values):
+                return values
         except Exception:
             continue
     return None
 
 
+def _candidate_ips() -> list[str]:
+    out: list[str] = []
+    if LOCAL.exists():
+        try:
+            saved = (json.loads(LOCAL.read_text()).get("ip") or "").strip()
+            if saved and saved not in ("0.0.0.0", "127.0.0.1"):
+                out.append(saved)
+        except Exception:
+            pass
+    for ip in CANDIDATE_IPS:
+        if ip not in out:
+            out.append(ip)
+    return out
+
+
+def _discover_by_probe(keys: list[tuple[str, str]]) -> dict | None:
+    for ip in _candidate_ips():
+        for key, key_ver in keys:
+            if not key:
+                continue
+            values = _probe_local(ip, key, key_ver)
+            if values:
+                return {"ip": ip, "local_key": key, "version": key_ver or "3.3", "_values": values}
+    return None
+
+
 def _discover_local_cfg() -> dict | None:
+    keys = _srw_keys()
+
     ip, ver = _scan_ip()
     if not ip:
+        probed = _discover_by_probe(keys)
+        if probed:
+            return probed
         return None
 
     if LOCAL.exists():
@@ -168,7 +234,7 @@ def _discover_local_cfg() -> dict | None:
         except Exception:
             pass
 
-    for key, key_ver in _localtuya_keys():
+    for key, key_ver in _srw_keys():
         values = _probe_local(ip, key, key_ver or ver)
         if values:
             return {"ip": ip, "local_key": key, "version": key_ver or ver or "3.3"}
@@ -179,20 +245,27 @@ def _discover_local_cfg() -> dict | None:
 def discover_and_save() -> int:
     found = _discover_local_cfg()
     if not found:
-        return _fail("SRW-TH01 not found in LAN scan")
+        return _fail("SRW-TH01 not found in LAN scan (нажмите кнопку на датчике)")
     if not found.get("local_key"):
         return _fail(f"SRW @ {found.get('ip')} found, local_key missing (renew iot.tuya.com or tinytuya wizard)")
-    values = _probe_local(found["ip"], found["local_key"], found.get("version"))
+    values = found.pop("_values", None) or _probe_local(found["ip"], found["local_key"], found.get("version"))
     if not values:
-        return _fail("SRW found but local status probe failed")
+        return _fail("SRW в пейринге или спит — короткое нажатие, не зажимать")
     LOCAL.write_text(json.dumps(found, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     LOG.unlink(missing_ok=True)
-    print(json.dumps({
+    payload = {
         "ip": found["ip"],
         "version": found.get("version"),
         "temp": _parse_temp(_pick(values, TEMP_KEYS)),
         "humidity": int(_pick(values, HUM_KEYS)),
-    }))
+        "battery": int(_pick(values, BAT_KEYS)),
+        "codes": list(values.keys()),
+        "raw": values,
+    }
+    Path(__file__).with_name("tuya_discover_last.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(payload))
     return 0
 
 

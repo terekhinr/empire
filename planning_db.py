@@ -148,6 +148,13 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tasks_remind ON tasks(remind_at)")
     if "reminder_pushed_at" not in cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN reminder_pushed_at TEXT")
+    proj_cols = {r[1] for r in conn.execute("PRAGMA table_info(projects)").fetchall()}
+    for name, typedef in (
+        ("folder_name", "TEXT"),
+        ("sort_order", "INTEGER NOT NULL DEFAULT 500"),
+    ):
+        if name not in proj_cols:
+            conn.execute(f"ALTER TABLE projects ADD COLUMN {name} {typedef}")
     conn.executescript(
         """
         CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -186,17 +193,78 @@ def add_goal(title: str, description: str = "", target_date: str | None = None) 
     return gid
 
 
-def add_project(title: str, goal_id: int | None = None, description: str = "") -> int:
+def add_project(
+    title: str,
+    goal_id: int | None = None,
+    description: str = "",
+    *,
+    folder_name: str | None = None,
+    sort_order: int | None = None,
+) -> int:
     init_db()
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO projects (title, goal_id, description, updated_at) VALUES (?, ?, ?, ?)",
-        (title.strip(), goal_id, description or None, _now()),
+        """
+        INSERT INTO projects (title, goal_id, description, folder_name, sort_order, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            title.strip(),
+            goal_id,
+            description or None,
+            folder_name,
+            sort_order if sort_order is not None else 500,
+            _now(),
+        ),
     )
     conn.commit()
     pid = int(cur.lastrowid)
     conn.close()
     return pid
+
+
+def ensure_project(
+    title: str,
+    *,
+    folder_name: str | None = None,
+    sort_order: int | None = None,
+    description: str | None = None,
+) -> int:
+    """Найти или создать список (проект TickTick)."""
+    name = (title or "").strip()
+    if not name:
+        raise ValueError("empty_project_title")
+    init_db()
+    conn = get_connection()
+    row = conn.execute("SELECT id FROM projects WHERE title = ?", (name,)).fetchone()
+    if row:
+        pid = int(row["id"])
+        fields: list[str] = []
+        params: list[Any] = []
+        if folder_name is not None:
+            fields.append("folder_name = ?")
+            params.append(folder_name)
+        if sort_order is not None:
+            fields.append("sort_order = ?")
+            params.append(sort_order)
+        if description is not None:
+            fields.append("description = ?")
+            params.append(description)
+        if fields:
+            fields.append("updated_at = ?")
+            params.append(_now())
+            params.append(pid)
+            conn.execute(f"UPDATE projects SET {', '.join(fields)} WHERE id = ?", params)
+            conn.commit()
+        conn.close()
+        return pid
+    conn.close()
+    return add_project(
+        name,
+        description=description or "",
+        folder_name=folder_name,
+        sort_order=sort_order,
+    )
 
 
 def add_task(
@@ -714,7 +782,17 @@ def list_projects(*, active_only: bool = True) -> list[dict[str, Any]]:
     q = "SELECT p.*, g.title AS goal_title FROM projects p LEFT JOIN goals g ON g.id = p.goal_id"
     if active_only:
         q += " WHERE p.status='active'"
-    q += " ORDER BY p.title"
+    q += """
+        ORDER BY
+            CASE COALESCE(p.folder_name, '')
+                WHEN 'ЛИЧНЫЕ ЦЕЛИ' THEN 1
+                WHEN 'Архивный список' THEN 2
+                WHEN 'Empire' THEN 3
+                ELSE 4
+            END,
+            COALESCE(p.sort_order, 500),
+            p.title
+    """
     rows = conn.execute(q).fetchall()
     out = []
     for row in rows:

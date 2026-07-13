@@ -10,7 +10,7 @@
   <title>Empire</title>
   <link rel="manifest" href="/tasks/assets/manifest.json">
   <link rel="apple-touch-icon" href="/tasks/assets/icon-192.png">
-    <link rel="stylesheet" href="/tasks/assets/styles.css?v=42">
+    <link rel="stylesheet" href="/tasks/assets/styles.css?v=45">
 </head>
 <body>
   <div id="app">
@@ -32,7 +32,7 @@
         <div class="nav-divider" aria-hidden="true"></div>
         <div class="nav-projects-block">
         <details class="nav-projects-wrap" open>
-          <summary class="disclosure-toggle nav-row-large"><span class="nav-icon nav-icon--projects" data-icon="projects" aria-hidden="true"></span><span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>Проекты</summary>
+          <summary class="disclosure-toggle nav-row-large"><span class="nav-icon nav-icon--projects" data-icon="projects" aria-hidden="true"></span><span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>Списки</summary>
           <div id="sidebar-projects-list"></div>
         </details>
         </div>
@@ -41,6 +41,12 @@
           <span class="nav-row-label">Чеклисты</span>
           <span class="nav-row-count" id="nav-count-lists">0</span>
         </button>
+        <div class="nav-tags-block">
+          <details class="nav-tags-wrap" open>
+            <summary class="disclosure-toggle nav-row-large"><span class="nav-icon nav-icon--tag" data-icon="tag" aria-hidden="true"></span><span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>Метки</summary>
+            <div id="sidebar-tags-list"></div>
+          </details>
+        </div>
         <button class="nav-row nav-row-finance" data-view="finance-model" type="button">
           <span class="nav-icon nav-icon--finance" data-icon="finance" aria-hidden="true"></span>
           <span class="nav-row-label">Финмодель</span>
@@ -212,6 +218,11 @@
           <input id="tf-title" class="sheet-title" placeholder="Название задачи" required>
         </div>
         <div id="tf-tag-pills" class="tag-pills"></div>
+        <div class="tt-tag-add-row">
+          <input id="tf-tag-add" type="text" class="tt-tag-add-input" placeholder="Добавить метку…" autocomplete="off">
+          <div id="tf-tag-suggestions" class="tag-suggestions hidden"></div>
+        </div>
+        <input id="tf-tags" type="hidden">
         <textarea id="tf-note" class="tt-note-field" rows="4" placeholder="Описание"></textarea>
         <div id="subtasks-block" class="tt-subtasks hidden">
           <label class="field-label">Подзадачи</label>
@@ -279,15 +290,13 @@
         </select>
         <label class="field-label">Проект</label>
         <select id="tf-project"><option value="">—</option></select>
-        <label class="field-label">Теги (через запятую)</label>
-        <input id="tf-tags" type="text" placeholder="дом, работа">
           </div>
         </details>
         <div class="tt-sheet-toolbar mobile-only">
           <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-project" title="Проект"><span data-icon="projects"></span></button>
           <button type="button" class="tt-toolbar-btn" data-action="open-date-picker" title="Дата"><span data-icon="calendar"></span></button>
           <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-remind" title="Напоминание"><span data-icon="bell"></span></button>
-          <button type="button" class="tt-toolbar-btn" data-action="focus-field" data-target="tf-tags" title="Теги"><span data-icon="tag"></span></button>
+          <button type="button" class="tt-toolbar-btn" data-action="focus-tag-add" title="Метки"><span data-icon="tag"></span></button>
         </div>
         <div class="sheet-actions">
           <button type="submit" class="btn primary">Сохранить</button>
@@ -439,8 +448,8 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/tasks/assets/finance_model_content.js?v=2"></script>
+  <script src="/tasks/assets/finance_model_content.js?v=3"></script>
   <script src="/tasks/assets/nav-icons.js?v=3" defer></script>
-  <script src="/tasks/assets/app.js?v=47" defer></script>
+  <script src="/tasks/assets/app.js?v=51" defer></script>
 </body>
 </html>

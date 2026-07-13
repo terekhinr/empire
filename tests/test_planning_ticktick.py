@@ -165,3 +165,27 @@ def test_import_child_as_subtask(temp_planning_db):
     assert len(subs) == 1
     assert subs[0]["title"] == "Child item"
     assert subs[0]["note"] == "Child body"
+
+
+def test_import_sets_folder_name_on_project(temp_planning_db):
+    text = """Folder Name,List Name,Title,Tags,Content,Status,taskId
+ЛИЧНЫЕ ЦЕЛИ,Инкубатор мыслей,Идея,,Текст,0,1
+"""
+    pt.import_ticktick_csv(text)
+    projects = pd_db.list_projects()
+    incub = next(p for p in projects if p["title"] == "Инкубатор мыслей")
+    assert incub["folder_name"] == "ЛИЧНЫЕ ЦЕЛИ"
+
+
+def test_archived_row_creates_list_and_done_task(temp_planning_db):
+    text = """Folder Name,List Name,Title,Kind,Tags,Content,Status,taskId
+Архивный список,Позже,Макс говорит,TEXT,,Пунюк - мячик попрыгун,2,99
+"""
+    r = pt.import_ticktick_csv(text)
+    assert r["imported_done"] == 1
+    projects = pd_db.list_projects()
+    assert any(p["title"] == "Позже" for p in projects)
+    tasks = pd_db.list_tasks(include_done=True, project_id=next(p["id"] for p in projects if p["title"] == "Позже"))
+    assert len(tasks) == 1
+    assert tasks[0]["status"] == "cancelled"
+    assert "Пунюк" in (tasks[0]["note"] or "")

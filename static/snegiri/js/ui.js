@@ -135,9 +135,23 @@
     if (!refs) return "";
     const ref = refs.bySlug(slug);
     if (!ref || !ref.comic) return "";
-    const src = refs.comicSrc(ref);
     const pk = refs.performerKey();
     const label = pk === "f" ? "женщина" : "мужчина";
+    const hasPlayer = global.SnegiriComicPhases && global.SnegiriComicPhases.bySlug(slug);
+    if (hasPlayer) {
+      return (
+        '<div class="card comic-etalon" data-comic-slug="' +
+        slug +
+        '">' +
+        '<div class="card-tag">Эталон · ' +
+        label +
+        "</div>" +
+        '<div class="comic-player-mount" data-comic-mount="' +
+        slug +
+        '"></div></div>'
+      );
+    }
+    const src = refs.comicSrc(ref);
     return (
       '<div class="card comic-etalon" data-comic-slug="' +
       slug +
@@ -156,6 +170,13 @@
       (ref.comic.panels || 4) +
       " · стиль Снегири · CV-линии</p></div>"
     );
+  }
+
+  function mountComicPlayers(root) {
+    if (!root || !global.SnegiriComicPlayer) return;
+    root.querySelectorAll("[data-comic-mount]").forEach(function (el) {
+      global.SnegiriComicPlayer.mount(el, el.dataset.comicMount);
+    });
   }
 
   function renderWorkout(root, exerciseId) {
@@ -190,6 +211,7 @@
       '<button type="button" class="btn btn-ghost" data-action="mark-done">Отметить без видео</button>' +
       '<button type="button" class="btn btn-ghost" data-action="home">Назад</button>';
     root.dataset.exerciseId = exerciseId;
+    mountComicPlayers(root);
   }
 
   function renderResult(root, result, exerciseId) {
@@ -285,8 +307,20 @@
 
   function renderSettings(root) {
     const p = global.SnegiriStore.get().profile;
+    const perf = p.performer === "f" ? "f" : "m";
     root.innerHTML =
       "<h1>Настройки</h1>" +
+      '<div class="card"><div class="card-tag">Эталон в мультиках</div>' +
+      '<label class="form-row">Модель выполнения' +
+      '<select name="performer" data-action="performer-select">' +
+      '<option value="m"' +
+      (perf === "m" ? " selected" : "") +
+      ">Мужчина (M)</option>" +
+      '<option value="f"' +
+      (perf === "f" ? " selected" : "") +
+      ">Женщина (F)</option>" +
+      "</select></label>" +
+      '<p class="card-desc">Влияет на картинку «Эталон · мультик» в упражнениях.</p></div>' +
       '<div class="card"><div class="card-tag">Профиль</div>' +
       "<p class=\"card-desc\">Цель: " +
       (p.goal || "—") +
@@ -295,9 +329,10 @@
       " кг<br>Опыт: " +
       (p.experience || "—") +
       "</p></div>" +
+      '<a href="comics.html" class="btn btn-ghost">Галерея мультиков</a>' +
       '<button type="button" class="btn btn-ghost" data-action="edit-profile">Изменить профиль</button>' +
       '<button type="button" class="btn btn-err btn-ghost" data-action="reset">Сбросить прогресс</button>' +
-      '<p class="disclaimer">Видео хранятся на сервере для разбора. Удаление по запросу на support@snegirinegiri.ru</p>';
+      '<p class="disclaimer">Видео хранятся на сервере для разбора. Удаление по запросу на support@snegirinegiri.ru</p>";
   }
 
   global.SnegiriUi = {
@@ -310,5 +345,6 @@
     renderProgress,
     renderSubscribe,
     renderSettings,
+    mountComicPlayers,
   };
 })(window);

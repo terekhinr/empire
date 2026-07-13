@@ -9,9 +9,9 @@ import re
 from typing import Any
 
 from planning_db import (
-    add_project,
     add_task,
     delete_task,
+    ensure_project,
     get_connection,
     init_db,
     load_projects_df,
@@ -20,6 +20,11 @@ from planning_db import (
     purge_all_planning_data,
     purge_tasks_for_ticktick_import,
     update_task,
+)
+from planning_ticktick_catalog import (
+    catalog_folder_for_list,
+    catalog_sort_for_list,
+    restore_ticktick_list_catalog,
 )
 from planning_recurrence import parse_repeat_rule, serialize_repeat_rule
 
@@ -216,7 +221,12 @@ def _sort_parents_before_children(rows: list[dict[str, str]]) -> list[dict[str, 
     return ordered
 
 
-def _project_id_for_list(list_name: str, cache: dict[str, int]) -> int | None:
+def _project_id_for_list(
+    list_name: str,
+    cache: dict[str, int],
+    *,
+    folder_name: str = "",
+) -> int | None:
     name = (list_name or "").strip()
     if not name or name.lower() in ("inbox", "tasks", "notes", ""):
         return None
@@ -227,9 +237,26 @@ def _project_id_for_list(list_name: str, cache: dict[str, int]) -> int | None:
     if name in existing:
         cache[name] = existing[name]
         return existing[name]
-    pid = add_project(name, description="Импорт TickTick")
+    folder = (folder_name or "").strip() or catalog_folder_for_list(name)
+    sort_order = catalog_sort_for_list(name)
+    pid = ensure_project(name, folder_name=folder, sort_order=sort_order, description="Импорт TickTick")
     cache[name] = pid
     return pid
+
+
+def _ensure_lists_from_rows(rows: list[dict[str, str]], cache: dict[str, int]) -> None:
+    """Создать пустые списки по CSV, даже если все задачи архивные."""
+    seen: set[tuple[str, str]] = set()
+    for row in rows:
+        list_name = _field(row, "List Name", "list name")
+        if not list_name or list_name.lower() in ("inbox", "tasks", "notes"):
+            continue
+        folder_name = _field(row, "Folder Name", "folder name")
+        key = (list_name, folder_name)
+        if key in seen:
+            continue
+        seen.add(key)
+        _project_id_for_list(list_name, cache, folder_name=folder_name)
 
 
 def _ticktick_source(row: dict[str, str], title: str, due_date: str | None) -> str:
@@ -321,6 +348,19 @@ def _resolve_parent_id(
     return None
 
 
+def _parse_priority(row: dict[str, str]) -> int:
+    prio_raw = _field(row, "Priority", "priority") or "0"
+    prio_raw = re.sub(r"^[pP]", "", prio_raw.strip())
+    try:
+        return PRIORITY_MAP.get(int(prio_raw), 0)
+    except ValueError:
+        return 0
+
+
+def _parse_tags(row: dict[str, str]) -> list[str]:
+    return [t.strip() for t in _field(row, "Tags", "tags").replace(",", " ").split() if t.strip()]
+
+
 def _upsert_ticktick_row(
     row: dict[str, str],
     *,
@@ -344,26 +384,46 @@ def _upsert_ticktick_row(
     if not existing_id:
         existing_id = _find_task_id_by_title(title)
 
-    # TickTick archived/completed: enrich existing tasks only (most notes live here).
+    # TickTick completed/archived: enrich existing or import as done (восстанавливает списки).
     if status in ("1", "2"):
-        if existing_id and note and update_existing:
-            if _backfill_note(existing_id, note, source=source):
-                if status == "1":
-                    update_task(existing_id, status="done")
-                return "backfilled", existing_id
-        return "skipped", None
+        empire_status = "done" if status == "1" else "cancelled"
+        if existing_id:
+            if note and update_existing:
+                if _backfill_note(existing_id, note, source=source):
+                    if status == "1":
+                        update_task(existing_id, status="done")
+                    return "backfilled", existing_id
+            if status == "1" and update_existing:
+                update_task(existing_id, status="done")
+                return "updated", existing_id
+            return "skipped", existing_id
+
+        list_name = _field(row, "List Name", "list name")
+        folder_name = _field(row, "Folder Name", "folder name")
+        project_id = _project_id_for_list(list_name, project_cache, folder_name=folder_name)
+        parent_id = _resolve_parent_id(row, id_map=id_map)
+        task_id = add_task(
+            title,
+            project_id=project_id,
+            parent_id=parent_id,
+            due_date=due_date,
+            due_time=_parse_time(due_raw),
+            priority=_parse_priority(row),
+            tags=_parse_tags(row) or None,
+            note=note,
+            repeat_rule=_rrule_to_repeat(_field(row, "Repeat", "repeat")),
+            obsidian_source=source,
+            status=empire_status,
+        )
+        return "imported_done", task_id
 
     list_name = _field(row, "List Name", "list name")
+    folder_name = _field(row, "Folder Name", "folder name")
     due_time = _parse_time(due_raw)
-    prio_raw = _field(row, "Priority", "priority") or "0"
-    prio_raw = re.sub(r"^[pP]", "", prio_raw.strip())
-    try:
-        priority = PRIORITY_MAP.get(int(prio_raw), 0)
-    except ValueError:
-        priority = 0
-    tags = [t.strip() for t in _field(row, "Tags", "tags").replace(",", " ").split() if t.strip()]
+    priority = _parse_priority(row)
+    tags = _parse_tags(row)
     repeat_rule = _rrule_to_repeat(_field(row, "Repeat", "repeat"))
-    project_id = _project_id_for_list(list_name, project_cache)
+    project_id = _project_id_for_list(list_name, project_cache, folder_name=folder_name)
     parent_id = _resolve_parent_id(row, id_map=id_map)
 
     update_fields: dict[str, Any] = {
@@ -406,8 +466,9 @@ def _upsert_ticktick_row(
 def import_ticktick_csv(text: str, *, update_existing: bool = True) -> dict[str, Any]:
     rows = _sort_parents_before_children(read_ticktick_csv(text))
     project_cache: dict[str, int] = {}
+    _ensure_lists_from_rows(rows, project_cache)
     id_map: dict[str, int] = {}
-    imported = updated = skipped = backfilled = 0
+    imported = updated = skipped = backfilled = imported_done = 0
     with_notes = 0
 
     for row in rows:
@@ -422,6 +483,8 @@ def import_ticktick_csv(text: str, *, update_existing: bool = True) -> dict[str,
         )
         if action == "imported":
             imported += 1
+        elif action == "imported_done":
+            imported_done += 1
         elif action == "updated":
             updated += 1
         elif action == "backfilled":
@@ -432,13 +495,17 @@ def import_ticktick_csv(text: str, *, update_existing: bool = True) -> dict[str,
         if task_id and tid:
             id_map[tid] = task_id
 
+    catalog = restore_ticktick_list_catalog(create_shells=True)
+
     return {
         "imported": imported,
+        "imported_done": imported_done,
         "updated": updated,
         "skipped": skipped,
         "backfilled": backfilled,
         "with_notes": with_notes,
         "projects": len(project_cache),
+        "catalog": catalog,
     }
 
 

@@ -16,7 +16,7 @@ _WIKI_UA = (
     "EmpireRubricBot/1.0 (+https://gdepar.ru; lenin/curated) Python-httpx"
 )
 
-# Минимум для «карточки» (legacy). Рубрики lenin/stern — разворот LLM (см. RUBRIC_EXPAND_*).
+# Stern/Lenin рубрики — готовый HTML из JSON; LLM-разворот только для athletic_legacy (seed).
 MIN_CURATED_BODY_CHARS = 260
 RUBRIC_EXPAND_MIN_CHARS = 550
 RUBRIC_EXPAND_MAX_CHARS = 950

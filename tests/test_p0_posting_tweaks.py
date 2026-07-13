@@ -32,19 +32,22 @@ def test_kirilych_opening_flagged_in_preachy():
     assert any("Кириллыч" in f for f in findings)
 
 
-def test_lenin_garden_autopublish_enabled():
+def test_lenin_garden_curated_only_autopublish():
     cfg = json.loads(
         (Path(__file__).resolve().parents[1] / "data" / "auto_publish.json").read_text(
             encoding="utf-8"
         )
     )
     assert cfg["enabled"] is True
-    assert cfg["personas"]["lenin"]["enabled"] is True
-    assert cfg["personas"]["garden"]["enabled"] is True
+    # LLM-слоты — только ручной approve; curated — по рубрикам.
+    assert cfg["personas"]["lenin"]["enabled"] is False
+    assert cfg["personas"]["garden"]["enabled"] is False
     assert cfg["personas"]["gdepar"]["enabled"] is True
     assert cfg["personas"]["stern"]["enabled"] is True
     assert cfg["rubrics"]["gdepar_duo_curated"]["enabled"] is True
     assert cfg["rubrics"]["stern_matrix_curated"]["enabled"] is True
+    assert cfg["rubrics"]["garden_lunar"]["enabled"] is True
+    assert cfg["rubrics"]["lenin_calendar"]["enabled"] is True
 
 
 def test_stern_default_hashtags_short():

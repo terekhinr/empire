@@ -33,7 +33,16 @@ def test_calculate_old_style_may12_1923():
     assert lc.calculate_old_style(12, 5, 1923) == "29 апреля"
 
 
-def test_is_calendar_topic():
+def test_resolve_lenin_calendar_prebuilt_not_llm():
+    import asyncio
+
+    topic, text, img, seed = asyncio.run(
+        lc.resolve_lenin_slot({"type": "lenin_calendar"}, weekday=0)
+    )
+    assert seed is None
+    assert text
+    assert "[#Вэтотдень]" in topic
+    assert "календарь" in text.lower()
     assert lc.is_calendar_topic("[#Вэтотдень] Революционный календарь: 12 мая 1923 года")
     assert lc.is_calendar_topic("[В этот день] Революционный календарь.")
     assert not lc.is_calendar_topic("[Марксистский анализ] что-то")

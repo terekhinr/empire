@@ -9,7 +9,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415605+00:00"
+    "imported_at": "2026-07-13T22:00:00.032567+00:00"
   },
   {
     "id": "pension-2026-06-10-slug",
@@ -21,7 +21,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415645+00:00"
+    "imported_at": "2026-07-13T22:00:00.032612+00:00"
   },
   {
     "id": "pension-2026-06-11-slug",
@@ -33,7 +33,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415810+00:00"
+    "imported_at": "2026-07-13T22:00:00.032846+00:00"
   },
   {
     "id": "pension-2026-06-16-slug",
@@ -45,7 +45,7 @@
     "status": "draft",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415748+00:00"
+    "imported_at": "2026-07-13T22:00:00.032755+00:00"
   },
   {
     "id": "pension-2026-06-26-slug",
@@ -57,7 +57,7 @@
     "status": "draft",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415534+00:00"
+    "imported_at": "2026-07-13T22:00:00.032466+00:00"
   },
   {
     "id": "pension-fondy-i-strojka-2026-05-25",
@@ -69,7 +69,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415872+00:00"
+    "imported_at": "2026-07-13T22:00:00.032922+00:00"
   },
   {
     "id": "pension-gori-gori-yasno-faire-2026-05-20",
@@ -81,7 +81,7 @@
     "status": "draft",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415675+00:00"
+    "imported_at": "2026-07-13T22:00:00.032655+00:00"
   },
   {
     "id": "pension-hotyat-li-russkie-vojny-2026-06-03",
@@ -93,7 +93,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415840+00:00"
+    "imported_at": "2026-07-13T22:00:00.032883+00:00"
   },
   {
     "id": "pension-kem-byt-2026-06-08",
@@ -105,7 +105,7 @@
     "status": "ready",
     "image": "attachments/Pasted image 20260530110821.png",
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415702+00:00"
+    "imported_at": "2026-07-13T22:00:00.032696+00:00"
   },
   {
     "id": "pension-na-palcah-1-2026-05-28",
@@ -117,7 +117,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415727+00:00"
+    "imported_at": "2026-07-13T22:00:00.032727+00:00"
   },
   {
     "id": "pension-norvegiya-tualet-2026-05-26",
@@ -129,7 +129,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415769+00:00"
+    "imported_at": "2026-07-13T22:00:00.032786+00:00"
   },
   {
     "id": "pension-pokupka-na-novostyah-2026-05-22",
@@ -141,7 +141,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415789+00:00"
+    "imported_at": "2026-07-13T22:00:00.032816+00:00"
   },
   {
     "id": "Без названия",
@@ -153,7 +153,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415580+00:00"
+    "imported_at": "2026-07-13T22:00:00.032534+00:00"
   },
   {
     "id": "Без названия 1",
@@ -165,7 +165,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415350+00:00"
+    "imported_at": "2026-07-13T22:00:00.032226+00:00"
   },
   {
     "id": "Без названия 2",
@@ -177,7 +177,7 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415426+00:00"
+    "imported_at": "2026-07-13T22:00:00.032335+00:00"
   },
   {
     "id": "Без названия 3",
@@ -189,6 +189,6 @@
     "status": "ready",
     "image": null,
     "image_prompt": null,
-    "imported_at": "2026-07-12T22:00:49.415501+00:00"
+    "imported_at": "2026-07-13T22:00:00.032408+00:00"
   }
 ]

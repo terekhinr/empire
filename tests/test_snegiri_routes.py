@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import io
+import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -83,6 +85,38 @@ def test_snegiri_exercise_refs(client: TestClient) -> None:
     slugs = {i["slug"] for i in items}
     assert "hand_switch" in slugs
     assert "curl_up" in slugs
+
+
+def test_snegiri_comic_phases_and_frames() -> None:
+    root = Path(__file__).resolve().parents[1]
+    phases_path = root / "static" / "snegiri" / "data" / "comic_phases.json"
+    refs_path = root / "static" / "snegiri" / "data" / "exercise_refs.json"
+    assert phases_path.is_file()
+    assert refs_path.is_file()
+    data = json.loads(phases_path.read_text(encoding="utf-8"))
+    refs = json.loads(refs_path.read_text(encoding="utf-8"))
+    slugs = [k for k in refs if not k.startswith("_")]
+    assert len(slugs) == 25
+    assert "swing" in data
+    assert data["swing"]["phases"][1]["term"] == "Подрыв"
+    for slug in slugs:
+        assert slug in data, slug
+        panels = data[slug]["panels"]
+        strip = root / "static" / "snegiri" / "assets" / "comics" / f"{slug}_m.webp"
+        assert strip.is_file(), strip
+        frame = (
+            root
+            / "static"
+            / "snegiri"
+            / "assets"
+            / "comics"
+            / "frames"
+            / slug
+            / "m"
+            / "01.webp"
+        )
+        assert frame.is_file(), slug
+        assert len(list(frame.parent.glob("*.webp"))) == panels
 
 
 def test_snegiri_analyze_short_video_rejected(client: TestClient) -> None:

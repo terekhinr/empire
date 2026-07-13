@@ -1,0 +1,1396 @@
+{
+  "_meta": {
+    "version": 1,
+    "note": "Названия фаз — русская гиревая терминология (Руднев, Денисов, StrongFirst RU, ФГОС). strip = лента; frames = нарезка scripts/slice_comic_strip.py"
+  },
+  "swing": {
+    "name": "Свинг двуручный",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/swing_m.webp",
+      "f": "assets/comics/swing_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/swing",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Замах",
+        "term_alt": "Отвод",
+        "source": "Руднев · StrongFirst RU",
+        "hold_ms": 2400,
+        "fade_ms": 550,
+        "cue": "Таз уходит назад. Гиря между ног. Спина как в мёртвой тяге — не круглая.",
+        "watch": "Поясница не округляется. Колени слегка согнуты, не присед.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "term_alt": "Импульс таза",
+        "source": "Руднев · Денисов",
+        "hold_ms": 2000,
+        "fade_ms": 450,
+        "cue": "Резкое разгибание таза и колен. Сила идёт от ног и ягодиц, не от плеч.",
+        "watch": "Бёдра выходят вперёд раньше, чем плечи поднимают гирю.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Маятник",
+        "term_alt": "Полёт гири",
+        "source": "Руднев · маятник",
+        "hold_ms": 1800,
+        "fade_ms": 400,
+        "cue": "Гиря летит по дуге от импульса. Руки — проводники, не тянут вверх.",
+        "watch": "Корпус жёсткий. Лопатки собраны, не «висят» на руках.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Верхняя точка",
+        "term_alt": "Фиксация",
+        "source": "StrongFirst · ФГОС",
+        "hold_ms": 2600,
+        "fade_ms": 500,
+        "cue": "Гиря на уровне груди. Корпус вертикален. Пауза — контроль перед замахом назад.",
+        "watch": "Нет прогиба в пояснице. Руки параллельны полу.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: прогиб",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Типичный косяк: подъём гири за счёт прогиба в пояснице.",
+        "watch": "Красная линия CV — где спина ушла из нейтрали.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "hand_switch": {
+    "name": "Смена рук на махе",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/hand_switch_m.webp",
+      "f": "assets/comics/hand_switch_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/hand_switch",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Верх маха",
+        "source": "Руднев · смена рук",
+        "hold_ms": 2200,
+        "fade_ms": 500,
+        "cue": "Гиря в верхней точке. Корпус стабилен, вес на ногах.",
+        "watch": "Гиря не уходит за линию корпуса назад.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Мёртвая точка",
+        "source": "Руднев · ФГОС",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Краткая пауза: гиря «висит» перед корпусом на уровне пояса.",
+        "watch": "Корпус не раскачивается. Локти близко к телу.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 3,
+        "term": "Перехват",
+        "source": "Руднев · Гири",
+        "hold_ms": 2000,
+        "fade_ms": 400,
+        "cue": "Вторая рука обхватывает рукоять в мёртвой точке. Без удара по предплечью.",
+        "watch": "Смена только здесь — не на подъёме и не внизу.",
+        "highlight": "grip"
+      },
+      {
+        "index": 4,
+        "term": "Новый мах",
+        "source": "Руднев",
+        "hold_ms": 2200,
+        "fade_ms": 500,
+        "cue": "Импульс таза — мах продолжается другой рукой.",
+        "watch": "Таз ведёт движение. Корпус не крутится.",
+        "highlight": "hips"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: рано",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Перехват слишком рано — удар гири о предплечье.",
+        "watch": "Красная зона CV — момент смены не в верхней точке.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "curl_up": {
+    "name": "Скручивание Макгилла",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/curl_up_m.webp",
+      "f": "assets/comics/curl_up_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/curl_up",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Лёжа",
+        "source": "McGill · Big 3",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Спина на коврике. Руки под поясницей — сохраняем нейтраль.",
+        "watch": "Подбородок не прижат к груди. Дыхание спокойное.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 2,
+        "term": "Подъём грудью",
+        "source": "McGill",
+        "hold_ms": 2400,
+        "fade_ms": 500,
+        "cue": "На выдохе поднимаем только грудную клетку. Шея — продолжение позвоночника.",
+        "watch": "Поясница не отрывается от пола. Движение короткое.",
+        "highlight": "core"
+      },
+      {
+        "index": 3,
+        "term": "Пауза",
+        "source": "McGill",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Фиксация 2 секунды вверху. Поясница остаётся нейтральной.",
+        "watch": "Нет рывка. Контроль — не амплитуда.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: шея",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Типичный косяк: тянем подбородок, а не грудь.",
+        "watch": "Красная линия CV — сгибание шеи вместо thoracic flexion.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "side_plank": {
+    "name": "Боковая планка",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/side_plank_m.webp",
+      "f": "assets/comics/side_plank_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/side_plank",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Опора",
+        "source": "McGill · Big 3",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Локоть строго под плечом. Ноги вместе или одна перед другой.",
+        "watch": "Плечо не уходит к уху. Шея нейтральна.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 2,
+        "term": "Линия",
+        "source": "McGill",
+        "hold_ms": 2600,
+        "fade_ms": 500,
+        "cue": "Прямая линия: плечо — таз — колени. Корпус как доска.",
+        "watch": "Таз не провисает и не заваливается назад.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Держим",
+        "source": "McGill",
+        "hold_ms": 2800,
+        "fade_ms": 450,
+        "cue": "Дышим ровно. Время удержания — по программе.",
+        "watch": "Линия не «ломается» к концу подхода.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: таз",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Провис таза — потеря анти-латеральной жёсткости.",
+        "watch": "Красная линия CV — таз ниже линии плеч–колени.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "bird_dog": {
+    "name": "Птица-собака",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/bird_dog_m.webp",
+      "f": "assets/comics/bird_dog_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/bird_dog",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Старт",
+        "source": "McGill · Big 3",
+        "hold_ms": 2000,
+        "fade_ms": 400,
+        "cue": "Четвереньки. Ладони под плечами, колени под тазом.",
+        "watch": "Спина нейтральна, взгляд в пол.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 2,
+        "term": "Вытянул",
+        "source": "McGill",
+        "hold_ms": 2400,
+        "fade_ms": 500,
+        "cue": "Противоположная рука и нога — одна линия с корпусом.",
+        "watch": "Плечи и таз остаются параллельны полу.",
+        "highlight": "core"
+      },
+      {
+        "index": 3,
+        "term": "Таз стоп",
+        "source": "McGill",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Удержание. Таз — якорь, не качается.",
+        "watch": "Нет ротации. Движение только в конечностях.",
+        "highlight": "hips"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: кручение",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Ротация таза — компенсация слабого кора.",
+        "watch": "Красная линия CV — таз поворачивается к поднятой ноге.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "hip_hinge": {
+    "name": "Тазовый шарнир",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/hip_hinge_m.webp",
+      "f": "assets/comics/hip_hinge_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/hip_hinge",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стоя",
+        "term_alt": "Старт",
+        "source": "StrongFirst · Руднев",
+        "hold_ms": 2000,
+        "fade_ms": 400,
+        "cue": "Гиря у голеней. Стопы на ширине таза. Спина нейтральна.",
+        "watch": "Плечи над гирей. Вес на середине стопы.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 2,
+        "term": "Таз назад",
+        "source": "Руднев · hinge",
+        "hold_ms": 2400,
+        "fade_ms": 500,
+        "cue": "Таз уходит назад, как закрываешь дверь ягодицами. Голени почти вертикальны.",
+        "watch": "Колени слегка согнуты, но это не присед.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Нейтраль",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Низ движения. Поясница ровная, грудь открыта.",
+        "watch": "Гиря между ног, руки прямые. Готовность к подъёму.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: присед",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Присед вместо hinge — колени ушли вперёд, спина округлилась.",
+        "watch": "Красная линия CV — поясница потеряла нейтраль.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "dead_stop": {
+    "name": "Мёртвая тяга с паузой",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/dead_stop_m.webp",
+      "f": "assets/comics/dead_stop_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/dead_stop",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Низ",
+        "source": "StrongFirst · dead stop",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Гиря на полу. Hinge до касания или чуть выше. Спина жёсткая.",
+        "watch": "Лопатки собраны. Нет рывка с пола.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 2,
+        "term": "Пауза 2 сек",
+        "source": "Руднев · мёртвая точка",
+        "hold_ms": 2800,
+        "fade_ms": 500,
+        "cue": "Полная остановка внизу. Считаем «один-два» — без отскока.",
+        "watch": "Гиря не качается. Таз не «пружинит».",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Подъём",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Толчок пола ногами, таз вперёд. Гиря едет вдоль голеней.",
+        "watch": "Спина не меняет форму на всём подъёме.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: отскок",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Нет паузы — отскок снизу, потеря контроля.",
+        "watch": "Красная линия CV — момент касания без фиксации.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "goblet_squat": {
+    "name": "Гоблет-присед",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/goblet_squat_m.webp",
+      "f": "assets/comics/goblet_squat_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/goblet_squat",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "StrongFirst · goblet",
+        "hold_ms": 2000,
+        "fade_ms": 400,
+        "cue": "Гиря у груди, локти внутрь. Стопы чуть шире таза.",
+        "watch": "Грудь открыта. Вес на всей стопе.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Вниз",
+        "source": "Руднев",
+        "hold_ms": 2400,
+        "fade_ms": 500,
+        "cue": "Колени в сторону носков. Таз между пятками.",
+        "watch": "Локти разводят колени. Спина вертикальна.",
+        "highlight": "knees"
+      },
+      {
+        "index": 3,
+        "term": "Низ",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Глубина — бёдра параллельны или ниже. Пятки прижаты.",
+        "watch": "Гиря не отрывается от груди. Колени не сходятся.",
+        "highlight": "hips"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: пятки",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3000,
+        "fade_ms": 400,
+        "cue": "Пятки отрываются — потеря опоры, вес на носки.",
+        "watch": "Красная линия CV — зазор под пятками.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "pallof_press": {
+    "name": "Pallof press",
+    "panels": 3,
+    "strip": {
+      "m": "assets/comics/pallof_press_m.webp",
+      "f": "assets/comics/pallof_press_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/pallof_press",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "McGill",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Резина на уровне груди. Стоим боком к якорю.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 2,
+        "term": "Жмём",
+        "source": "McGill",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Руки вперёд — анти-ротация. Таз не крутится.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 3,
+        "term": "Ошибка: таз",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Таз поворачивается к якорю резины.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "plank_shoulder_tap": {
+    "name": "Планка с касанием плеч",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/plank_shoulder_tap_m.webp",
+      "f": "assets/comics/plank_shoulder_tap_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/plank_shoulder_tap",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Планка",
+        "source": "McGill",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Высокая планка. Ладони под плечами.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Касание",
+        "source": "McGill",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Касаем противоположного плеча. Медленно.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 3,
+        "term": "Стабильно",
+        "source": "McGill",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Таз не качается. Корпус как доска.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: таз",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Качание таза при касании.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "suitcase_carry": {
+    "name": "Suitcase carry",
+    "panels": 3,
+    "strip": {
+      "m": "assets/comics/suitcase_carry_m.webp",
+      "f": "assets/comics/suitcase_carry_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/suitcase_carry",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стоя",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря в одной руке. Корпус вертикален.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Шаг",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Идём ровно. Плечи на одном уровне.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Ошибка: наклон",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Наклон к гире — lateral flexion.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "farmer_walk": {
+    "name": "Farmer's walk",
+    "panels": 3,
+    "strip": {
+      "m": "assets/comics/farmer_walk_m.webp",
+      "f": "assets/comics/farmer_walk_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/farmer_walk",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Старт",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Две гири. Плечи опущены, грудь открыта.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 2,
+        "term": "Шаг",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Короткие уверенные шаги. Взгляд вперёд.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 3,
+        "term": "Ошибка: плечи",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Провисание плеч, шарканье.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "halo": {
+    "name": "Кольцо (halo)",
+    "panels": 3,
+    "strip": {
+      "m": "assets/comics/halo_m.webp",
+      "f": "assets/comics/halo_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/halo",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Старт",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Лёгкая гиря у подбородка. Локти вниз.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 2,
+        "term": "Кольцо",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Гиря описывает круг вокруг головы.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 3,
+        "term": "Ошибка: дуга",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Гиря далеко от головы — лишняя нагрузка.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "rack_hold": {
+    "name": "Удержание в стойке",
+    "panels": 3,
+    "strip": {
+      "m": "assets/comics/rack_hold_m.webp",
+      "f": "assets/comics/rack_hold_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/rack_hold",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "Алферова",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря на груди. Локти на корпусе.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 2,
+        "term": "Треугольник",
+        "source": "Алферова",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Локти и запястья — треугольник. Кисть прямая.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 3,
+        "term": "Ошибка: локти",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Опущенные локти — гиря давит вперёд.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "one_arm_swing": {
+    "name": "Свинг одноручный",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/one_arm_swing_m.webp",
+      "f": "assets/comics/one_arm_swing_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/one_arm_swing",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Замах",
+        "source": "Руднев",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Таз назад. Одна рука с гирей.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "source": "Руднев",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Импульс таза. Анти-ротация корпуса.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Маятник",
+        "source": "Руднев",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Гиря по дуге. Корпус жёсткий.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Верхняя точка",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря на уровне груди. Корпус вертикален.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "lumbar"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: кручение",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Ротация корпуса — компенсация.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "clean": {
+    "name": "Заброс в стойку",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/clean_m.webp",
+      "f": "assets/comics/clean_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/clean",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Замах",
+        "source": "Денисов",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Hinge назад. Гиря между ног.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "source": "Денисов",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Импульс таза. Рука проводит гирю.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Заброс",
+        "source": "Денисов",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Мягкий заброс на грудь.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 4,
+        "term": "Фиксация",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Стойка: локти на корпусе, кисть прямая.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: удар",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Удар гири по предплечью.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "front_squat": {
+    "name": "Присед из стойки",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/front_squat_m.webp",
+      "f": "assets/comics/front_squat_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/front_squat",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря в стойке. Локти высоко.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 2,
+        "term": "Вниз",
+        "source": "Руднев",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Присед. Колени в сторону носков.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "knees"
+      },
+      {
+        "index": 3,
+        "term": "Низ",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Глубина под контролем. Пятки на полу.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: локти",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Локти опущены — гиря уезжает вперёд.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "press": {
+    "name": "Жим из стойки",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/press_m.webp",
+      "f": "assets/comics/press_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/press",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря на груди. Корпус вертикален.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Жмём",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Строгий жим вверх. Без отклонения назад.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 3,
+        "term": "Верх",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Фиксация над головой. Локти выпрямлены.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: прогиб",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Прогиб в пояснице при жиме.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "push_press": {
+    "name": "Push press",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/push_press_m.webp",
+      "f": "assets/comics/push_press_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/push_press",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Присед",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Лёгкий dip коленей из стойки.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "knees"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Разгибание ног — импульс в гирю.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Жим",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Дожимаем руками до фиксации.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: только руки",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Жим без ног — гиря не взлетает.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "tgu_partial": {
+    "name": "Турлиш до сидения",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/tgu_partial_m.webp",
+      "f": "assets/comics/tgu_partial_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/tgu_partial",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Лёжа",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря над плечом. Прямая рука. Взгляд на гирю.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 2,
+        "term": "На локоть",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Переход на локоть опорной руки.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 3,
+        "term": "Сел",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Подъём в сидение. Гиря вертикальна.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Фиксация",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Пауза в сидении. Контроль баланса.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: локоть",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Согнутый локоть / гиря уезжает.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "tgu_full": {
+    "name": "Турлиш полный",
+    "panels": 6,
+    "strip": {
+      "m": "assets/comics/tgu_full_m.webp",
+      "f": "assets/comics/tgu_full_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/tgu_full",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Лёжа",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Старт. Гиря над грудью.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 2,
+        "term": "Локоть",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "На локоть. Взгляд на гирю.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 3,
+        "term": "Сед",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Подъём в сидение.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 4,
+        "term": "Мост",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Мост из бедра. Прямая линия.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 5,
+        "term": "Встал",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Вставание. Гиря над головой.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 6,
+        "term": "Ошибка: дрейф",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Гиря уезжает в сторону.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "high_pull": {
+    "name": "Высокий подъём",
+    "panels": 4,
+    "strip": {
+      "m": "assets/comics/high_pull_m.webp",
+      "f": "assets/comics/high_pull_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/high_pull",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Замах",
+        "source": "Руднев",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Hinge назад. Гиря между ног.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "source": "Руднев",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Импульс таза. Локоть высоко.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Локоть",
+        "source": "Денисов",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Гиря у груди, локоть вверх. Не над головой.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 4,
+        "term": "Ошибка: корпус",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Ранний отклон корпуса назад.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "snatch": {
+    "name": "Рывок",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/snatch_m.webp",
+      "f": "assets/comics/snatch_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/snatch",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Замах",
+        "source": "Руднев",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Hinge. Одна рука с гирей.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 2,
+        "term": "Подрыв",
+        "source": "Денисов",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Импульс таза. Высокий локоть.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 3,
+        "term": "Просов кисти",
+        "source": "Руднев",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Просов кисти под гирей.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "grip"
+      },
+      {
+        "index": 4,
+        "term": "Фиксация",
+        "source": "ФГОС",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Рука прямая над головой. Пауза.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: локоть",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Согнутый локоть в фиксации.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "jerk": {
+    "name": "Толчок",
+    "panels": 5,
+    "strip": {
+      "m": "assets/comics/jerk_m.webp",
+      "f": "assets/comics/jerk_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/jerk",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Стойка",
+        "source": "Денисов",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Гиря в стойке. Корпус вертикален.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 2,
+        "term": "Присед",
+        "source": "Денисов",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Dip — лёгкое сгибание коленей.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "knees"
+      },
+      {
+        "index": 3,
+        "term": "Подрыв",
+        "source": "Денисов",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Разгибание ног. Гиря взлетает.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "hips"
+      },
+      {
+        "index": 4,
+        "term": "Фиксация",
+        "source": "ФГОС",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Руки прямые. Пауза над головой.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 5,
+        "term": "Ошибка: отжим",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Отжим от груди — локти сгибаются снова.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  },
+  "complex": {
+    "name": "Связка clean→press→squat",
+    "panels": 6,
+    "strip": {
+      "m": "assets/comics/complex_m.webp",
+      "f": "assets/comics/complex_f.webp"
+    },
+    "frame_dir": "assets/comics/frames/complex",
+    "phases": [
+      {
+        "index": 1,
+        "term": "Заброс",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Clean в стойку.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "elbows"
+      },
+      {
+        "index": 2,
+        "term": "Жим",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Press над головой.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "shoulder"
+      },
+      {
+        "index": 3,
+        "term": "Присед",
+        "source": "StrongFirst",
+        "hold_ms": 2200,
+        "fade_ms": 450,
+        "cue": "Front squat из стойки.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "knees"
+      },
+      {
+        "index": 4,
+        "term": "Стойка",
+        "source": "StrongFirst",
+        "hold_ms": 2400,
+        "fade_ms": 450,
+        "cue": "Возврат гири в стойку.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 5,
+        "term": "Связка",
+        "source": "StrongFirst",
+        "hold_ms": 2600,
+        "fade_ms": 450,
+        "cue": "Плавный переход без паузы.",
+        "watch": "Сверь с эталоном перед съёмкой.",
+        "highlight": "core"
+      },
+      {
+        "index": 6,
+        "term": "Ошибка: стойка",
+        "term_alt": "ERROR",
+        "source": "CV-разбор",
+        "hold_ms": 3200,
+        "fade_ms": 400,
+        "cue": "Сломанная стойка между элементами.",
+        "watch": "Красная линия CV — зона ошибки.",
+        "highlight": "error",
+        "is_error": true
+      }
+    ]
+  }
+}

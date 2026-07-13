@@ -1,34 +1,85 @@
-# SRW-TH01 балкон: облачный опрос (батарейный датчик) + LocalTuya raw (когда проснётся в LAN).
-# Ключ: /config/scripts/.srw_local.json (fetch: shell_command.balkon_srw_fetch_key)
+# SRW-TH01 балкон — только LocalTuya → template (как спальня).
+# Облачный command_line убран: Tuya API 1106 permission deny ломал опрос.
+# Discover: shell_command.balkon_srw_discover (LAN scan, обновляет .srw_local.json)
 
 shell_command:
-  balkon_srw_fetch_key: "python3 /config/scripts/tuya_srw_fetch_key.py"
+  balkon_srw_discover: "python3 /config/scripts/tuya_srw_status.py discover"
+  balkon_srw_sync_localtuya: "python3 /config/scripts/tuya_srw_sync_localtuya.py"
 
-command_line:
+automation:
+  - id: empire_balkon_srw_discover_boot
+    alias: "Балкон SRW — discover при старте HA"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: "00:02:00"
+      - service: shell_command.balkon_srw_discover
+      - delay: "00:00:20"
+      - service: shell_command.balkon_srw_sync_localtuya
+      - service: homeassistant.reload_config_entry
+        data:
+          entry_id: 01F1XRJS41AC54X2WPAEHVBMS1
+  - id: empire_balkon_srw_discover_6h
+    alias: "Балкон SRW — discover если offline"
+    trigger:
+      - platform: time_pattern
+        hours: "/6"
+    condition:
+      - condition: template
+        value_template: >-
+          {{ states('sensor.balkon_temperatura') in ['unknown','unavailable','none',''] }}
+    action:
+      - service: shell_command.balkon_srw_discover
+      - delay: "00:00:15"
+      - service: shell_command.balkon_srw_sync_localtuya
+      - service: homeassistant.reload_config_entry
+        data:
+          entry_id: 01F1XRJS41AC54X2WPAEHVBMS1
+
+template:
   - sensor:
-      name: Balkon temperatura
-      unique_id: balkon_temperatura
-      command: "python3 /config/scripts/tuya_srw_status.py temp"
-      scan_interval: 300
-      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
-      unit_of_measurement: "°C"
-      device_class: temperature
-      state_class: measurement
-  - sensor:
-      name: Balkon vlazhnost
-      unique_id: balkon_vlazhnost
-      command: "python3 /config/scripts/tuya_srw_status.py humidity"
-      scan_interval: 300
-      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
-      unit_of_measurement: "%"
-      device_class: humidity
-      state_class: measurement
-  - sensor:
-      name: Balkon batareia
-      unique_id: balkon_batareia
-      command: "python3 /config/scripts/tuya_srw_status.py battery"
-      scan_interval: 3600
-      value_template: "{{ value if value != 'unavailable' else 'unknown' }}"
-      unit_of_measurement: "%"
-      device_class: battery
-      state_class: measurement
+      - name: Balkon temperatura
+        unique_id: balkon_temperatura
+        default_entity_id: sensor.balkon_temperatura
+        icon: mdi:balcony
+        state: >
+          {% set raw = states('sensor.srw_th01_balkon_balkon_tdeg_raw') %}
+          {% set n = raw | float(none) %}
+          {% if n is number and n > 5 %}
+            {{ n }}
+          {% elif this.state | float(none) is number and (this.state | float) > 5 %}
+            {{ this.state }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+      - name: Balkon vlazhnost
+        unique_id: balkon_vlazhnost
+        default_entity_id: sensor.balkon_vlazhnost
+        icon: mdi:water-percent
+        state: >
+          {% set raw = states('sensor.srw_th01_balkon_balkon_vlazhn_raw') %}
+          {% set n = raw | float(none) %}
+          {% if n is number and n > 0 %}
+            {{ n | int }}
+          {% elif this.state | float(none) is number and (this.state | float) > 0 %}
+            {{ this.state }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "%"
+        device_class: humidity
+        state_class: measurement
+      - name: Balkon batareia
+        unique_id: balkon_batareia
+        default_entity_id: sensor.balkon_batareia
+        icon: mdi:battery
+        state: >
+          {% set v = states('sensor.srw_th01_balkon_balkon_batareia_raw') %}
+          {{ v if v not in ['unknown', 'unavailable', 'none', ''] else 'unknown' }}
+        unit_of_measurement: "%"
+        device_class: battery
+        state_class: measurement

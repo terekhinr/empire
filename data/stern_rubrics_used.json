@@ -17,7 +17,9 @@
       "gear_chalk",
       "gear_chalk",
       "gear_belt",
-      "gear_home"
+      "gear_home",
+      "gear_chalk",
+      "gear_shoes"
     ],
     "sports_med": [
       "med_shoulder",
@@ -64,7 +66,8 @@
       "hist_competition_standard",
       "hist_soviet_sport",
       "hist_circus_strong",
-      "hist_trade_weight"
+      "hist_trade_weight",
+      "hist_soviet_sport"
     ],
     "russian_strongmen": [
       "strong_kryloff",
@@ -74,5 +77,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-07-11T07:00:00.007483"
+  "last": "2026-07-13T09:47:15.489569"
 }

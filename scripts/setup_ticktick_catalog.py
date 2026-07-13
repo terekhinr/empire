@@ -12,39 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from planning_db import create_checklist, get_connection, init_db, list_checklists, list_tasks  # noqa: E402
 
-PROJECT_GUIDES: dict[str, str] = {
-    "": (
-        "Входящие (Inbox) — задачи без списка TickTick. "
-        "Разбирайте: перенос в проект, дата, или удаление. Не смешивать с чек-листами-шаблонами."
-    ),
-    "Инкубатор мыслей": (
-        "Идеи и гипотезы «на подумать»: бизнес, контент, эксперименты. "
-        "Не срочные действия — инкубатор перед переносом в Проекты или Когда-нибудь."
-    ),
-    "Информация": (
-        "Справочник: факты о детях, книги, цитаты, ссылки. "
-        "Чаще «помнить», чем «сделать»; при необходимости превращать в задачу с датой."
-    ),
-    "Когда-нибудь": (
-        "Someday/Maybe (GTD): интересно, но без обязательства и срока. "
-        "Раз в квартал просматривать — активировать или удалить."
-    ),
-    "На этой неделе": (
-        "Фокус текущей недели. Держать 3–7 пунктов; в конце недели — в Выполнено или перенос."
-    ),
-    "Проекты": (
-        "Многошаговые дела с планом и результатом (диссертация, завещание, запуск). "
-        "У каждого — подзадачи или чек-лист этапов."
-    ),
-    "Цели": (
-        "Долгосрочные ориентиры (доход, семья, здоровье, навыки). "
-        "Без жёсткого дедлайна; декомпозировать в проекты и задачи."
-    ),
-    "Чек-листы": (
-        "Шаблоны повторяющихся процедур (командировка, сплав, уборка). "
-        "В Empire — раздел «Чеклисты»; здесь остаются только ссылки/напоминания при необходимости."
-    ),
-}
+from planning_ticktick_catalog import PROJECT_GUIDES, restore_ticktick_list_catalog
 
 CHECKLIST_GUIDES: dict[str, str] = {
     "Поставить в нетбук твёрдый диск": (
@@ -179,8 +147,10 @@ def _project_id(name: str) -> int | None:
 
 def main() -> None:
     n = update_project_descriptions()
+    cat = restore_ticktick_list_catalog(create_shells=True)
     mig = migrate_checklist_tasks()
     print(f"project descriptions updated: {n}")
+    print(f"list catalog: {cat}")
     print(f"checklists created: {mig['created']}, skipped: {mig['skipped']}")
     print(f"total checklists: {len(list_checklists(status=None, limit=500))}")
 

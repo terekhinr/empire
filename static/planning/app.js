@@ -1,6 +1,6 @@
 const API_BASE = "/tasks/api/planning";
 const TOKEN_KEY = "empire_planning_token";
-const APP_VER = "47";
+const APP_VER = "51";
 const OFFLINE_SNAPSHOT_KEY = "empire_offline_snapshot";
 const REPEAT_MAP = {
   daily: { freq: "daily", interval: 1 },
@@ -48,10 +48,12 @@ const state = {
   currentView: "today",
   hideDoneInLists: localStorage.getItem("empire_hide_done") === "1",
   inboxOnly: false,
+  tagFilter: localStorage.getItem("empire_tag_filter") || null,
   projectFilter: null,
   editingId: null,
   creatingTask: false,
   reminded: new Set(JSON.parse(localStorage.getItem("empire_reminded") || "[]")),
+  fmPipelineTab: localStorage.getItem("empire_fm_tab") || "empire",
 };
 
 const TITLES = {
@@ -62,7 +64,7 @@ const TITLES = {
   matrix: "Матрица Эйзенхауэра",
   "all-tasks": "Все задачи",
   search: "Поиск",
-  projects: "Проекты",
+  projects: "Списки",
   lists: "Чеклисты",
   "finance-model": "Пайплайн",
   done: "Вся история",
@@ -133,14 +135,126 @@ function projectColor(id) {
   return PROJECT_COLORS[(Number(id) || 0) % PROJECT_COLORS.length];
 }
 
-function activeTasks() {
+function activeTasksRaw() {
   return state.tasks.filter((t) => t.status !== "done" && t.status !== "cancelled");
+}
+
+function activeTasks() {
+  return applyTagFilter(activeTasksRaw());
+}
+
+function applyTagFilter(items) {
+  if (!state.tagFilter) return items;
+  const needle = state.tagFilter.toLowerCase();
+  return items.filter((t) => (t.tags || []).some((x) => String(x).toLowerCase() === needle));
+}
+
+function collectAllTags() {
+  const counts = new Map();
+  state.tasks.forEach((t) => {
+    (t.tags || []).forEach((tag) => {
+      const key = String(tag).trim();
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+  });
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "ru"));
+}
+
+function tagColor(tag) {
+  const palette = ["#3b82f6", "#22c55e", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316", "#64748b"];
+  let h = 0;
+  const s = String(tag || "");
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return palette[h % palette.length];
+}
+
+function parseTagsInput(str) {
+  return String(str || "")
+    .split(",")
+    .map((x) => x.trim().replace(/^#/, ""))
+    .filter(Boolean);
+}
+
+function getSheetTags() {
+  return parseTagsInput(document.getElementById("tf-tags")?.value || "");
+}
+
+function setSheetTags(tags) {
+  const input = document.getElementById("tf-tags");
+  if (!input) return;
+  const uniq = [];
+  tags.forEach((tag) => {
+    const t = String(tag).trim();
+    if (!t) return;
+    if (!uniq.some((x) => x.toLowerCase() === t.toLowerCase())) uniq.push(t);
+  });
+  input.value = uniq.join(", ");
+  renderTagPillsFromInput();
+  renderTagSuggestions(document.getElementById("tf-tag-add")?.value || "");
+}
+
+function addSheetTag(raw) {
+  const tag = String(raw || "").trim().replace(/^#/, "");
+  if (!tag) return;
+  setSheetTags([...getSheetTags(), tag]);
+  const addEl = document.getElementById("tf-tag-add");
+  if (addEl) addEl.value = "";
+  renderTagSuggestions("");
+  persistSheetTagsIfEditing().catch((err) => showToast(err.message));
+}
+
+function removeSheetTag(tag) {
+  const needle = String(tag || "").toLowerCase();
+  setSheetTags(getSheetTags().filter((x) => x.toLowerCase() !== needle));
+  persistSheetTagsIfEditing().catch((err) => showToast(err.message));
+}
+
+async function persistSheetTagsIfEditing() {
+  const id = document.getElementById("tf-id")?.value;
+  if (!id) return;
+  await api(`/tasks/${id}`, { method: "PUT", body: JSON.stringify({ tags: getSheetTags() }) });
+  await loadAll();
+  renderTagPillsFromInput();
+}
+
+function openTagFilter(tag) {
+  const t = String(tag || "").trim().replace(/^#/, "");
+  if (!t) return;
+  state.tagFilter = t;
+  state.inboxOnly = false;
+  localStorage.setItem("empire_tag_filter", t);
+  closeSheet();
+  showView("all-tasks");
+  document.getElementById("page-title").textContent = `#${t}`;
+}
+
+function clearTagFilter() {
+  state.tagFilter = null;
+  localStorage.removeItem("empire_tag_filter");
+  if (state.currentView === "all-tasks") renderAllTasks();
+  else if (state.currentView === "today") renderToday();
+  else if (state.currentView === "week") renderWeek();
+  else if (state.currentView === "search") renderSearch(document.getElementById("search-input")?.value || "");
+  else if (state.currentView === "project-tasks") renderProjectTasks(state.projectFilter);
+  renderSidebarNav();
+  document.getElementById("page-title").textContent = TITLES[state.currentView] || "Empire";
+}
+
+function tagFilterBarHtml() {
+  if (!state.tagFilter) return "";
+  return `<div class="tag-filter-bar">
+    <span>Метка <strong>#${escapeHtml(state.tagFilter)}</strong></span>
+    <button type="button" class="btn-link" data-action="clear-tag-filter">Сбросить</button>
+  </div>`;
 }
 
 function taskNavCounts() {
   const today = todayStr();
   const weekEnd = addDays(7);
-  const active = activeTasks();
+  const active = activeTasksRaw();
   const overdue = active.filter((t) => t.due_date && t.due_date < today);
   const todayTasks = active.filter((t) => t.due_date === today);
   const weekTasks = active.filter((t) => t.due_date && t.due_date <= weekEnd);
@@ -279,7 +393,7 @@ async function applyScheduleFromPicker({ persist = true } = {}) {
     remind_at: computeRemindAt(dueDate, dueTime, remindOff),
     clear_remind: remindOff === "" || remindOff == null,
   };
-  await api(`/tasks/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  await api(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(body) });
   await loadAll();
   if (state.editingId) {
     const t = [...state.tasks, ...state.doneTasks].find((x) => x.id === state.editingId);
@@ -313,26 +427,58 @@ function taskMetaIconsHtml(t) {
   return parts.join("");
 }
 
-function tagPillsHtml(tags, { limit = 3 } = {}) {
+function tagPillsHtml(tags, { limit = 3, clickable = true } = {}) {
   const list = (tags || []).filter(Boolean).slice(0, limit);
   if (!list.length) return "";
   return `<div class="tag-pills tag-pills--inline">${list
-    .map((tag) => `<span class="tag-pill">#${escapeHtml(tag)}</span>`)
+    .map((tag) => {
+      const color = tagColor(tag);
+      if (!clickable) {
+        return `<span class="tag-pill" style="--tag-color:${color}">#${escapeHtml(tag)}</span>`;
+      }
+      return `<button type="button" class="tag-pill tag-pill--click" data-action="filter-tag" data-tag="${escapeHtml(tag)}" style="--tag-color:${color}">#${escapeHtml(tag)}</button>`;
+    })
     .join("")}</div>`;
+}
+
+function renderTagSuggestions(query) {
+  const el = document.getElementById("tf-tag-suggestions");
+  if (!el) return;
+  const q = String(query || "").trim().toLowerCase().replace(/^#/, "");
+  const current = new Set(getSheetTags().map((x) => x.toLowerCase()));
+  let items = collectAllTags().filter((x) => !current.has(x.tag.toLowerCase()));
+  if (q) items = items.filter((x) => x.tag.toLowerCase().includes(q));
+  items = items.slice(0, 8);
+  if (!items.length) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+    return;
+  }
+  el.classList.remove("hidden");
+  el.innerHTML = items
+    .map(
+      (x) => `<button type="button" class="tag-suggestion" data-action="pick-sheet-tag" data-tag="${escapeHtml(x.tag)}">
+        <span class="tag-dot" style="background:${tagColor(x.tag)}"></span>${escapeHtml(x.tag)}
+        <span class="hint">${x.count}</span>
+      </button>`
+    )
+    .join("");
 }
 
 function renderTagPillsFromInput() {
   const el = document.getElementById("tf-tag-pills");
   const input = document.getElementById("tf-tags");
   if (!el || !input) return;
-  const tags = input.value
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  const tags = parseTagsInput(input.value);
   el.innerHTML = tags.length
-    ? tags.map((tag) => `<span class="tag-pill">#${escapeHtml(tag)}</span>`).join("")
-        + `<button type="button" class="tag-pill tag-pill--add" data-action="focus-field" data-target="tf-tags">+</button>`
-    : `<button type="button" class="tag-pill tag-pill--add tag-pill--empty" data-action="focus-field" data-target="tf-tags">+ тег</button>`;
+    ? tags
+        .map(
+          (tag) => `<button type="button" class="tag-pill tag-pill--sheet" data-action="remove-sheet-tag" data-tag="${escapeHtml(tag)}" style="--tag-color:${tagColor(tag)}" title="Убрать метку">#${escapeHtml(tag)}<span class="tag-pill-x" aria-hidden="true">×</span></button>`
+        )
+        .join("")
+    : "";
+  const addBtn = `<button type="button" class="tag-pill tag-pill--add${tags.length ? "" : " tag-pill--empty"}" data-action="focus-tag-add">${tags.length ? "+" : "+ метка"}</button>`;
+  el.innerHTML = (el.innerHTML || "") + addBtn;
 }
 
 function syncSheetMetaDisplay() {
@@ -430,7 +576,7 @@ function renderMobileDrawer() {
   const nav = document.getElementById("mobile-drawer-nav");
   if (!nav) return;
   const c = taskNavCounts();
-  const inboxCount = activeTasks().filter((t) => !t.project_id).length;
+  const inboxCount = activeTasksRaw().filter((t) => !t.project_id).length;
   nav.innerHTML = [
     drawerNavRow("today", "Сегодня", c.todayNav || ""),
     drawerNavRow("week", "Следующие 7 дней", c.weekNav || ""),
@@ -438,7 +584,7 @@ function renderMobileDrawer() {
     `<button class="drawer-row${state.inboxOnly && state.currentView === "all-tasks" ? " active" : ""}" type="button" data-view="all-tasks" data-inbox="1" data-drawer-close="1">${window.NavIcons ? NavIcons.badge("inbox") : ""}<span class="drawer-row-label">Входящие</span><span class="drawer-row-count">${inboxCount || ""}</span></button>`,
     drawerNavRow("done", "История", ""),
     `<div class="drawer-divider" aria-hidden="true"></div>`,
-    drawerNavRow("projects", "Проекты", state.projects.length || ""),
+    drawerNavRow("projects", "Списки", state.projects.length || ""),
     drawerNavRow("lists", "Чеклисты", state.checklists.length || ""),
     `<div class="drawer-divider" aria-hidden="true"></div>`,
     drawerNavRow("measurements", "Здоровье", "", { icon: "health" }),
@@ -554,11 +700,18 @@ function navRowHtml(view, label, count) {
 
 function renderSidebarNav() {
   const c = taskNavCounts();
+  const inboxCount = activeTasksRaw().filter((t) => !t.project_id).length;
   const main = document.getElementById("sidebar-nav-main");
   if (main) {
+    const inboxActive = state.inboxOnly && state.currentView === "all-tasks" ? " active" : "";
     main.innerHTML = [
       navRowHtml("today", "Сегодня", c.todayNav || ""),
       navRowHtml("week", "Следующие 7 дней", c.weekNav || ""),
+      `<button class="nav-row${inboxActive}" data-view="all-tasks" data-inbox="1" type="button">
+        ${window.NavIcons ? NavIcons.badge("inbox") : ""}
+        <span class="nav-row-label">Входящие</span>
+        <span class="nav-row-count">${inboxCount || ""}</span>
+      </button>`,
       navRowHtml("matrix", "Матрица", ""),
       navRowHtml("all-tasks", "Все задачи", c.all || ""),
       navRowHtml("search", "Поиск", ""),
@@ -572,16 +725,62 @@ function renderSidebarNav() {
   const projEl = document.getElementById("sidebar-projects-list");
   if (projEl) {
     if (!state.projects.length) {
-      projEl.innerHTML = `<button class="nav-row nav-row-large" data-view="projects" type="button"><span class="nav-row-label">Все проекты</span></button>`;
+      projEl.innerHTML = `<button class="nav-row nav-row-large" data-view="projects" type="button"><span class="nav-row-label">Все списки</span></button>`;
     } else {
-      projEl.innerHTML = state.projects
-        .map((p) => {
-          const isEmpire = (p.title || "").startsWith("Empire ·");
-          const pct = isEmpire ? projectProgress(p.id).pct : null;
-          const count = pct != null ? `${pct}%` : (p.open_tasks || 0);
-          return `<button class="nav-row nav-row-large" data-view="project-tasks" data-project-id="${p.id}" type="button">
-            <span class="nav-row-label"><span class="project-dot" style="background:${projectColor(p.id)}"></span> ${escapeHtml(p.title)}</span>
-            <span class="nav-row-count">${count}</span>
+      const folders = [];
+      const byFolder = new Map();
+      state.projects.forEach((p) => {
+        const folder = (p.folder_name || "").trim() || "Другие";
+        if (!byFolder.has(folder)) byFolder.set(folder, []);
+        byFolder.get(folder).push(p);
+      });
+      const folderOrder = ["ЛИЧНЫЕ ЦЕЛИ", "Архивный список", "Empire", "Другие"];
+      folderOrder.forEach((f) => {
+        if (byFolder.has(f)) folders.push([f, byFolder.get(f)]);
+      });
+      byFolder.forEach((items, f) => {
+        if (!folderOrder.includes(f)) folders.push([f, items]);
+      });
+
+      projEl.innerHTML = folders
+        .map(([folder, items]) => {
+          const rows = items
+            .map((p) => {
+              const isEmpire = (p.title || "").startsWith("Empire ·");
+              const pct = isEmpire ? projectProgress(p.id).pct : null;
+              const count = pct != null ? `${pct}%` : (p.open_tasks || 0);
+              const active =
+                state.currentView === "project-tasks" && state.projectFilter === p.id ? " active" : "";
+              return `<button class="nav-row nav-row-large${active}" data-view="project-tasks" data-project-id="${p.id}" type="button">
+                <span class="nav-row-label"><span class="project-dot" style="background:${projectColor(p.id)}"></span> ${escapeHtml(p.title)}</span>
+                <span class="nav-row-count">${count}</span>
+              </button>`;
+            })
+            .join("");
+          const open = folder === "ЛИЧНЫЕ ЦЕЛИ" || folder === "Архивный список" ? " open" : "";
+          return `<details class="nav-folder-wrap"${open}>
+            <summary class="nav-folder-summary">${escapeHtml(folder)}</summary>
+            <div class="nav-folder-lists">${rows}</div>
+          </details>`;
+        })
+        .join("");
+    }
+  }
+
+  const tagsEl = document.getElementById("sidebar-tags-list");
+  if (tagsEl) {
+    const tags = collectAllTags().slice(0, 40);
+    if (!tags.length) {
+      tagsEl.innerHTML = `<p class="nav-tags-empty hint">Меток пока нет — добавьте в карточке задачи</p>`;
+    } else {
+      tagsEl.innerHTML = tags
+        .map((x) => {
+          const active = state.tagFilter && state.tagFilter.toLowerCase() === x.tag.toLowerCase() ? " active" : "";
+          const color = tagColor(x.tag);
+          return `<button type="button" class="nav-row nav-row-large nav-row-tag${active}" data-action="filter-tag" data-tag="${escapeHtml(x.tag)}">
+            <span class="tag-dot" style="background:${color}"></span>
+            <span class="nav-row-label">${escapeHtml(x.tag)}</span>
+            <span class="nav-row-count">${x.count}</span>
           </button>`;
         })
         .join("");
@@ -664,10 +863,30 @@ async function api(path, opts = {}) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || res.statusText);
+    throw new Error(formatApiError(err.detail, res.statusText));
   }
   if (res.status === 204) return null;
   return res.json();
+}
+
+function formatApiError(detail, fallback = "Ошибка запроса") {
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item.msg === "string") return item.msg;
+        return JSON.stringify(item);
+      })
+      .join("; ");
+  }
+  if (detail && typeof detail.msg === "string") return detail.msg;
+  try {
+    return JSON.stringify(detail);
+  } catch {
+    return fallback;
+  }
 }
 
 async function apiUpload(path, file) {
@@ -684,7 +903,7 @@ async function apiUpload(path, file) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || res.statusText);
+    throw new Error(formatApiError(err.detail, res.statusText));
   }
   return res.json();
 }
@@ -970,6 +1189,21 @@ function renderFinanceModel() {
     return;
   }
 
+  const tab = state.fmPipelineTab === "snegiri" ? "snegiri" : "empire";
+  const tabsHtml = `<div class="fm-tabs" role="tablist">
+    <button type="button" class="fm-tab ${tab === "empire" ? "active" : ""}" data-fm-tab="empire" role="tab" aria-selected="${tab === "empire"}">Empire · книга и Где Пар</button>
+    <button type="button" class="fm-tab ${tab === "snegiri" ? "active" : ""}" data-fm-tab="snegiri" role="tab" aria-selected="${tab === "snegiri"}">Снегири · гири</button>
+  </div>`;
+
+  if (tab === "snegiri") {
+    el.innerHTML = tabsHtml + renderFinanceModelSnegiriBody(FM.snegiri);
+    return;
+  }
+
+  el.innerHTML = tabsHtml + renderFinanceModelEmpireBody(FM);
+}
+
+function renderFinanceModelEmpireBody(FM) {
   const pipeCl = checklistByRef("empire-pipeline-2026");
   const pipePct = checklistPct(pipeCl);
 
@@ -1082,7 +1316,7 @@ function renderFinanceModel() {
   const introHtml = FM.intro.map((p) => `<p>${formatPlainText(p)}</p>`).join("");
   const bridgeHtml = bridge.paragraphs.map((p) => `<p>${formatPlainText(p)}</p>`).join("");
 
-  el.innerHTML = `
+  return `
     <div class="fm-hero card">
       <h2 class="fm-title">${escapeHtml(FM.title)}</h2>
       <p class="hint">${escapeHtml(FM.period)}</p>
@@ -1099,8 +1333,8 @@ function renderFinanceModel() {
       <p class="hint">Срок: до ${escapeHtml(formatDateRu(bridge.deadline))} · задача в календаре и в проекте «Финмодель»</p>
     </div>
 
-    <div class="section-title">Расшифровка модулей</div>
-    <p class="fm-hint">Коды из аудита Empire (R0–R5, блоки A–G, фазы Ф0–Ф3) и будущего проекта «Снегири».</p>
+    <div class="section-title">Расшифровка модулей Empire</div>
+    <p class="fm-hint">Коды из аудита Empire. Полная финмодель «Снегири · гири» — на соседней вкладке.</p>
     <div class="fm-modules">${modulesLegendHtml}</div>
 
     <div class="section-title">Пайплайн к цели (6 блоков)</div>
@@ -1154,22 +1388,211 @@ function renderFinanceModel() {
         <li>Воскресенье — KPI и чеклист «метрики»${metricsCl?.id ? ` (<button type="button" class="btn-link" data-goto-checklist="${metricsCl.id}">открыть</button>)` : ""}.</li>
       </ol>
     </div>`;
+}
 
-  el.querySelectorAll("[data-goto-checklist]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = +btn.dataset.gotoChecklist;
-      if (!id) return;
-      showView("detail");
-      await renderDetail(id);
-    });
-  });
-  el.querySelectorAll("[data-open-task]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = +btn.dataset.openTask;
-      const t = state.tasks.find((x) => x.id === id);
-      if (t) await openSheet(t);
-    });
-  });
+function renderFinanceModelSnegiriBody(SN) {
+  if (!SN) {
+    return '<div class="empty card">Раздел «Снегири» не загружен</div>';
+  }
+
+  const introHtml = (SN.intro || []).map((p) => `<p>${formatPlainText(p)}</p>`).join("");
+  const verdictHtml = (SN.verdict?.paragraphs || []).map((p) => `<p>${formatPlainText(p)}</p>`).join("");
+
+  const stepsHtml = (SN.product?.steps || [])
+    .map(
+      (s) => `<div class="fm-sn-step">
+        <span class="fm-sn-step-num">${escapeHtml(s.step)}</span>
+        <strong>${escapeHtml(s.name)}</strong>
+        <span class="hint">${escapeHtml(s.price)}</span>
+        <p>${escapeHtml(s.text)}</p>
+      </div>`
+    )
+    .join("");
+
+  const tracksHtml = (SN.product?.tracks || [])
+    .map(
+      (t) => `<div class="fm-sn-track card">
+        <strong>${escapeHtml(t.name)}</strong>
+        <span class="hint">${escapeHtml(t.audience)}</span>
+        <p>${formatPlainText(t.text)}</p>
+      </div>`
+    )
+    .join("");
+
+  const pricingHtml = (SN.pricing || [])
+    .map(
+      (p) => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.price)}</td><td class="hint">${escapeHtml(p.note)}</td></tr>`
+    )
+    .join("");
+
+  const capexRows = (SN.capex?.rows || [])
+    .map((r) => `<tr><td>${escapeHtml(r.what)}</td><td>${escapeHtml(r.amount)}</td></tr>`)
+    .join("");
+
+  const unitRows = (SN.unitEconomics?.rows || [])
+    .map((r) => `<tr><td>${escapeHtml(r.label)}</td><td>${formatPlainText(r.value)}</td></tr>`)
+    .join("");
+
+  const pipelineHtml = (SN.pipeline || [])
+    .map((b) => {
+      const fullDesc = b.fullDesc ? `<p class="fm-block-full">${formatPlainText(b.fullDesc)}</p>` : "";
+      return `<div class="fm-block fm-block-static">
+        <span class="fm-block-num">${escapeHtml(b.num)}</span>
+        <span class="fm-block-title">${escapeHtml(b.title)}</span>
+        <span class="fm-block-period">${escapeHtml(b.period)}</span>
+        <span class="fm-block-text">${escapeHtml(b.text)}</span>
+        ${fullDesc}
+      </div>`;
+    })
+    .join('<span class="fm-arrow" aria-hidden="true">→</span>');
+
+  const phasesHtml = (SN.phases || [])
+    .map(
+      (ph) => `<div class="fm-phase card">
+        <div class="fm-phase-head">
+          <strong>${escapeHtml(ph.label)}</strong>
+          <span class="fm-phase-dates">${escapeHtml(ph.dates)}</span>
+        </div>
+        <p class="fm-phase-focus">${escapeHtml(ph.focus)}</p>
+        <p class="fm-phase-desc">${escapeHtml(ph.fullDesc)}</p>
+      </div>`
+    )
+    .join("");
+
+  const killHtml = (SN.killMetrics || [])
+    .map(
+      (k) => `<div class="fm-sn-kill card">
+        <div class="fm-sn-kill-head"><strong>${escapeHtml(k.title)}</strong><span class="hint">${escapeHtml(k.deadline)}</span></div>
+        <p>${formatPlainText(k.text)}</p>
+      </div>`
+    )
+    .join("");
+
+  const msHtml = (SN.milestones || [])
+    .map(
+      (m) => `<tr><td>${escapeHtml(formatDateRu(m.date))}</td><td><strong>${escapeHtml(m.title)}</strong><div class="hint">${escapeHtml(m.hint)}</div></td></tr>`
+    )
+    .join("");
+
+  const monthlyHtml = (SN.monthlyPlan || [])
+    .map(
+      (r) => `<tr>
+        <td>${escapeHtml(r.month)}</td>
+        <td>${escapeHtml(r.paying)}</td>
+        <td>${escapeHtml(r.mrr)}</td>
+        <td>${escapeHtml(r.cashflow)}</td>
+        <td class="hint">${escapeHtml(r.note)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const scenarioHtml = (SN.scenarios?.rows || [])
+    .map(
+      (r) => `<tr>
+        <td><strong>${escapeHtml(r.name)}</strong></td>
+        <td>${escapeHtml(r.conversion)}</td>
+        <td>${escapeHtml(r.churn)}</td>
+        <td>${escapeHtml(r.revshare)}</td>
+        <td>${escapeHtml(r.be)}</td>
+      </tr>`
+    )
+    .join("");
+
+  const moneyHtml = (SN.moneySplit?.rows || [])
+    .map(
+      (r) => `<div class="fm-money-row">
+        <strong>${escapeHtml(r.what)}</strong>
+        <span>${escapeHtml(r.who)}</span>
+        <span class="hint">${escapeHtml(r.share)}</span>
+      </div>`
+    )
+    .join("");
+
+  const glossaryHtml = (SN.glossary || [])
+    .map((g) => `<dt>${escapeHtml(g.term)}</dt><dd>${escapeHtml(g.text)}</dd>`)
+    .join("");
+
+  const howtoHtml = (SN.howTo || []).map((li) => `<li>${formatPlainText(li)}</li>`).join("");
+
+  return `
+    <div class="fm-hero card">
+      <h2 class="fm-title">${escapeHtml(SN.title)}</h2>
+      <p class="hint">${escapeHtml(SN.site)} · ${escapeHtml(SN.period)}</p>
+      <div class="fm-intro">${introHtml}</div>
+    </div>
+
+    <div class="fm-bridge card fm-bridge-highlight fm-sn-verdict">
+      <h3>${escapeHtml(SN.verdict?.title || "Итог")}</h3>
+      <p class="fm-bridge-short"><strong>${escapeHtml(SN.verdict?.short || "")}</strong></p>
+      ${verdictHtml}
+    </div>
+
+    <div class="section-title">Что продаём</div>
+    <div class="fm-sn-steps">${stepsHtml}</div>
+    <div class="fm-sn-tracks">${tracksHtml}</div>
+
+    <div class="section-title">Тарифы подписки</div>
+    <div class="card fm-table-wrap">
+      <table class="fm-table"><thead><tr><th>Тариф</th><th>Цена</th><th>Комментарий</th></tr></thead><tbody>${pricingHtml}</tbody></table>
+    </div>
+
+    <div class="section-title">${escapeHtml(SN.capex?.title || "Вложения до запуска")}</div>
+    <p class="hint fm-hint">Итого: <strong>${escapeHtml(SN.capex?.total || "")}</strong>. ${escapeHtml(SN.capex?.cashReserve || "")}</p>
+    <div class="card fm-table-wrap">
+      <table class="fm-table"><thead><tr><th>Статья</th><th>Сумма</th></tr></thead><tbody>${capexRows}</tbody></table>
+      <p class="hint" style="margin:12px">${escapeHtml(SN.capex?.codeBeforeContract || "")}</p>
+    </div>
+
+    <div class="section-title">${escapeHtml(SN.unitEconomics?.title || "Юнит-экономика")}</div>
+    <p class="hint fm-hint">${escapeHtml(SN.unitEconomics?.note || "")}</p>
+    <div class="card fm-table-wrap">
+      <table class="fm-table"><tbody>${unitRows}</tbody></table>
+    </div>
+
+    <div class="section-title">Пайплайн разработки (7 шагов)</div>
+    <p class="hint fm-hint">Слева направо: от договора с тренером до питания во второй версии. ~26 недель.</p>
+    <div class="fm-pipeline">${pipelineHtml}</div>
+
+    <div class="section-title">Стоп-метрики (когда останавливаем или меняем курс)</div>
+    <div class="fm-sn-kills">${killHtml}</div>
+
+    <div class="section-title">Фазы после запуска</div>
+    <div class="fm-phases">${phasesHtml}</div>
+
+    <div class="section-title">Вехи с датами</div>
+    <div class="card fm-table-wrap">
+      <table class="fm-table"><thead><tr><th>Дата</th><th>Событие</th></tr></thead><tbody>${msHtml}</tbody></table>
+    </div>
+
+    <div class="section-title">План по месяцам (ориентир)</div>
+    <div class="card fm-table-wrap">
+      <table class="fm-table">
+        <thead><tr><th>Месяц</th><th>Платящие</th><th>Выручка подписок</th><th>Денежный поток</th><th>Комментарий</th></tr></thead>
+        <tbody>${monthlyHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="section-title">${escapeHtml(SN.scenarios?.title || "Сценарии")}</div>
+    <div class="card fm-table-wrap">
+      <table class="fm-table">
+        <thead><tr><th>Сценарий</th><th>Конверсия</th><th>Отток</th><th>Доля тренеру</th><th>Безубыточность</th></tr></thead>
+        <tbody>${scenarioHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="section-title">${escapeHtml(SN.moneySplit?.title || "Куда идут деньги")}</div>
+    <div class="card">${moneyHtml}</div>
+
+    <div class="section-title">Налоги</div>
+    <div class="card"><p>${formatPlainText(SN.taxNote || "")}</p></div>
+
+    <div class="section-title">Словарь (все сокращения расшифрованы)</div>
+    <dl class="card fm-glossary">${glossaryHtml}</dl>
+
+    <div class="fm-footer card">
+      <p><strong>Как работать с моделью</strong></p>
+      <ol class="fm-howto">${howtoHtml}</ol>
+    </div>`;
 }
 
 function formatDateRu(iso) {
@@ -1866,17 +2289,20 @@ function bindPeriodChips(container, target) {
 function renderAllTasks() {
   let items = activeTasks();
   if (state.inboxOnly) items = items.filter((t) => !t.project_id);
-  const sourceTasks = state.inboxOnly ? state.tasks.filter((t) => !t.project_id) : state.tasks;
+  const sourceTasks = applyTagFilter(state.inboxOnly ? state.tasks.filter((t) => !t.project_id) : state.tasks);
   const groups = groupTasks(sourceTasks);
   const total = state.inboxOnly ? items.length : (state.summary?.tasks_todo ?? items.length);
   const hint = state.inboxOnly
     ? `<p class="sheet-hint">Входящие — задачи без проекта (${items.length}).</p>`
-    : total > items.length
-      ? `<p class="sheet-hint">Показано ${items.length} из ${total}. Используйте поиск или фильтр по проекту.</p>`
-      : "";
+    : state.tagFilter
+      ? `<p class="sheet-hint">Задачи с меткой #${escapeHtml(state.tagFilter)} (${items.length}).</p>`
+      : total > items.length
+        ? `<p class="sheet-hint">Показано ${items.length} из ${total}. Используйте поиск или фильтр по проекту.</p>`
+        : "";
   document.getElementById("view-all-tasks").innerHTML =
     [
       quickAddHtml(),
+      tagFilterBarHtml(),
       hint,
       groups.overdue.length ? '<div class="task-group-label overdue">Просрочено</div>' : "",
       groups.overdue.length ? renderTaskList(groups.overdue) : "",
@@ -2067,7 +2493,8 @@ function taskRowHtml(t, { compact = false } = {}) {
   meta += priorityBadge(t.priority || 0);
   if (t.project_title) meta += `<span class="badge">${escapeHtml(t.project_title)}</span>`;
   (t.tags || []).forEach((tag) => {
-    meta += `<span class="badge">#${escapeHtml(tag)}</span>`;
+    const color = tagColor(tag);
+    meta += `<button type="button" class="badge badge-tag" data-action="filter-tag" data-tag="${escapeHtml(tag)}" style="--tag-color:${color}">#${escapeHtml(tag)}</button>`;
   });
   const noteLine = t.note
     ? `<div class="task-note-preview">${escapeHtml(t.note.split("\n")[0].slice(0, 140))}${t.note.length > 140 ? "…" : ""}</div>`
@@ -2116,7 +2543,7 @@ function renderSection(title, items, cls = "") {
 }
 
 function renderToday() {
-  const groups = groupTasks(state.tasks);
+  const groups = groupTasks(applyTagFilter(state.tasks));
   const counts = taskNavCounts();
   const completedToday = [...counts.completedToday]
     .sort((a, b) => (b.completed_at || "").localeCompare(a.completed_at || ""))
@@ -2124,6 +2551,7 @@ function renderToday() {
   const doneOpen = localStorage.getItem("empire_group_done_open") !== "0";
   const parts = [
     quickAddHtml(),
+    tagFilterBarHtml(),
     groups.overdue.length
       ? renderCollapsibleGroup("Просрочено", groups.overdue, { open: true, cls: "overdue" })
       : "",
@@ -2156,7 +2584,7 @@ function renderWeek() {
     if (!t.due_date || t.due_date < today || t.due_date > weekEnd) return;
     byDay[t.due_date].push(t);
   });
-  const parts = [quickAddHtml()];
+  const parts = [quickAddHtml(), tagFilterBarHtml()];
   if (overdue.length) {
     parts.push(renderCollapsibleGroup("Просрочено", overdue, { open: true, cls: "overdue" }));
   }
@@ -2481,7 +2909,7 @@ async function renderCalendarDay() {
 function renderSearch(q) {
   const el = document.getElementById("view-search");
   const query = (q || "").trim().toLowerCase();
-  let items = state.tasks;
+  let items = applyTagFilter(state.tasks);
   if (query) {
     items = items.filter(
       (t) =>
@@ -2491,9 +2919,10 @@ function renderSearch(q) {
     );
   }
   items = items.filter((t) => t.status !== "done").sort(sortByDueTime);
-  el.innerHTML = items.length
-    ? renderTaskList(items)
-    : '<div class="empty">Ничего не найдено</div>';
+  el.innerHTML = [
+    tagFilterBarHtml(),
+    items.length ? renderTaskList(items) : '<div class="empty">Ничего не найдено</div>',
+  ].join("");
 }
 
 function projectProgress(projectId) {
@@ -2571,10 +3000,11 @@ function renderProjects() {
 
 function renderProjectTasks(pid) {
   const p = state.projects.find((x) => x.id === pid);
-  const tasks = state.tasks.filter((t) => t.project_id === pid && t.status !== "done").sort(sortByDueTime);
+  const tasks = applyTagFilter(state.tasks.filter((t) => t.project_id === pid && t.status !== "done")).sort(sortByDueTime);
   document.getElementById("view-project-tasks").innerHTML = `
-    <button class="back-btn" data-action="back-projects">← Проекты</button>
+    <button class="back-btn" data-action="back-projects">← Списки</button>
     ${projectHeaderHtml(p)}
+    ${tagFilterBarHtml()}
     <div class="section-title">Задачи</div>
     ${tasks.length ? renderTaskList(tasks) : '<div class="empty">Нет открытых задач</div>'}`;
 }
@@ -3103,7 +3533,7 @@ async function openSheet(task = null) {
   document.getElementById("tf-due-time").value = task?.due_time || "";
   document.getElementById("tf-priority").value = String(task?.priority ?? 0);
   document.getElementById("tf-project").value = task?.project_id || "";
-  document.getElementById("tf-tags").value = (task?.tags || []).join(", ");
+  setSheetTags(task?.tags || []);
   document.getElementById("tf-repeat").value = repeatKeyFromObj(task?.repeat_rule_obj);
   document.getElementById("tf-remind").value = task ? remindOffsetFromTask(task) : "";
   document.getElementById("tf-delete").classList.toggle("hidden", !task?.id);
@@ -3117,6 +3547,7 @@ async function openSheet(task = null) {
   state.pendingTaskImageRemove = false;
   renderTaskImagePreview(task);
   syncSheetMetaDisplay();
+  renderTagSuggestions("");
   const details = document.getElementById("sheet-fields-details");
   if (details && !usesDesktopTaskSplit()) {
     details.open = state.creatingTask;
@@ -3215,7 +3646,9 @@ function showView(name) {
       ? formatDayTitle(state.calendarDay || todayStr())
       : name === "all-tasks" && state.inboxOnly
         ? "Входящие"
-        : (TITLES[name] || "Empire");
+        : name === "all-tasks" && state.tagFilter
+          ? `#${state.tagFilter}`
+          : (TITLES[name] || "Empire");
   const mainEl = document.getElementById("main");
   if (mainEl) mainEl.scrollTop = 0;
   document.getElementById("search-bar").classList.toggle("hidden", name !== "search");
@@ -3348,11 +3781,7 @@ async function saveTaskForm(e) {
   const dueTime = document.getElementById("tf-due-time").value || null;
   const repeatKey = document.getElementById("tf-repeat").value;
   const remindOff = document.getElementById("tf-remind").value;
-  const tags = document
-    .getElementById("tf-tags")
-    .value.split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const tags = getSheetTags();
   const body = {
     title: document.getElementById("tf-title").value.trim(),
     note: document.getElementById("tf-note").value.trim() || null,
@@ -3430,7 +3859,7 @@ async function checkReminders() {
 }
 
 function bindEvents() {
-  document.addEventListener("click", (e) => {
+  document.addEventListener("click", async (e) => {
     const settingsBtn = e.target.closest("[data-action^='open-settings']");
     if (settingsBtn) {
       e.preventDefault();
@@ -3462,8 +3891,41 @@ function bindEvents() {
       state.projectFilter = +projBtn.dataset.projectId;
       showView("project-tasks");
       renderProjectTasks(state.projectFilter);
+      return;
+    }
+
+    const fmTab = e.target.closest("[data-fm-tab]");
+    if (fmTab?.closest("#view-finance-model")) {
+      e.preventDefault();
+      const next = fmTab.dataset.fmTab === "snegiri" ? "snegiri" : "empire";
+      if (next !== state.fmPipelineTab) {
+        state.fmPipelineTab = next;
+        localStorage.setItem("empire_fm_tab", next);
+        renderFinanceModel();
+      }
+      return;
+    }
+
+    const fmGoto = e.target.closest("[data-goto-checklist]");
+    if (fmGoto?.closest("#view-finance-model")) {
+      e.preventDefault();
+      const id = +fmGoto.dataset.gotoChecklist;
+      if (!id) return;
+      showView("detail");
+      await renderDetail(id);
+      return;
+    }
+
+    const fmOpenTask = e.target.closest("[data-open-task]");
+    if (fmOpenTask?.closest("#view-finance-model")) {
+      e.preventDefault();
+      const id = +fmOpenTask.dataset.openTask;
+      const t = state.tasks.find((x) => x.id === id);
+      if (t) await openSheet(t);
+      return;
     }
   });
+
   document.getElementById("mobile-tabbar")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".tab[data-view]");
     if (!btn) return;
@@ -3483,6 +3945,16 @@ function bindEvents() {
     document.getElementById(id)?.addEventListener("change", () => syncSheetMetaDisplay());
   });
   document.getElementById("tf-tags")?.addEventListener("input", () => syncSheetMetaDisplay());
+  document.getElementById("tf-tag-add")?.addEventListener("input", (e) => renderTagSuggestions(e.target.value));
+  document.getElementById("tf-tag-add")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addSheetTag(e.target.value);
+    } else if (e.key === "Escape") {
+      e.target.value = "";
+      renderTagSuggestions("");
+    }
+  });
 
   document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -3588,7 +4060,7 @@ function bindEvents() {
     if (!file) return;
     try {
       const r = await importTicktickFile(file);
-      showToast(`Импорт: +${r.imported || 0}, обновлено ${r.updated || 0}, описаний ${r.backfilled || 0}, в CSV с текстом ${r.with_notes || 0}`);
+      showToast(`Импорт: +${r.imported || 0}, архив +${r.imported_done || 0}, обновлено ${r.updated || 0}, описаний ${r.backfilled || 0}`);
       await loadAll();
     } catch (err) { showToast(String(err.message)); }
     e.target.value = "";
@@ -3754,6 +4226,34 @@ function bindEvents() {
         clearDatePickerSelection().catch((err) => showToast(err.message));
         return;
       }
+      if (action === "filter-tag") {
+        e.preventDefault();
+        e.stopPropagation();
+        openTagFilter(actionEl.dataset.tag);
+        return;
+      }
+      if (action === "clear-tag-filter") {
+        e.preventDefault();
+        clearTagFilter();
+        return;
+      }
+      if (action === "remove-sheet-tag") {
+        e.preventDefault();
+        e.stopPropagation();
+        removeSheetTag(actionEl.dataset.tag);
+        return;
+      }
+      if (action === "pick-sheet-tag") {
+        e.preventDefault();
+        e.stopPropagation();
+        addSheetTag(actionEl.dataset.tag);
+        return;
+      }
+      if (action === "focus-tag-add") {
+        e.preventDefault();
+        document.getElementById("tf-tag-add")?.focus();
+        return;
+      }
       if (action === "focus-field") {
         const targetId = actionEl.dataset.target;
         const details = document.getElementById("sheet-fields-details");
@@ -3905,7 +4405,7 @@ async function init() {
   setInterval(() => checkReminders(), 60000);
   setInterval(() => checkHealthReminders(), 60000);
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/tasks/assets/sw.js?v=23", { scope: "/tasks/" }).catch(() => {});
+    navigator.serviceWorker.register("/tasks/assets/sw.js?v=24", { scope: "/tasks/" }).catch(() => {});
   }
 }
 
