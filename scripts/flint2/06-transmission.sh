@@ -22,7 +22,9 @@ curl -fL -o /etc/transmission-schedule.sh "$BASE/transmission-schedule.sh" 2>/de
 chmod +x /etc/transmission-schedule.sh 2>/dev/null || true
 
 ( crontab -l 2>/dev/null | grep -v transmission-schedule
-  echo "*/5 * * * * /etc/transmission-schedule.sh"
+  echo "0 1 * * * /etc/transmission-schedule.sh start"
+  echo "0 6 * * * /etc/transmission-schedule.sh stop"
+  echo "*/10 * * * * /etc/transmission-schedule.sh"
 ) | crontab - 2>/dev/null || true
 
 /etc/init.d/transmission enable 2>/dev/null || true

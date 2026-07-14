@@ -23,11 +23,24 @@ need_openwrt24() {
 log "модель: $(cat /tmp/sysinfo/model 2>/dev/null || echo '?')"
 need_openwrt24
 
+skip_lan=0
+CURRENT="$(uci -q get network.lan.ipaddr || echo '')"
+if [ "$CURRENT" = "192.168.1.1" ]; then
+  log "LAN уже 192.168.1.1 — пропуск 01-base-lan"
+  skip_lan=1
+fi
+
 for step in 01-base-lan.sh 02-install-podkop.sh 03-config-podkop.sh 04-install-zapret2.sh \
-  05-wireguard-server.sh 06-transmission.sh 07-router-tunnel.sh; do
+  05-wireguard-server.sh 07-router-tunnel.sh 10-restore-keenetic-snapshot.sh; do
+  if [ "$skip_lan" = "1" ] && [ "$step" = "01-base-lan.sh" ]; then
+    continue
+  fi
   log "=== $step ==="
   fetch "$FLINT2_BASE/$step" | sh
 done
+
+log "=== verify ==="
+fetch "$FLINT2_BASE/11-youtube-verify.sh" | sh || true
 
 log "=== готово ==="
 log "LuCI: http://192.168.1.1  |  Podkop: Services → Podkop"

@@ -1,7 +1,8 @@
 const API_BASE = "/tasks/api/planning";
 const TOKEN_KEY = "empire_planning_token";
-const APP_VER = "51";
+const APP_VER = "52";
 const OFFLINE_SNAPSHOT_KEY = "empire_offline_snapshot";
+const REST_TIMER_PRESETS = [60, 90, 120, 180];
 const REPEAT_MAP = {
   daily: { freq: "daily", interval: 1 },
   weekdays: { freq: "weekdays", interval: 1 },
@@ -54,6 +55,7 @@ const state = {
   creatingTask: false,
   reminded: new Set(JSON.parse(localStorage.getItem("empire_reminded") || "[]")),
   fmPipelineTab: localStorage.getItem("empire_fm_tab") || "empire",
+  restTimer: { endAt: null, pausedRemainingMs: null, intervalId: null, presetSec: 120 },
 };
 
 const TITLES = {
@@ -1803,6 +1805,200 @@ function renderMeasurements() {
   }
 }
 
+function getRestTimerDefaultSec() {
+  const n = Number(localStorage.getItem("empire_rest_sec") || 120);
+  return REST_TIMER_PRESETS.includes(n) ? n : 120;
+}
+
+function restTimerAutostartEnabled() {
+  return localStorage.getItem("empire_rest_autostart") !== "0";
+}
+
+function formatRestTimer(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function formatRestPreset(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return s ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`;
+}
+
+function restTimerRemainingMs() {
+  const rt = state.restTimer;
+  if (rt.pausedRemainingMs != null) return rt.pausedRemainingMs;
+  if (!rt.endAt) return 0;
+  return Math.max(0, rt.endAt - Date.now());
+}
+
+function restTimerIsRunning() {
+  return state.restTimer.endAt != null || state.restTimer.pausedRemainingMs != null;
+}
+
+function stopRestTimerInterval() {
+  if (state.restTimer.intervalId) {
+    clearInterval(state.restTimer.intervalId);
+    state.restTimer.intervalId = null;
+  }
+}
+
+function playRestTimerBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.value = 0.12;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
+    setTimeout(() => {
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.value = 988;
+      gain2.gain.value = 0.12;
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start();
+      osc2.stop(ctx.currentTime + 0.35);
+    }, 280);
+  } catch (_) {}
+}
+
+function onRestTimerComplete() {
+  stopRestTimerInterval();
+  state.restTimer.endAt = null;
+  state.restTimer.pausedRemainingMs = null;
+  syncRestTimerUI();
+  showToast("Отдых окончен — следующий подход");
+  if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
+  playRestTimerBeep();
+}
+
+function tickRestTimer() {
+  if (state.restTimer.pausedRemainingMs != null) return;
+  const left = restTimerRemainingMs();
+  if (left <= 0) {
+    onRestTimerComplete();
+    return;
+  }
+  const display = document.getElementById("rest-timer-display");
+  if (display) display.textContent = formatRestTimer(left);
+}
+
+function startRestTimer(seconds) {
+  const sec = Number(seconds) || getRestTimerDefaultSec();
+  localStorage.setItem("empire_rest_sec", String(sec));
+  state.restTimer.presetSec = sec;
+  state.restTimer.pausedRemainingMs = null;
+  state.restTimer.endAt = Date.now() + sec * 1000;
+  stopRestTimerInterval();
+  syncRestTimerUI();
+  tickRestTimer();
+  state.restTimer.intervalId = setInterval(tickRestTimer, 200);
+}
+
+function pauseRestTimer() {
+  if (state.restTimer.pausedRemainingMs != null) return;
+  const left = restTimerRemainingMs();
+  if (!left) return;
+  stopRestTimerInterval();
+  state.restTimer.pausedRemainingMs = left;
+  state.restTimer.endAt = null;
+  syncRestTimerUI();
+}
+
+function resumeRestTimer() {
+  if (state.restTimer.pausedRemainingMs == null) return;
+  state.restTimer.endAt = Date.now() + state.restTimer.pausedRemainingMs;
+  state.restTimer.pausedRemainingMs = null;
+  stopRestTimerInterval();
+  syncRestTimerUI();
+  tickRestTimer();
+  state.restTimer.intervalId = setInterval(tickRestTimer, 200);
+}
+
+function stopRestTimer() {
+  stopRestTimerInterval();
+  state.restTimer.endAt = null;
+  state.restTimer.pausedRemainingMs = null;
+  syncRestTimerUI();
+}
+
+function addRestTimerSeconds(extra) {
+  const addMs = (Number(extra) || 30) * 1000;
+  if (state.restTimer.pausedRemainingMs != null) {
+    state.restTimer.pausedRemainingMs += addMs;
+  } else if (state.restTimer.endAt) {
+    state.restTimer.endAt += addMs;
+  } else {
+    startRestTimer(Math.round(addMs / 1000));
+    return;
+  }
+  syncRestTimerUI();
+  tickRestTimer();
+}
+
+function syncRestTimerUI() {
+  const bar = document.getElementById("rest-timer-bar");
+  const idle = document.getElementById("rest-timer-idle");
+  const active = document.getElementById("rest-timer-active");
+  const display = document.getElementById("rest-timer-display");
+  const sub = document.getElementById("rest-timer-sub");
+  const pauseBtn = document.getElementById("rest-pause-btn");
+  const autostart = document.getElementById("rest-autostart");
+  if (!bar || !idle || !active) return;
+
+  const running = restTimerIsRunning();
+  const paused = state.restTimer.pausedRemainingMs != null;
+  idle.classList.toggle("hidden", running);
+  active.classList.toggle("hidden", !running);
+  bar.classList.toggle("rest-timer-bar--active", running);
+
+  const defaultSec = getRestTimerDefaultSec();
+  bar.querySelectorAll(".rest-preset").forEach((btn) => {
+    btn.classList.toggle("rest-preset--default", Number(btn.dataset.sec) === defaultSec);
+  });
+
+  if (running && display) {
+    display.textContent = formatRestTimer(restTimerRemainingMs());
+  }
+  if (sub) sub.textContent = paused ? "пауза" : "осталось";
+  if (pauseBtn) {
+    pauseBtn.textContent = paused ? "Продолжить" : "Пауза";
+    pauseBtn.dataset.action = paused ? "rest-resume" : "rest-pause";
+  }
+  if (autostart && autostart.checked !== restTimerAutostartEnabled()) {
+    autostart.checked = restTimerAutostartEnabled();
+  }
+}
+
+function syncRestTimerChrome(view) {
+  const bar = document.getElementById("rest-timer-bar");
+  if (!bar) return;
+  const show = view === "workouts" || view === "program";
+  bar.classList.toggle("hidden", !show);
+  bar.setAttribute("aria-hidden", show ? "false" : "true");
+  if (show) syncRestTimerUI();
+}
+
+function initRestTimerControls() {
+  const autostart = document.getElementById("rest-autostart");
+  if (autostart) {
+    autostart.checked = restTimerAutostartEnabled();
+    autostart.addEventListener("change", () => {
+      localStorage.setItem("empire_rest_autostart", autostart.checked ? "1" : "0");
+    });
+  }
+  syncRestTimerUI();
+}
+
 function renderWorkouts() {
   const el = document.getElementById("view-workouts");
   state.workoutDiaryDate = state.workoutDiaryDate || todayStr();
@@ -1940,6 +2136,9 @@ function bindProgramExerciseHandlers(root) {
   });
   root.querySelectorAll(".pg-set-done").forEach((cb) => {
     cb.onchange = () => {
+      if (cb.checked && restTimerAutostartEnabled()) {
+        startRestTimer(getRestTimerDefaultSec());
+      }
       updateProgramDots(root, cb.dataset.idx);
       scheduleProgramAutoSave();
     };
@@ -3430,6 +3629,7 @@ function updateChromeForView(name) {
   const isSettings = name === "settings";
   document.getElementById("btn-mobile-menu")?.classList.toggle("hidden", isSettings);
   document.getElementById("btn-overflow")?.classList.toggle("hidden", isSettings);
+  syncRestTimerChrome(name);
   document.querySelectorAll(".icon-rail-btn[data-view]").forEach((btn) => {
     const match = btn.dataset.view === name || (name === "cal-day" && btn.dataset.view === "calendar");
     btn.classList.toggle("active", !isSettings && match);
@@ -4254,6 +4454,31 @@ function bindEvents() {
         document.getElementById("tf-tag-add")?.focus();
         return;
       }
+      if (action === "rest-start") {
+        e.preventDefault();
+        startRestTimer(Number(actionEl.dataset.sec) || getRestTimerDefaultSec());
+        return;
+      }
+      if (action === "rest-pause") {
+        e.preventDefault();
+        pauseRestTimer();
+        return;
+      }
+      if (action === "rest-resume") {
+        e.preventDefault();
+        resumeRestTimer();
+        return;
+      }
+      if (action === "rest-stop") {
+        e.preventDefault();
+        stopRestTimer();
+        return;
+      }
+      if (action === "rest-add-30") {
+        e.preventDefault();
+        addRestTimerSeconds(30);
+        return;
+      }
       if (action === "focus-field") {
         const targetId = actionEl.dataset.target;
         const details = document.getElementById("sheet-fields-details");
@@ -4349,6 +4574,7 @@ async function init() {
     projectsWrap.open = false;
   }
   bindEvents();
+  initRestTimerControls();
   bindColumnResizers();
   renderMobileTabbar();
   syncOverflowHideDoneLabel();

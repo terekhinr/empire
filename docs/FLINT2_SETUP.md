@@ -16,6 +16,32 @@ Bootstrap VPS: `http://193.233.232.48:8789/`
 | `05-wireguard-server.sh` | Удалённый доступ в LAN |
 | `06-transmission.sh` | Торрент, окно 01:00–05:59 MSK |
 | `07-router-tunnel.sh` | Reverse SSH → VPS `:6223` (для агента) |
+| `08-migrate-keenetic.sh` | Wi‑Fi Destroy, DHCP static, DNS 1.1.1.1 |
+| `09-amnezia-awg.sh` | AmneziaWG client (нужен `/etc/amnezia/client.env`) |
+| `11-youtube-verify.sh` | Проверка YouTube / Sber после настройки |
+
+Дополнительно: `dhcp-static-leases.sh` (25 устройств), `docs/FLINT2_AMNEZIA.md`
+
+## Миграция с Keenetic (подготовлено на VPS)
+
+Экспорт: `scripts/flint2/keenetic-export.json`
+
+| Keenetic | Flint |
+|----------|-------|
+| LAN `192.168.1.1/24`, DHCP `.33–.152` | `01-base-lan` + `08-migrate-keenetic` |
+| Wi‑Fi `Destroy` | `08-migrate-keenetic` (пароль через `KEENETIC_WIFI_PSK`) |
+| 25 static DHCP (HA `.41`, камеры…) | `dhcp-static-leases.sh` |
+| Transmission USB, **01:00–05:59 MSK** | `06-transmission.sh` |
+| XKeen VLESS → `:8443` | `03-config-podkop.sh` |
+| nfqws2 | `04-install-zapret2.sh` |
+| KeenDNS / HA remote | `05-wireguard-server.sh` |
+| Amnezia AWG | `09-amnezia-awg.sh` — `docs/FLINT2_AMNEZIA.md` |
+
+**Сейчас (2026-07-14):** Keenetic LAN → **Flint WAN**, Flint `192.168.1.99` (hostname OpenWrt).  
+Flint LAN **не** должен быть в общем свитче до cutover (конфликт `192.168.1.1` с Keenetic).  
+SSH/HTTP на WAN **закрыты** (OpenWrt по умолчанию) — bootstrap только с **Flint LAN** (ПК в порт LAN Flint, WAN остаётся в Keenetic).
+
+VPS следит за появлением SSH: `tmux -s flint2-watch` → `scripts/flint2/flint2-watcher.py`
 
 ---
 
@@ -42,7 +68,7 @@ curl -fsSL http://193.233.232.48:8789/00-bootstrap.sh | sh
 
 ```sh
 export FLINT2_BASE=http://193.233.232.48:8789
-for s in 01-base-lan 02-install-podkop 03-config-podkop 04-install-zapret2 05-wireguard-server 06-transmission 07-router-tunnel; do
+for s in 01-base-lan 02-install-podkop 03-config-podkop 04-install-zapret2 05-wireguard-server 06-transmission 07-router-tunnel 08-migrate-keenetic; do
   curl -fsSL "$FLINT2_BASE/$s.sh" | sh
 done
 ```

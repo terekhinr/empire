@@ -16,6 +16,19 @@ if in_window; then
   exit 0
 fi
 
+case "${1:-}" in
+  start)
+    in_window || exit 0
+    /etc/init.d/transmission start 2>/dev/null || true
+    exit 0
+    ;;
+  stop)
+    /etc/init.d/transmission stop 2>/dev/null || killall transmission-daemon 2>/dev/null || true
+    echo "$(date -Is) stop hour=$H" >>"$LOG"
+    exit 0
+    ;;
+esac
+
 if pidof transmission-daemon >/dev/null 2>&1; then
   /etc/init.d/transmission stop 2>/dev/null || killall transmission-daemon 2>/dev/null || true
   echo "$(date -Is) stop outside window hour=$H" >>"$LOG"

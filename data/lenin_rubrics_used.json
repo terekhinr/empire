@@ -45,6 +45,7 @@
       "art_serov_sketch",
       "art_kuzma_petrograd",
       "art_monument_volgograd",
+      "art_monument_volgograd",
       "art_monument_volgograd"
     ],
     "biography": [
@@ -95,5 +96,5 @@
       "lit_pasternak"
     ]
   },
-  "last": "2026-07-13T09:00:16.797029"
+  "last": "2026-07-14T09:00:31.162575"
 }

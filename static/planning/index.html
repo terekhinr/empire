@@ -10,7 +10,7 @@
   <title>Empire</title>
   <link rel="manifest" href="/tasks/assets/manifest.json">
   <link rel="apple-touch-icon" href="/tasks/assets/icon-192.png">
-    <link rel="stylesheet" href="/tasks/assets/styles.css?v=45">
+    <link rel="stylesheet" href="/tasks/assets/styles.css?v=46">
 </head>
 <body>
   <div id="app">
@@ -437,6 +437,35 @@
     </div>
   </div>
 
+  <div id="rest-timer-bar" class="rest-timer-bar hidden" aria-hidden="true">
+    <div class="rest-timer-inner">
+      <div id="rest-timer-idle" class="rest-timer-idle">
+        <div class="rest-timer-head">
+          <span class="rest-timer-title">Отдых между подходами</span>
+          <label class="rest-timer-autostart">
+            <input type="checkbox" id="rest-autostart" checked>
+            <span>После подхода</span>
+          </label>
+        </div>
+        <div class="rest-timer-presets">
+          <button type="button" class="rest-preset" data-action="rest-start" data-sec="60">1:00</button>
+          <button type="button" class="rest-preset" data-action="rest-start" data-sec="90">1:30</button>
+          <button type="button" class="rest-preset rest-preset--default" data-action="rest-start" data-sec="120">2:00</button>
+          <button type="button" class="rest-preset" data-action="rest-start" data-sec="180">3:00</button>
+        </div>
+      </div>
+      <div id="rest-timer-active" class="rest-timer-active hidden">
+        <div id="rest-timer-display" class="rest-timer-display">2:00</div>
+        <div class="rest-timer-sub" id="rest-timer-sub">осталось</div>
+        <div class="rest-timer-actions">
+          <button type="button" class="btn small" data-action="rest-add-30">+30 сек</button>
+          <button type="button" class="btn small" id="rest-pause-btn" data-action="rest-pause">Пауза</button>
+          <button type="button" class="btn small" data-action="rest-stop">Стоп</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="auth-screen" class="auth-screen hidden">
     <div class="auth-card">
       <h2>Empire</h2>
@@ -450,6 +479,6 @@
   <div id="toast" class="toast hidden"></div>
   <script src="/tasks/assets/finance_model_content.js?v=3"></script>
   <script src="/tasks/assets/nav-icons.js?v=3" defer></script>
-  <script src="/tasks/assets/app.js?v=51" defer></script>
+  <script src="/tasks/assets/app.js?v=52" defer></script>
 </body>
 </html>

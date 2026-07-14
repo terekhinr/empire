@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+set timeout 45
+set pwd [lindex $argv 0]
+spawn dbclient root@192.168.8.1 {*}$argv 1
+expect {
+  -re "(?i)password:" { send "$pwd\r"; exp_continue }
+  eof
+}
+catch wait result
+exit [lindex $result 3]

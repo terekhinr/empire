@@ -73,9 +73,10 @@
     "as_pushkin_pisma",
     "fa_abramov_zhenskiy",
     "yuk_olesha_kult",
-    "ap_chehov_melochnost"
+    "ap_chehov_melochnost",
+    "sd_dovlatov_ironiya"
   ],
-  "last": "2026-07-13T12:00:00.013287",
+  "last": "2026-07-14T12:00:00.004618",
   "last_by_id": {
     "sholokhov_don": "2026-06-07T12:00:16.922077",
     "dostoevsky_poor": "2026-06-07T12:00:16.922077",
@@ -150,6 +151,7 @@
     "as_pushkin_pisma": "2026-07-10T12:00:00.008252",
     "fa_abramov_zhenskiy": "2026-07-11T12:00:00.800778",
     "yuk_olesha_kult": "2026-07-12T12:00:00.011328",
-    "ap_chehov_melochnost": "2026-07-13T12:00:00.013287"
+    "ap_chehov_melochnost": "2026-07-13T12:00:00.013287",
+    "sd_dovlatov_ironiya": "2026-07-14T12:00:00.004618"
   }
 }

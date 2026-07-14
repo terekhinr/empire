@@ -26,7 +26,7 @@ def main() -> int:
     cmd = (
         "ip addr add 192.168.8.254/24 dev br0 2>/dev/null || true; "
         "ping -c2 -W2 192.168.8.1; "
-        "timeout 8 sh -c \"printf 'GET / HTTP/1.0\\r\\nHost: 192.168.8.1\\r\\n\\r\\n' | nc 192.168.8.1 80\" | head -20"
+        "printf 'GET / HTTP/1.0\\r\\nHost: 192.168.8.1\\r\\n\\r\\n' | nc 192.168.8.1 80 | head -15"
     )
     script = textwrap.dedent(
         f'''
@@ -37,7 +37,7 @@ def main() -> int:
         tn.read_until(b"Login:",15); tn.write(L.encode()+b"\\n")
         tn.read_until(b"Password:",15); tn.write(P.encode()+b"\\n"); time.sleep(2)
         tn.read_very_eager(); tn.write(b"exec sh\\r\\n"); time.sleep(4)
-        tn.read_very_eager(); tn.write(cmd.encode()+b"\\r\\n"); time.sleep(20)
+        tn.read_very_eager(); tn.write(cmd.encode()+b"\\r\\n"); time.sleep(8)
         print(tn.read_very_eager().decode("utf-8","replace")[-3000:])
         tn.write(b"exit\\r\\n"); tn.close()
         '''
