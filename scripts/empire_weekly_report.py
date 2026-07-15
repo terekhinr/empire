@@ -151,6 +151,23 @@ def build_report() -> str:
 
     lines.extend(["", "── Постинг / продукты ──"])
     lines.extend(_posting_summary())
+    pm_path = LOG_DIR / "posting-metrics-latest.txt"
+    kpi_path = ROOT / "data" / "empire_weekly_kpi.json"
+    if pm_path.is_file():
+        lines.extend(["", "── Эффективность постинга (неделя) ──"])
+        lines.extend(pm_path.read_text(encoding="utf-8", errors="replace").splitlines()[:12])
+    if kpi_path.is_file():
+        try:
+            hist = json.loads(kpi_path.read_text(encoding="utf-8"))
+            last = hist[-1] if isinstance(hist, list) and hist else hist
+            kpi = (last or {}).get("kpi") or {}
+            lines.append(
+                f"KPI: published={kpi.get('tg_posts_published')} "
+                f"skip={kpi.get('autopost_failures')} "
+                f"rate={kpi.get('autopost_success_rate')}"
+            )
+        except Exception:
+            pass
     ca_path = LOG_DIR / "content-audit-latest.txt"
     if ca_path.is_file():
         ca_body = ca_path.read_text(encoding="utf-8", errors="replace")

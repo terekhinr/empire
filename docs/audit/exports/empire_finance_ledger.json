@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-05-27",
+    "type": "expense",
+    "category": "vps",
+    "amount_rub": 2373,
+    "vendor": "VPS VIEs-3",
+    "persona": null,
+    "note": "moderate-amethys, 4 CPU / 8 GB / 120 GB, продление до 2026-06-27",
+    "receipt_url": null
+  }
+]

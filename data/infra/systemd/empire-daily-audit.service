@@ -1,0 +1,16 @@
+[Unit]
+Description=Empire daily audit (security, backups, disk, HA)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+Environment=EMPIRE_AUDIT_NO_TELEGRAM=1
+ExecStart=/root/projects/empire/scripts/empire_daily_audit.sh
+User=root
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

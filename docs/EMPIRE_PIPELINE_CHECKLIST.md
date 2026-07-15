@@ -21,6 +21,7 @@
 | I6 | **Автопост 5 TG** (`auto_publish.json`) | ✅ | `journalctl -u empire \| grep autopublish` |
 | I7 | **KPI недели** (вкл. автопост + email) | ⬜ | `data/empire_weekly_kpi.json` · шаблон CSV |
 | I8 | Метрика **оба** сайта | ⏸ | gdepar + neverretire — блокер воронки |
+| I9 | **DR: docs/infra + Я.Диск** | ✅ | `docs/infra/README.md` · `vps_restore_from_yandex.sh` |
 
 ---
 
@@ -190,3 +191,5 @@ journalctl -u empire_gdepar | grep 'timing route='   # если тормозит
 | `data/pension/scripts/README.md` | Папки scripts / reference |
 | `docs/audit/14_PIPELINE_R5_AUTOPOST.md` | R5: автопост, метрики, сроки |
 | `docs/empire_kpi_sheets_template.md` | Колонки KPI + пороги |
+| `docs/infra/README.md` | Сеть Flint, VPS runbook, бэкап/restore Я.Диск |
+| `docs/YANDEX_RCLONE_START.md` | rclone + Яндекс (старт) |

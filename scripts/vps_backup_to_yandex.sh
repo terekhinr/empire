@@ -48,9 +48,15 @@ if [[ -d /etc/empire ]]; then
   tar -czf "$ETC_TAR" -C /etc empire 2>/dev/null || true
 fi
 
-for u in /etc/systemd/system/empire*.service /etc/systemd/system/obsidian*.timer /etc/systemd/system/obsidian*.service; do
+for u in /etc/systemd/system/empire*.service /etc/systemd/system/empire*.timer \
+         /etc/systemd/system/obsidian*.timer /etc/systemd/system/obsidian*.service; do
   [[ -f "$u" ]] && cp -a "$u" "$SYSTEMD_STAGING/" || true
 done
+
+log "Сбор infra-пакета (docs, роутер, systemd)..."
+if [[ -x "$ROOT/scripts/infra/infra_backup_bundle.sh" ]]; then
+  EMPIRE_ROOT="$ROOT" "$ROOT/scripts/infra/infra_backup_bundle.sh" || log "WARN: infra_backup_bundle"
+fi
 
 log "Upload empire project (код, без venv/media/PDF/dist) → ${REMOTE}:${REMOTE_DAY}/empire"
 rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
@@ -83,6 +89,13 @@ log "Upload /etc/empire + systemd + sqlite backups"
 [[ -f "$ETC_TAR" ]] && rclone copy "$ETC_TAR" "${REMOTE}:${REMOTE_DAY}/" -v
 [[ -d "$SYSTEMD_STAGING" ]] && rclone copy "$SYSTEMD_STAGING" "${REMOTE}:${REMOTE_DAY}/systemd" -v
 rclone copy "$LOCAL_DB_BACKUP" "${REMOTE}:${REMOTE_DAY}/sqlite-backups" -v --max-age 48h
+
+# Infra: домашняя сеть, docs snapshot, rclone backup
+if [[ -d "$ROOT/data/infra" ]]; then
+  log "Upload data/infra → ${REMOTE}:${REMOTE_DAY}/infra"
+  rclone copy "$ROOT/data/infra" "${REMOTE}:${REMOTE_DAY}/infra" \
+    --transfers 2 --checkers 4 --retries 10 -v || log "WARN: infra upload"
+fi
 
 # «latest» — для быстрого восстановления
 rclone sync "${REMOTE}:${REMOTE_DAY}" "${REMOTE}:${REMOTE_LATEST}" -v

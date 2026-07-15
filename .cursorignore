@@ -1,13 +1,34 @@
 # Снижаем нагрузку Cursor indexing на VPS (8 GB RAM).
+# Не игнорируем весь data/ — иначе IDE не даёт копировать KPI/финансы.
 vector_db/
 venv/
 .venv/
 __pycache__/
 *.pyc
-data/
+data/stern/
+data/lenin/
+data/gdepar/
+data/audio/
+data/pension/
+data/garden/
+data/obsidian_vault/
+data/voice_vault_staging/
+data/voice_incoming/
+data/scans/
+data/ocr_cache/
+data/portfolio_imports/
+data/garden_deliverables/
+data/book/
+data/**/*.pdf
+data/**/*.mp3
+data/**/*.m4a
+data/**/*.wav
 media/
 node_modules/
-.git/
+# Не игнорить весь .git/ — sandbox Cursor падает на mount hooks.
+.git/objects/
+.git/logs/
+.git/cursor/
 var/tmp/
 *.img
 *.mp4

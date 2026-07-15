@@ -1,0 +1,18 @@
+[Unit]
+Description=Empire portfolio sync (MOEX + T-Bank)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/empire/empire.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/portfolio_sync.py
+Nice=10
+IOSchedulingClass=best-effort
+
+[Install]
+WantedBy=multi-user.target

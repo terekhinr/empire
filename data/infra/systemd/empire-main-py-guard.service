@@ -1,0 +1,13 @@
+[Unit]
+Description=Empire guard: auto-restore main.py if truncated
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=RCLONE_REMOTE=yandex
+ExecStart=/bin/bash /root/projects/empire/scripts/guard_critical_files.sh --auto-restore --warn
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

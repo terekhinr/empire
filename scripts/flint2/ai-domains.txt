@@ -1,0 +1,11 @@
+# Домены ИИ → Amnezia awg0 (Вена). Яндекс — напрямую через WAN (РФ).
+# yandex.* сюда НЕ добавлять: awg0 не форвардит, yandex.ru таймаутит.
+openai.com
+chatgpt.com
+chat.openai.com
+oaistatic.com
+oaiusercontent.com
+anthropic.com
+claude.ai
+copilot.microsoft.com
+bing.com

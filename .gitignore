@@ -25,7 +25,12 @@ build/
 *.swp
 .DS_Store
 
-# БД и тяжёлые runtime-артефакты (бэкап — rclone / backup_empire_db.sh)
+# Infra backups (секреты + live router config — только Я.Диск)
+data/infra/rclone.conf.backup
+data/infra/home-router/flint-uci-*.conf
+data/infra/home-router/flint-etc-config-*.tar.gz
+data/infra/crontab-root.txt
+
 *.db
 *.db-shm
 *.db-wal

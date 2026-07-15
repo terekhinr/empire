@@ -34,6 +34,30 @@ uci set podkop.main.proxy_string="$VLESS"
 uci set podkop.main.enable_udp_over_tcp='0'
 uci -q delete podkop.main.community_lists 2>/dev/null || true
 uci add_list podkop.main.community_lists='russia_inside'
+# russia_inside НЕ включает Telegram — отдельный список
+uci add_list podkop.main.community_lists='telegram'
+uci set podkop.main.enable_udp_over_tcp='1'
+
+# AI / Яндекс → Amnezia awg0 (не nftset — конфликтует с FakeIP)
+AI_LIST=/etc/amnezia/ai-domains.txt
+curl -fsSL "$BASE/ai-domains.txt" -o "$AI_LIST" 2>/dev/null || true
+if [ -f "$AI_LIST" ]; then
+  DOMAINS="$(grep -v '^#' "$AI_LIST" | grep -v '^[[:space:]]*$' | tr '\n' ' ')"
+  uci -q delete podkop.ai_awg 2>/dev/null || true
+  uci set podkop.ai_awg='section'
+  uci set podkop.ai_awg.connection_type='vpn'
+  uci set podkop.ai_awg.interface='awg0'
+  uci set podkop.ai_awg.user_domain_list_type='text'
+  uci set podkop.ai_awg.user_domains_text="$DOMAINS"
+  # google_ai НЕ через awg0 — туннель 10.8.1.13 без handshake на сервере (таймаут).
+  # Gemini идёт через VLESS в main (см. google_ai ниже).
+fi
+
+# Gemini / Google AI → VLESS (Empire), пока awg0 не поднят end-to-end
+uci -q delete podkop.main.community_lists 2>/dev/null || true
+uci add_list podkop.main.community_lists='russia_inside'
+uci add_list podkop.main.community_lists='telegram'
+uci add_list podkop.main.community_lists='google_ai'
 
 uci commit podkop
 

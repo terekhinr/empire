@@ -1,0 +1,11 @@
+[Unit]
+Description=Empire memory refresh (restart main/worker/gdepar)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /root/projects/empire/scripts/empire_memory_refresh.sh
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

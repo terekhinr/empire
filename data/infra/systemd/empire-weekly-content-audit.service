@@ -1,0 +1,14 @@
+[Unit]
+Description=Weekly Empire content quality audit
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/projects/empire
+Environment=EMPIRE_LOG_DIR=/var/log/empire
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_weekly_content_audit.py --reject-junk --apply-reject
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

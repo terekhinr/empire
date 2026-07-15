@@ -271,6 +271,26 @@ if command -v apt-get >/dev/null 2>&1; then
   fi
 fi
 
+section "Роутер Flint (podkop/VPN/torrent)"
+if [[ -x "$ROOT/scripts/empire_router_watchdog.py" ]]; then
+  EMPIRE_ROUTER_NO_FIX=0 EMPIRE_ROUTER_PRINT_SUMMARY=1 \
+    "$ROOT/venv/bin/python" "$ROOT/scripts/empire_router_watchdog.py" 2>&1 | tail -8 | while read -r rl; do log "  $rl"; done || true
+  if [[ -f /var/log/empire/router-state.json ]]; then
+    router_ok="$("$ROOT/venv/bin/python" -c "import json; d=json.load(open('/var/log/empire/router-state.json')); print('OK' if d.get('last_all_ok') else 'FAIL')" 2>/dev/null || echo FAIL)"
+    if [[ "$router_ok" == "OK" ]]; then
+      add_ok "Flint: podkop/torrent/VPN OK"
+    elif [[ -f /var/log/empire/router-state.json ]] && grep -q '"last_channel": null' /var/log/empire/router-state.json 2>/dev/null; then
+      add_issue "Flint недоступен (reverse SSH и HA)"
+    else
+      add_warn "Flint: часть сервисов не OK — см. router-state.json"
+    fi
+  else
+    add_warn "router-state.json не создан"
+  fi
+else
+  add_warn "нет empire_router_watchdog.py"
+fi
+
 section "Постинг / health"
 if curl -sf --max-time 8 http://127.0.0.1:8001/api/gdepar/health >/tmp/empire-audit-health.json 2>/dev/null; then
   add_ok "gdepar /api/gdepar/health отвечает"

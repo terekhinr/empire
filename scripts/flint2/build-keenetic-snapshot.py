@@ -169,7 +169,13 @@ def find_static_hosts(data: dict) -> list[dict]:
 
 def sanitize_name(name: str) -> str:
     base = name.split(" - ")[0].strip()
-    return "".join(c if c.isalnum() or c in "-_" else "_" for c in base)[:32] or "host"
+    out = "".join(c if c.isalnum() or c in "-_" else "_" for c in base)
+    out = "".join(c for c in out if ord(c) < 128)
+    out = out.strip("_-")
+    # dnsmasq не принимает имена, начинающиеся с _ или только из _
+    if not out or not out[0].isalnum():
+        out = f"h{out}" if out else "host"
+    return out[:32]
 
 
 def write_dhcp_sh(hosts: list[dict]) -> None:

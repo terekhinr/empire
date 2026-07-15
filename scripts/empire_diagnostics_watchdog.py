@@ -24,6 +24,8 @@ TIMERS = (
     "empire-weekly-report.timer",
     "empire-main-py-guard.timer",
     "empire-diagnostics-watchdog.timer",
+    "empire-router-watchdog.timer",
+    "empire-morning-brief.timer",
 )
 
 WATCHDOG_LOG = LOG_DIR / "diagnostics-watchdog.log"
@@ -119,7 +121,7 @@ def read_night_pipeline() -> dict:
 
 
 def yandex_latest_day() -> str | None:
-    host = os.uname().nodename
+    host = os.uname().nodename.split(".")[0]
     remote = f"yandex:VPS-backup/{host}/"
     code, out = run(["rclone", "lsf", remote, "--dirs-only"], timeout=120)
     if code != 0:
@@ -165,7 +167,8 @@ def stuck_yandex_rclone_h() -> float | None:
 
 
 def tox1_cloud_parts() -> int:
-    host = os.uname().nodename
+    # rclone путь = short hostname (moderate-amethys), не FQDN
+    host = os.uname().nodename.split(".")[0]
     remote = f"yandex:VPS-backup/{host}/TOX1/parts/"
     code, out = run(["rclone", "lsf", remote], timeout=90)
     if code != 0:
@@ -231,6 +234,42 @@ def remediate_yandex_backup(st: dict) -> bool:
     return code == 0
 
 
+def read_router_state() -> dict:
+    p = Path(os.getenv("EMPIRE_ROUTER_STATE", str(LOG_DIR / "router-state.json")))
+    if not p.is_file():
+        return {"ok": False, "reason": "router-state.json нет (empire-router-watchdog?)"}
+    try:
+        st = json.loads(p.read_text(encoding="utf-8"))
+        age_h = (time.time() - p.stat().st_mtime) / 3600
+        return {
+            "ok": bool(st.get("last_all_ok")),
+            "summary": st.get("last_summary", "")[:400],
+            "channel": st.get("last_channel"),
+            "age_h": age_h,
+            "actions": st.get("last_actions") or [],
+        }
+    except Exception as exc:
+        return {"ok": False, "reason": str(exc)}
+
+
+def maybe_run_router_watchdog(st: dict) -> bool:
+    """Запуск router watchdog если state старше 45 мин."""
+    p = Path(os.getenv("EMPIRE_ROUTER_STATE", str(LOG_DIR / "router-state.json")))
+    if p.is_file() and (time.time() - p.stat().st_mtime) < 45 * 60:
+        return False
+    attempts = st.setdefault("remediation", {}).get("router_wd", 0)
+    if attempts >= 3:
+        return False
+    log("REMEDIATE: empire_router_watchdog.py")
+    code, _ = run(
+        [str(ROOT / "venv/bin/python"), str(ROOT / "scripts/empire_router_watchdog.py")],
+        timeout=240,
+    )
+    st.setdefault("remediation", {})["router_wd"] = attempts + 1
+    save_state(st)
+    return code == 0
+
+
 def build_report(
     *,
     timer_status: list[str],
@@ -238,6 +277,7 @@ def build_report(
     night: dict,
     yandex_day: str | None,
     tox1_parts: int,
+    router: dict,
     actions: list[str],
     problems: list[str],
 ) -> str:
@@ -288,6 +328,17 @@ def build_report(
         lines.append("✅ образ снят с VPS")
     else:
         lines.append("⚠ 30 ГБ образ ещё на VPS — ждёт выгрузки")
+
+    lines.append("")
+    lines.append("── Роутер Flint ──")
+    if router.get("summary"):
+        icon = "✅" if router.get("ok") else "⚠"
+        lines.append(f"{icon} {router.get('channel', '?')} ({router.get('age_h', 0):.1f}ч назад)")
+        for ln in (router.get("summary") or "").splitlines()[1:3]:
+            if ln.strip():
+                lines.append(f"  {ln[:100]}")
+    else:
+        lines.append(f"❌ {router.get('reason', 'не проверен')}")
 
     if actions:
         lines.extend(["", "── Автопочинка ──", *actions])
@@ -377,12 +428,21 @@ def main() -> int:
     if orphan_rclone_large():
         problems.append("empire-large rclone всё ещё работает (может блокировать пайплайн)")
 
+    if maybe_run_router_watchdog(st):
+        actions.append("запущен empire_router_watchdog.py")
+    router = read_router_state()
+    if router.get("age_h", 999) > 1.5:
+        problems.append("роутер не проверялся >1.5ч")
+    elif not router.get("ok") and router.get("channel"):
+        problems.append("роутер: podkop/VPN/torrent — проблемы")
+
     report = build_report(
         timer_status=timer_lines,
         audit=audit,
         night=night,
         yandex_day=yday,
         tox1_parts=tox1_n,
+        router=router,
         actions=actions,
         problems=problems,
     )

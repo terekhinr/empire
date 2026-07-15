@@ -6,8 +6,8 @@ SESSION="${EMPIRE_TOX1_SESSION:-empire-tox1}"
 IMG="/root/tox1-backup/tox1-emmc-android-20260606.img"
 
 tox1_running() {
-  pgrep -f 'vps_large_files_to_cloud.sh tox1-yandex' >/dev/null 2>&1 \
-    || pgrep -f 'rclone copyto.*TOX1/parts/' >/dev/null 2>&1
+  pgrep -f 'scripts/tox1_scp_to_flint.sh' >/dev/null 2>&1 \
+    || pgrep -f 'scp -O -P 6223.*TOX1-backup' >/dev/null 2>&1
 }
 
 if [[ ! -f "$IMG" ]]; then
@@ -25,5 +25,5 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
 fi
 
 tmux new-session -d -s "$SESSION" \
-  "bash -lc 'cd \"$ROOT\" && while [[ -f \"$IMG\" ]]; do scripts/vps_large_files_to_cloud.sh tox1-yandex && break; echo RETRY; sleep 60; done; echo TOX1_DONE'"
+  "bash -lc 'cd \"$ROOT\" && while [[ -f \"$IMG\" ]]; do scripts/tox1_scp_to_flint.sh && break; echo RETRY; sleep 60; done; echo TOX1_DONE'"
 echo "[$(date -Iseconds)] TOX1: запущен в tmux $SESSION"

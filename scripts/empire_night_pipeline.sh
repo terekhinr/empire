@@ -50,8 +50,13 @@ fi
 log "--- 3/5 код → Я.Диск ---"
 if [[ -f /root/tox1-backup/tox1-emmc-android-20260606.img ]]; then
   log "SKIP yandex code: TOX1 eMMC ещё на VPS — не конкурируем с выгрузкой"
-elif [[ -x "$ROOT/scripts/vps_backup_to_yandex.sh" ]]; then
-  "$ROOT/scripts/vps_backup_to_yandex.sh" || log "WARN: yandex backup failed"
+else
+  if [[ -x "$ROOT/scripts/infra/infra_backup_bundle.sh" ]]; then
+    EMPIRE_ROOT="$ROOT" "$ROOT/scripts/infra/infra_backup_bundle.sh" || log "WARN: infra bundle"
+  fi
+  if [[ -x "$ROOT/scripts/vps_backup_to_yandex.sh" ]]; then
+    "$ROOT/scripts/vps_backup_to_yandex.sh" || log "WARN: yandex backup failed"
+  fi
 fi
 
 log "--- 4/5 empire-large (>80 МБ media/data) ---"

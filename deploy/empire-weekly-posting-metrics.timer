@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly posting metrics (Sun 08:30 MSK, after tech report)
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+Persistent=true
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target

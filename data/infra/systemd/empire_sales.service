@@ -1,0 +1,20 @@
+[Unit]
+Description=Empire sales webhook (YooKassa stub)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/empire/empire.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python empire_sales.py
+Restart=always
+RestartSec=10
+MemoryMax=512M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

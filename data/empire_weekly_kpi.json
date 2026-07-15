@@ -1,1 +1,104 @@
-[]
+[
+  {
+    "generated_at": "2026-07-15T16:54:15.346320+00:00",
+    "week": "2026-07-13",
+    "period_days": 7,
+    "autopublish": {
+      "published": 71,
+      "skip": 11,
+      "success_rate": 0.866,
+      "by_persona": {
+        "garden": {
+          "published": 20,
+          "skip": 1,
+          "success_rate": 0.952,
+          "top_skip_reasons": {
+            "no_image": 1
+          }
+        },
+        "gdepar": {
+          "published": 20,
+          "skip": 1,
+          "success_rate": 0.952,
+          "top_skip_reasons": {
+            "short:125<280": 1
+          }
+        },
+        "lenin": {
+          "published": 12,
+          "skip": 7,
+          "success_rate": 0.632,
+          "top_skip_reasons": {
+            "short:247<500": 2,
+            "short:286<500": 1,
+            "short:388<500": 1
+          }
+        },
+        "stern": {
+          "published": 19,
+          "skip": 2,
+          "success_rate": 0.905,
+          "top_skip_reasons": {
+            "p0:P0: stern — «гиревой спорт»": 1,
+            "short:330<700": 1
+          }
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "garden": 38,
+        "gdepar": 41,
+        "lenin": 80,
+        "pension": 151,
+        "stern": 54
+      },
+      "published_in_db_week": {
+        "garden": 25,
+        "gdepar": 19,
+        "lenin": 13,
+        "stern": 19
+      },
+      "status_breakdown": {
+        "garden": {
+          "pending": 38,
+          "published": 253,
+          "rejected": 2
+        },
+        "gdepar": {
+          "pending": 41,
+          "published": 165,
+          "rejected": 27
+        },
+        "lenin": {
+          "pending": 80,
+          "published": 160,
+          "rejected": 8
+        },
+        "pension": {
+          "draft": 1,
+          "pending": 150,
+          "published": 14,
+          "rejected": 15
+        },
+        "stern": {
+          "pending": 54,
+          "published": 262,
+          "rejected": 12
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 71,
+      "autopost_failures": 11,
+      "autopost_success_rate": 0.866,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "Автопост приемлемый; проверьте skip_reasons"
+    ]
+  }
+]

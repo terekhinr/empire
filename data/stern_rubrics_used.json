@@ -36,7 +36,8 @@
       "med_hr_zones",
       "med_shoulder",
       "med_hr_zones",
-      "med_lower_back"
+      "med_lower_back",
+      "med_return"
     ],
     "kettlebell_fitness": [
       "fit_long_cycle"
@@ -77,5 +78,5 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-07-13T09:47:15.489569"
+  "last": "2026-07-15T07:00:00.004536"
 }

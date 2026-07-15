@@ -1,0 +1,127 @@
+=== VPS software inventory 2026-07-15T124029Z ===
+hostname: moderate-amethys
+kernel: 6.8.0-48-generic
+
+=== empire systemd (active) ===
+  UNIT                                LOAD   ACTIVE SUB     DESCRIPTION
+  empire_dashboard.service            loaded active running Empire Streamlit Dashboard
+  empire_gdepar.service               loaded active running Gde Par Web App (FastAPI, gdepar.ru)
+  empire_ha_notify.service            loaded active running Empire HA → Telegram bridge (Tailscale)
+  empire_main.service                 loaded active running Empire Main Bot (Aiogram + scheduler + RAG)
+  empire_planning.service             loaded active running Empire Tasks (planning PWA + API)
+  empire_sales.service                loaded active running Empire sales webhook (YooKassa stub)
+  empire_webapp.service               loaded active running Neverretire Web (FastAPI)
+  empire_worker.service               loaded active running Empire background worker (jobs queue)
+  empire-daily-audit.timer            loaded active waiting Daily Empire audit at 07:00 MSK (04:00 UTC, хост в UTC)
+  empire-diagnostics-watchdog.timer   loaded active waiting Empire diagnostics watchdog every 2h + boot check
+  empire-main-py-guard.timer          loaded active waiting Every 10 min: check main.py integrity on VPS
+  empire-memory-refresh.timer         loaded active waiting Daily Empire memory refresh at 04:30 UTC
+  empire-morning-brief.timer          loaded active waiting Morning brief 07:05 MSK (04:05 UTC, after daily audit)
+  empire-night-pipeline.timer         loaded active waiting Empire night pipeline at 01:00 MSK (22:00 UTC)
+  empire-router-watchdog.timer        loaded active waiting Router watchdog every 30 min (Flint VPN/podkop/torrent)
+  empire-status-digest.timer          loaded active waiting Empire status digest 07:00 and 20:00 MSK (04:02 / 17:02 UTC)
+  empire-weekly-content-audit.timer   loaded active waiting Weekly Empire content quality audit Sunday 09:00 MSK (06:00 UTC)
+  empire-weekly-posting-metrics.timer loaded active waiting Weekly posting metrics (Sun 08:30 MSK, after tech report)
+  empire-weekly-report.timer          loaded active waiting Weekly Empire report Sunday 08:00 MSK (05:00 UTC)
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+19 loaded units listed.
+
+=== python venv top packages ===
+aiofiles==25.1.0
+aiogram==3.29.0
+aiohappyeyeballs==2.6.1
+aiohttp==3.14.1
+aiosignal==1.4.0
+aiosqlite==0.22.1
+altair==6.1.0
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.13.0
+APScheduler==3.11.2
+asyncpg==0.31.0
+asyncstdlib==3.14.0
+attrs==26.1.0
+av==17.0.1
+beautifulsoup4==4.14.3
+blinker==1.9.0
+boolean.py==5.0
+CacheControl==0.14.4
+cachetools==7.1.1
+cairocffi==1.7.1
+CairoSVG==2.9.0
+certifi==2026.4.22
+cffi==2.0.0
+charset-normalizer==3.4.7
+click==8.3.2
+colorama==0.4.6
+contourpy==1.3.3
+cryptography==49.0.0
+cssselect2==0.9.0
+ctranslate2==4.7.2
+cuda-bindings==13.2.0
+cuda-pathfinder==1.5.4
+cuda-toolkit==13.0.2
+cycler==0.12.1
+cyclonedx-python-lib==11.11.0
+dataclasses-json==0.6.7
+decompyle3==3.9.3
+defusedxml==0.7.1
+distro==1.9.0
+... (truncated)
+
+=== docker ===
+NAMES          STATUS       PORTS
+amnezia-awg2   Up 2 weeks   0.0.0.0:39182->39182/udp, [::]:39182->39182/udp
+empire-db-1    Up 2 weeks   5432/tcp
+
+=== listening ports ===
+State  Recv-Q Send-Q               Local Address:Port  Peer Address:PortProcess                                                                                                                                       
+LISTEN 0      511                        0.0.0.0:443        0.0.0.0:*    users:(("nginx",pid=2525178,fd=7),("nginx",pid=2525177,fd=7),("nginx",pid=2525176,fd=7),("nginx",pid=2525175,fd=7),("nginx",pid=262514,fd=7))
+LISTEN 0      4096                       0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=13199,fd=3),("systemd",pid=1,fd=237))                                                                                     
+LISTEN 0      511                        0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=2525178,fd=5),("nginx",pid=2525177,fd=5),("nginx",pid=2525176,fd=5),("nginx",pid=2525175,fd=5),("nginx",pid=262514,fd=5))
+LISTEN 0      2048                     127.0.0.1:8502       0.0.0.0:*    users:(("uvicorn",pid=1096871,fd=6))                                                                                                         
+LISTEN 0      2048                     127.0.0.1:8501       0.0.0.0:*    users:(("streamlit",pid=982,fd=6))                                                                                                           
+LISTEN 0      128                        0.0.0.0:8877       0.0.0.0:*    users:(("python",pid=2519872,fd=6))                                                                                                          
+LISTEN 0      5                          0.0.0.0:8787       0.0.0.0:*    users:(("python3",pid=2519867,fd=3))                                                                                                         
+LISTEN 0      5                          0.0.0.0:8789       0.0.0.0:*    users:(("python3",pid=2825979,fd=5))                                                                                                         
+LISTEN 0      4096                  100.84.19.35:61342      0.0.0.0:*    users:(("tailscaled",pid=797,fd=26))                                                                                                         
+LISTEN 0      511                      127.0.0.1:39121      0.0.0.0:*    users:(("node",pid=3041364,fd=21))                                                                                                           
+LISTEN 0      511                      127.0.0.1:35055      0.0.0.0:*    users:(("node",pid=3041401,fd=21))                                                                                                           
+LISTEN 0      128                      127.0.0.1:6223       0.0.0.0:*    users:(("sshd",pid=3068288,fd=5))                                                                                                            
+LISTEN 0      4096                    127.0.0.54:53         0.0.0.0:*    users:(("systemd-resolve",pid=1710,fd=17))                                                                                                   
+LISTEN 0      4096                 127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=1710,fd=15))                                                                                                   
+LISTEN 0      2048                     127.0.0.1:8002       0.0.0.0:*    users:(("python",pid=2519869,fd=6))                                                                                                          
+LISTEN 0      2048                     127.0.0.1:8000       0.0.0.0:*    users:(("uvicorn",pid=993,fd=6))                                                                                                             
+LISTEN 0      2048                     127.0.0.1:8001       0.0.0.0:*    users:(("uvicorn",pid=3037934,fd=6))                                                                                                         
+LISTEN 0      511                           [::]:443           [::]:*    users:(("nginx",pid=2525178,fd=8),("nginx",pid=2525177,fd=8),("nginx",pid=2525176,fd=8),("nginx",pid=2525175,fd=8),("nginx",pid=262514,fd=8))
+LISTEN 0      4096                             *:8443             *:*    users:(("xray",pid=3143450,fd=3))                                                                                                            
+LISTEN 0      4096                          [::]:22            [::]:*    users:(("sshd",pid=13199,fd=4),("systemd",pid=1,fd=238))                                                                                     
+LISTEN 0      511                           [::]:80            [::]:*    users:(("nginx",pid=2525178,fd=6),("nginx",pid=2525177,fd=6),("nginx",pid=2525176,fd=6),("nginx",pid=2525175,fd=6),("nginx",pid=262514,fd=6))
+LISTEN 0      4096   [fd7a:115c:a1e0::9e3b:1323]:58243         [::]:*    users:(("tailscaled",pid=797,fd=27))                                                                                                         
+
+=== disk ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2       119G   78G   39G  67% /
+19G	/root/projects/empire
+7.2G	/root/projects/empire/venv
+4.3G	/root/projects/empire/data
+3.6G	/root/projects/empire/.git
+2.0G	/root/projects/empire/media
+972M	/root/projects/empire/desktop
+147M	/root/projects/empire/static
+104M	/root/projects/empire/scripts
+84M	/root/projects/empire/vector_db
+83M	/root/projects/empire/kb_sources
+14M	/root/projects/empire/docs
+11M	/root/projects/empire/tools
+
+=== pip-audit (summary) ===
+pillow            12.2.0  PYSEC-2026-2256 12.3.0
+pillow            12.2.0  PYSEC-2026-2254 12.3.0
+pypdf2            3.0.1   PYSEC-2026-1835 3.9.0
+setuptools        81.0.0  PYSEC-2026-3447 83.0.0
+torch             2.11.0  CVE-2025-3000

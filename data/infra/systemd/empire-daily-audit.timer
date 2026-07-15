@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Empire audit at 07:00 MSK (04:00 UTC, хост в UTC)
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target

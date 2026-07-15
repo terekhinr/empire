@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire morning brief (07:05 MSK)
+After=network-online.target empire-daily-audit.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_morning_brief.py
+User=root
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

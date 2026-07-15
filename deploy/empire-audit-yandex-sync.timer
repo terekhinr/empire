@@ -1,0 +1,11 @@
+[Unit]
+Description=Audit to Yandex Disk daily 07:15 MSK and after weekly KPI
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+OnCalendar=Sun *-*-* 05:45:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

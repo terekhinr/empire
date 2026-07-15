@@ -1,0 +1,17 @@
+[Unit]
+Description=Weekly posting metrics and KPI JSON
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/projects/empire
+EnvironmentFile=-/root/projects/empire/.env
+Environment=EMPIRE_LOG_DIR=/var/log/empire
+Environment=EMPIRE_SKIP_YANDEX_AUDIT=1
+Environment=EMPIRE_POSTING_METRICS_TELEGRAM=1
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_weekly_posting_metrics.py
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

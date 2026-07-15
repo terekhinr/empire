@@ -1,0 +1,15 @@
+[Unit]
+Description=Empire HA → Telegram bridge (Tailscale)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/empire
+EnvironmentFile=/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python ha_telegram_bridge.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

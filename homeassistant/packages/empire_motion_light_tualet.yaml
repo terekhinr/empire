@@ -1,0 +1,51 @@
+# Туалет: SONOFF SNZB-06P (mmWave присутствие) → light.empire_tualet_svet
+
+automation:
+  - id: empire_tualet_sensor_init
+    alias: "Туалет — настройка Sonoff присутствия при старте"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:f2:bd:92"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 34
+          value: 3
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:f2:bd:92"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 33
+          value: 10
+
+  - id: empire_tualet_motion_light_on
+    alias: "Туалет — присутствие, свет вкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p_3
+        to: "on"
+    actions:
+      - action: light.turn_on
+        target:
+          entity_id: light.empire_tualet_svet
+
+  - id: empire_tualet_motion_light_off
+    alias: "Туалет — нет присутствия, свет выкл"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.sonoff_snzb_06p_3
+        to: "off"
+        for:
+          seconds: 10
+    actions:
+      - action: light.turn_off
+        target:
+          entity_id: light.empire_tualet_svet

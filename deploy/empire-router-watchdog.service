@@ -1,0 +1,15 @@
+[Unit]
+Description=Empire router watchdog (Flint podkop/zapret/torrent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+Environment=EMPIRE_FLINT_FIX_URL=http://127.0.0.1:8789/13-fix-all.sh
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_router_watchdog.py
+User=root
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

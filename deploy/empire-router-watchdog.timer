@@ -1,0 +1,11 @@
+[Unit]
+Description=Router watchdog every 30 min (Flint VPN/podkop/torrent)
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+RandomizedDelaySec=90
+
+[Install]
+WantedBy=timers.target

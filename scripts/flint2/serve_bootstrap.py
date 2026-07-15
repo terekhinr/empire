@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from collections import defaultdict
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -13,11 +14,32 @@ TOKEN_FILE = Path("/root/.xkeen-router-access.token")
 AUTH_KEYS = Path("/root/.ssh/authorized_keys")
 MARKER = "# flint2-router-tunnel"
 TUN_PORT = 6223
+_RATE: dict[str, list[float]] = defaultdict(list)
+_RATE_MAX = 120  # requests per hour per IP for GET
 
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def _rate_ok(self) -> bool:
+        ip = self.client_address[0]
+        now = time.time()
+        window = _RATE[ip]
+        _RATE[ip] = [t for t in window if now - t < 3600]
+        if len(_RATE[ip]) >= _RATE_MAX:
+            return False
+        _RATE[ip].append(now)
+        return True
+
+    def do_GET(self):
+        if self.path.startswith("/register"):
+            self.send_error(404)
+            return
+        if not self._rate_ok():
+            self.send_error(429, "rate limit")
+            return
+        return super().do_GET()
 
     def do_POST(self):
         if self.path != "/register-router-key":

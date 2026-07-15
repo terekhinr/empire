@@ -1,0 +1,17 @@
+[Unit]
+Description=Empire night backup pipeline (SQLite, large files, TOX1, Yandex)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/scripts/empire_night_pipeline.sh
+User=root
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=infinity
+TimeoutStopSec=30min
+
+[Install]
+WantedBy=multi-user.target

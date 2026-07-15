@@ -1,0 +1,21 @@
+[Unit]
+Description=Empire Main Bot (Aiogram + scheduler + RAG)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/empire/empire.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStartPre=/bin/bash /root/projects/empire/scripts/guard_critical_files.sh
+ExecStart=/root/projects/empire/venv/bin/python main.py
+Restart=always
+RestartSec=8
+MemoryMax=3584M
+CPUQuota=200%
+
+[Install]
+WantedBy=multi-user.target

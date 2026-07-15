@@ -24,6 +24,22 @@ FORWARD_URL = os.getenv("HA_NOTIFY_FORWARD_URL", "").strip()
 FORWARD_ONLY = os.getenv("HA_NOTIFY_FORWARD_ONLY", "").lower() in ("1", "true", "yes")
 HTTP_TIMEOUT = aiohttp.ClientTimeout(total=12)
 
+# Сообщения с камер (Ezviz motion) в Telegram не нужны.
+_CAMERA_NOTIFY_MARKERS = (
+    "камера",
+    "ezviz",
+    "motion alarm",
+    "движение (прихожая)",
+    "движение (подъезд)",
+    "движение (улица)",
+    "движение в отпуске",
+)
+
+
+def _is_camera_notify(message: str) -> bool:
+    low = message.casefold()
+    return any(m in low for m in _CAMERA_NOTIFY_MARKERS)
+
 
 def _auth_ok(request: web.Request) -> bool:
     if not HA_NOTIFY_TOKEN:
@@ -88,6 +104,9 @@ async def notify(request: web.Request) -> web.Response:
     message = (body.get("message") or "").strip()
     if not message:
         return web.json_response({"error": "message required"}, status=400)
+    if _is_camera_notify(message):
+        log.info("dropped camera notify: %s", message[:80])
+        return web.json_response({"ok": True, "dropped": "camera"})
     ok, detail = await _dispatch(message, request.headers.get("Authorization", ""))
     if not ok:
         log.error("notify failed: %s", detail)
@@ -103,6 +122,9 @@ async def notify_get(request: web.Request) -> web.Response:
     message = (request.query.get("message") or "").strip()
     if not message:
         return web.json_response({"error": "message required"}, status=400)
+    if _is_camera_notify(message):
+        log.info("dropped camera notify (GET): %s", message[:80])
+        return web.json_response({"ok": True, "dropped": "camera"})
     ok, detail = await _dispatch(message, request.headers.get("Authorization", ""))
     if not ok:
         return web.json_response({"error": detail}, status=502)

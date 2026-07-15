@@ -57,6 +57,10 @@ rclone lsd yandex:VPS-backup/
 
 Расписание: ежедневно ~03:45, хранение дневных папок **14 дней** + папка `latest/`.
 
+**Полная документация по восстановлению:** `docs/infra/README.md`  
+**Восстановление VPS одной командой:** `sudo bash scripts/infra/vps_restore_from_yandex.sh latest`  
+**Домашняя сеть (Flint):** `docs/infra/HOME_NETWORK.md`
+
 ## Команды
 
 ```bash

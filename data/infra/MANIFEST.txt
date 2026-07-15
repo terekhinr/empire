@@ -1,0 +1,6 @@
+infra bundle 2026-07-15T102246
+host=moderate-amethys
+empire_root=/root/projects/empire
+docs=docs/infra/
+restore_vps=scripts/infra/vps_restore_from_yandex.sh
+restore_home=docs/infra/HOME_NETWORK.md

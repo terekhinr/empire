@@ -37,12 +37,12 @@ uci set dhcp.@host[-1].name='ESP-8E310A'
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='b8:99:ae:6a:d7:62'
 uci set dhcp.@host[-1].ip='192.168.1.124'
-uci set dhcp.@host[-1].name='Приставка_детская_ви_фи_b8_99_ae'
+uci set dhcp.@host[-1].name='b8_99_ae_6a_d7_62'
 
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='04:05:dd:c5:eb:a4'
 uci set dhcp.@host[-1].ip='192.168.1.141'
-uci set dhcp.@host[-1].name='СберТелек_04_05_dd_c5_eb_a4'
+uci set dhcp.@host[-1].name='04_05_dd_c5_eb_a4'
 
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='70:89:76:35:8e:16'
@@ -112,7 +112,7 @@ uci set dhcp.@host[-1].name='RE200'
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='a8:21:02:c9:60:5b'
 uci set dhcp.@host[-1].ip='192.168.1.60'
-uci set dhcp.@host[-1].name='Проектор_провод_a8_21_02_c9_60_5'
+uci set dhcp.@host[-1].name='a8_21_02_c9_60_5b'
 
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='86:84:d9:77:8e:86'

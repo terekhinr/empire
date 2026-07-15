@@ -1,0 +1,21 @@
+[Unit]
+Description=Empire background worker (jobs queue)
+After=network.target empire_main.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/projects/empire
+Environment=PATH=/root/projects/empire/venv/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=EMPIRE_SKIP_EMBEDDINGS=1
+EnvironmentFile=-/etc/empire/empire.env
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python empire_worker.py
+Restart=always
+RestartSec=10
+MemoryMax=2048M
+CPUQuota=150%
+
+[Install]
+WantedBy=multi-user.target

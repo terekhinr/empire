@@ -1,0 +1,10 @@
+[Unit]
+Description=Empire night disk cleanup at 01:00 MSK (22:00 UTC, хост в UTC)
+
+[Timer]
+OnCalendar=*-*-* 22:00:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
