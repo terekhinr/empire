@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-07-15T16:45:40.456556+00:00",
+  "last_run": "2026-07-16T04:05:39.554472+00:00",
   "remediation": {
     "day": "2026-07-15",
     "fix_podkop": 2,
@@ -31,7 +31,7 @@
     },
     "awg0": {
       "ok": true,
-      "detail": "latest handshake: 1 minute, 41 seconds ago"
+      "detail": "latest handshake: 1 minute, 9 seconds ago"
     },
     "transmission": {
       "ok": true,

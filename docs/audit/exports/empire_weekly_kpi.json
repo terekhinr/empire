@@ -1,29 +1,13 @@
 [
   {
-    "generated_at": "2026-07-15T16:54:15.346320+00:00",
+    "generated_at": "2026-07-16T04:05:42.160440+00:00",
     "week": "2026-07-13",
     "period_days": 7,
     "autopublish": {
-      "published": 71,
+      "published": 70,
       "skip": 11,
-      "success_rate": 0.866,
+      "success_rate": 0.864,
       "by_persona": {
-        "garden": {
-          "published": 20,
-          "skip": 1,
-          "success_rate": 0.952,
-          "top_skip_reasons": {
-            "no_image": 1
-          }
-        },
-        "gdepar": {
-          "published": 20,
-          "skip": 1,
-          "success_rate": 0.952,
-          "top_skip_reasons": {
-            "short:125<280": 1
-          }
-        },
         "lenin": {
           "published": 12,
           "skip": 7,
@@ -42,32 +26,48 @@
             "p0:P0: stern — «гиревой спорт»": 1,
             "short:330<700": 1
           }
+        },
+        "gdepar": {
+          "published": 20,
+          "skip": 1,
+          "success_rate": 0.952,
+          "top_skip_reasons": {
+            "short:125<280": 1
+          }
+        },
+        "garden": {
+          "published": 19,
+          "skip": 1,
+          "success_rate": 0.95,
+          "top_skip_reasons": {
+            "no_image": 1
+          }
         }
       }
     },
     "database": {
       "queue_pending_by_persona": {
-        "garden": 38,
+        "garden": 39,
         "gdepar": 41,
         "lenin": 80,
         "pension": 151,
         "stern": 54
       },
       "published_in_db_week": {
-        "garden": 25,
-        "gdepar": 19,
-        "lenin": 13,
-        "stern": 19
+        "garden": 22,
+        "gdepar": 18,
+        "lenin": 12,
+        "stern": 17
       },
       "status_breakdown": {
         "garden": {
-          "pending": 38,
-          "published": 253,
+          "pending": 39,
+          "published": 254,
           "rejected": 2
         },
         "gdepar": {
           "pending": 41,
-          "published": 165,
+          "published": 166,
           "rejected": 27
         },
         "lenin": {
@@ -89,9 +89,9 @@
       }
     },
     "kpi": {
-      "tg_posts_published": 71,
+      "tg_posts_published": 70,
       "autopost_failures": 11,
-      "autopost_success_rate": 0.866,
+      "autopost_success_rate": 0.864,
       "expenses_rub_week": null,
       "revenue_rub": 0,
       "orders": 0,

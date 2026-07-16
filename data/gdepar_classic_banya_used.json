@@ -75,9 +75,10 @@
     "yuk_olesha_kult",
     "ap_chehov_melochnost",
     "sd_dovlatov_ironiya",
-    "vv_veresaev_banya"
+    "vv_veresaev_banya",
+    "vya_shishkov_sibirskiy"
   ],
-  "last": "2026-07-15T12:00:31.314374",
+  "last": "2026-07-16T12:00:00.008608",
   "last_by_id": {
     "sholokhov_don": "2026-06-07T12:00:16.922077",
     "dostoevsky_poor": "2026-06-07T12:00:16.922077",
@@ -154,6 +155,7 @@
     "yuk_olesha_kult": "2026-07-12T12:00:00.011328",
     "ap_chehov_melochnost": "2026-07-13T12:00:00.013287",
     "sd_dovlatov_ironiya": "2026-07-14T12:00:00.004618",
-    "vv_veresaev_banya": "2026-07-15T12:00:31.314374"
+    "vv_veresaev_banya": "2026-07-15T12:00:31.314374",
+    "vya_shishkov_sibirskiy": "2026-07-16T12:00:00.008608"
   }
 }

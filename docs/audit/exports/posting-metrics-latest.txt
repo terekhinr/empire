@@ -1,8 +1,8 @@
 📈 Постинг · неделя с 2026-07-13
-Опубликовано: 71 · skip: 11 · success 87%
+Опубликовано: 70 · skip: 11 · success 86%
 
 ── По персонам ──
-  garden: +20 skip=1 (95%)
+  garden: +19 skip=1 (95%)
   gdepar: +20 skip=1 (95%)
   lenin: +12 skip=7 (63%)
   stern: +19 skip=2 (90%)
