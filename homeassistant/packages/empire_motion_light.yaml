@@ -1,4 +1,5 @@
 # Ванная: SONOFF SNZB-06P + light.empire_vannaya_svet
+# High давал ложные включения (пар, отражения). Low + debounce 1 с.
 
 template:
   - binary_sensor:
@@ -15,7 +16,7 @@ template:
 
 automation:
   - id: empire_vannaya_sensor_init
-    alias: "Ванная — max чувствительность Sonoff при старте"
+    alias: "Ванная — настройка Sonoff присутствия при старте"
     trigger:
       - platform: homeassistant
         event: start
@@ -24,7 +25,28 @@ automation:
         target:
           entity_id: select.sonoff_snzb_06p_chuvstvitelnost_obnaruzheniia
         data:
-          option: "High"
+          option: "Low"
+        continue_on_error: true
+      # Чувствительность: attr 0x0022 = 34 → Low=1
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:b2:f7:c0"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 34
+          value: 1
+        continue_on_error: true
+      # Тайм-аут после ухода: attr 0x0020 = 32 → 15 с
+      - action: zha.set_zigbee_cluster_attribute
+        data:
+          ieee: "8c:73:da:ff:fe:b2:f7:c0"
+          endpoint_id: 1
+          cluster_id: 1030
+          cluster_type: in
+          attribute: 32
+          value: 15
+        continue_on_error: true
 
   - id: empire_vannaya_motion_light_on
     alias: "Ванная — присутствие, свет вкл"
@@ -33,9 +55,8 @@ automation:
       - trigger: state
         entity_id: binary_sensor.sonoff_snzb_06p
         to: "on"
-      - trigger: state
-        entity_id: sensor.sonoff_snzb_06p_poslednee_sostoianie_osveshchennosti
-        to: "Bright"
+        for:
+          seconds: 1
     actions:
       - choose:
           - conditions:
@@ -63,7 +84,7 @@ automation:
         entity_id: binary_sensor.sonoff_snzb_06p
         to: "off"
         for:
-          seconds: 10
+          seconds: 15
     actions:
       - action: light.turn_off
         target:

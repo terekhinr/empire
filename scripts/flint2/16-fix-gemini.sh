@@ -12,7 +12,15 @@ uci add_list podkop.main.community_lists=russia_inside
 uci add_list podkop.main.community_lists=telegram
 uci add_list podkop.main.community_lists=google_ai
 uci set podkop.main.user_domain_list_type=text
-uci set podkop.main.user_domains_text="$GEMINI_EXTRA"
+# не затирать youtube/torrent-домены, уже прописанные в main
+CUR="$(uci -q get podkop.main.user_domains_text || true)"
+PAD=" $CUR "
+for d in $GEMINI_EXTRA; do
+  echo "$PAD" | grep -q " $d " && continue
+  CUR="${CUR:+$CUR }$d"
+  PAD=" $CUR "
+done
+uci set podkop.main.user_domains_text="$CUR"
 
 # Без AAAA и без раздачи IPv6 клиентам (обход FakeIP)
 uci set dhcp.@dnsmasq[0].filter_aaaa=1

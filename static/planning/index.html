@@ -7,10 +7,33 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta http-equiv="Cache-Control" content="no-cache">
-  <title>Empire</title>
+  <title>Задачник</title>
+  <script>
+    /* Android app / deep link: one-shot token bootstrap */
+    (function () {
+      try {
+        var q = new URLSearchParams(location.search);
+        var nt = q.get("native_token");
+        if (nt) {
+          localStorage.setItem("empire_planning_token", nt);
+          q.delete("native_token");
+          var qs = q.toString();
+          history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+        }
+        if (window.ZadachnikBridge && typeof ZadachnikBridge.getToken === "function") {
+          var t = ZadachnikBridge.getToken();
+          if (t) localStorage.setItem("empire_planning_token", t);
+        }
+        var fs = Number(localStorage.getItem("empire_font_scale") || "100");
+        if (!isFinite(fs)) fs = 100;
+        fs = Math.min(140, Math.max(85, Math.round(fs)));
+        document.documentElement.style.setProperty("--font-scale", String(fs / 100));
+      } catch (e) {}
+    })();
+  </script>
   <link rel="manifest" href="/tasks/assets/manifest.json">
   <link rel="apple-touch-icon" href="/tasks/assets/icon-192.png">
-    <link rel="stylesheet" href="/tasks/assets/styles.css?v=46">
+    <link rel="stylesheet" href="/tasks/assets/styles.css?v=55">
 </head>
 <body>
   <div id="app">
@@ -18,14 +41,14 @@
       <button class="icon-rail-btn" data-view="search" type="button" title="Поиск"><span class="rail-icon rail-icon--search" data-icon="search"></span></button>
       <button class="icon-rail-btn" data-view="today" type="button" title="Сегодня"><span class="rail-icon rail-icon--today" data-icon="today"></span></button>
       <button class="icon-rail-btn" data-view="calendar" type="button" title="Календарь"><span class="rail-icon rail-icon--calendar" data-icon="calendar"></span></button>
-      <button class="icon-rail-btn" data-view="matrix" type="button" title="Матрица"><span class="rail-icon rail-icon--matrix" data-icon="matrix"></span></button>
+      <button class="icon-rail-btn" data-view="measurements" type="button" title="Здоровье"><span class="rail-icon rail-icon--health" data-icon="health"></span></button>
       <div class="icon-rail-spacer"></div>
       <button id="btn-settings-rail" class="icon-rail-btn icon-rail-btn--settings" type="button" title="Настройки" data-action="open-settings"><span class="rail-icon rail-icon--settings" data-icon="settings"></span></button>
     </nav>
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-brand">
         <img src="/tasks/assets/icon-192.png" alt="" width="32" height="32">
-        <span>Empire</span>
+        <span>Задачник</span>
       </div>
       <nav class="sidebar-nav">
         <div id="sidebar-nav-main"></div>
@@ -122,7 +145,7 @@
           </div>
         </div>
         <div id="search-bar" class="search-bar hidden">
-          <input id="search-input" type="search" placeholder="Поиск задач…" autocomplete="off">
+          <input id="search-input" type="text" inputmode="search" enterkeyhint="search" placeholder="Поиск задач…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="zdk-search" data-lpignore="true" data-1p-ignore="true" data-form-type="other">
         </div>
         <div id="metrics" class="metrics"></div>
       </header>
@@ -140,6 +163,9 @@
         <section id="view-lists" class="view"></section>
         <section id="view-finance-model" class="view"></section>
         <section id="view-done" class="view"></section>
+        <section id="view-someday" class="view"></section>
+        <section id="view-archive" class="view"></section>
+        <section id="view-assistant" class="view"></section>
         <section id="view-task-stats" class="view"></section>
         <section id="view-measurements" class="view"></section>
         <section id="view-workouts" class="view"></section>
@@ -150,6 +176,7 @@
         <section id="view-settings" class="view"></section>
       </main>
 
+      <button id="fab-ai" class="fab fab-ai mobile-only" type="button" aria-label="ИИ-ассистент" title="ИИ"><span data-icon="insights"></span></button>
       <button id="fab-add" class="fab mobile-only" type="button" aria-label="Новая задача"><span data-icon="add"></span></button>
 
       <nav id="mobile-tabbar" class="tabbar mobile-only" aria-label="Навигация" data-mode="pipeline"></nav>
@@ -159,7 +186,7 @@
         <aside class="mobile-drawer-panel">
           <div class="mobile-drawer-brand">
             <img src="/tasks/assets/icon-192.png" alt="" width="28" height="28">
-            <span>Empire</span>
+            <span>Задачник</span>
           </div>
           <nav id="mobile-drawer-nav" class="mobile-drawer-nav"></nav>
           <div class="mobile-drawer-footer">
@@ -211,11 +238,11 @@
         <span class="tt-due-picker-icon" aria-hidden="true">📅</span>
         <span id="tf-due-display-text" class="tt-due-display-text">Без даты — нажмите для выбора</span>
       </button>
-      <form id="task-form" class="task-form-tt">
+      <form id="task-form" class="task-form-tt" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
         <input type="hidden" id="tf-id">
         <div class="sheet-row check-row tt-title-row">
           <button type="button" id="tf-complete" class="check large" aria-label="Выполнить"></button>
-          <input id="tf-title" class="sheet-title" placeholder="Название задачи" required>
+          <input id="tf-title" class="sheet-title" name="zdk-task-title" placeholder="Название задачи" required autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-1p-ignore="true" data-form-type="other">
         </div>
         <div id="tf-tag-pills" class="tag-pills"></div>
         <div class="tt-tag-add-row">
@@ -466,9 +493,21 @@
     </div>
   </div>
 
+  <div id="hold-timer-bar" class="hold-timer-bar hidden" aria-hidden="true">
+    <div class="hold-timer-inner">
+      <div id="hold-timer-label" class="hold-timer-label">Удержание</div>
+      <div id="hold-timer-display" class="hold-timer-display">60</div>
+      <div class="hold-timer-sub">секунд</div>
+      <div class="hold-timer-actions">
+        <button type="button" class="btn small" id="hold-pause-btn" data-action="hold-pause">Пауза</button>
+        <button type="button" class="btn small" data-action="hold-stop">Стоп</button>
+      </div>
+    </div>
+  </div>
+
   <div id="auth-screen" class="auth-screen hidden">
     <div class="auth-card">
-      <h2>Empire</h2>
+      <h2>Задачник</h2>
       <p>Задачи и здоровье в одном приложении. Токен: <code>PLANNING_API_TOKEN</code>.</p>
       <input id="token-input" type="password" placeholder="Токен доступа" autocomplete="off">
       <button id="token-save" class="btn primary" type="button">Войти</button>
@@ -479,6 +518,6 @@
   <div id="toast" class="toast hidden"></div>
   <script src="/tasks/assets/finance_model_content.js?v=3"></script>
   <script src="/tasks/assets/nav-icons.js?v=3" defer></script>
-  <script src="/tasks/assets/app.js?v=52" defer></script>
+  <script src="/tasks/assets/app.js?v=65" defer></script>
 </body>
 </html>

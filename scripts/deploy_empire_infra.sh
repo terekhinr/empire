@@ -15,7 +15,7 @@ echo "==> systemd units"
 for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot \
   empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline \
   empire-router-watchdog empire-morning-brief empire-diagnostics-watchdog empire-status-digest \
-  empire-weekly-posting-metrics; do
+  empire-weekly-posting-metrics empire-flint2-bootstrap; do
   sudo cp "deploy/${u}.service" "/etc/systemd/system/${u}.service" 2>/dev/null || true
 done
 for t in empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline \
@@ -27,6 +27,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable empire-vps-backup-yandex.timer empire-main-py-guard.timer empire-daily-audit.timer \
   empire-night-pipeline.timer empire-router-watchdog.timer empire-morning-brief.timer \
   empire-diagnostics-watchdog.timer empire-status-digest.timer empire-weekly-posting-metrics.timer \
+  empire-flint2-bootstrap.service \
   2>/dev/null || true
 sudo systemctl disable empire-disk-cleanup-night.timer empire-vps-backup-yandex.timer 2>/dev/null || true
 if [[ -x ./venv/bin/pip ]]; then
@@ -43,7 +44,7 @@ fi
 sudo chmod +x "$ROOT/scripts/backup_empire_db.sh"
 
 echo "==> enable units (start only if .env ready)"
-for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot; do
+for u in empire_main empire_dashboard empire_webapp empire_worker empire_sales empire_stern_bot empire-flint2-bootstrap; do
   sudo systemctl enable "$u.service" 2>/dev/null || true
 done
 echo "Готово. Запуск: sudo systemctl start empire_main empire_worker empire_webapp empire_dashboard empire_sales"

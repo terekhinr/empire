@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 import fitz
-import PyPDF2
+import pypdf as PyPDF2
 import pytesseract
 from io import BytesIO
 from PIL import Image, ImageOps

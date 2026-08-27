@@ -18,6 +18,8 @@ _WIKI_UA = (
 
 # Stern/Lenin рубрики — готовый HTML из JSON; LLM-разворот только для athletic_legacy (seed).
 MIN_CURATED_BODY_CHARS = 260
+# Календарь «В этот день» — короткий факт из txt, не цитата. Совпадает с auto_publish.json.
+MIN_CALENDAR_BODY_CHARS = 120
 RUBRIC_EXPAND_MIN_CHARS = 550
 RUBRIC_EXPAND_MAX_CHARS = 950
 
@@ -85,11 +87,77 @@ async def ensure_entry_image(entry: dict, media_dir: Path, default_name: str = "
     return None
 
 
+async def fetch_wiki_page_image(
+    query: str,
+    dest: Path,
+    *,
+    skip_titles: set[str] | None = None,
+) -> str | None:
+    """Скачать pageimage с ru.wikipedia по поисковому запросу (картина/фильм/памятник)."""
+    import httpx
+    from urllib.parse import quote as urlquote
+
+    clean = re.sub(r"\s+", " ", (query or "").strip())
+    if len(clean) < 3:
+        return None
+    skip = {s.lower() for s in (skip_titles or set())}
+    skip |= {
+        "ленин",
+        "ленин, владимир ильич",
+        "владимир ленин",
+        "lenin",
+        "vladimir lenin",
+    }
+    headers = {"User-Agent": _WIKI_UA, "Accept": "application/json,image/*,*/*;q=0.8"}
+    search_url = (
+        "https://ru.wikipedia.org/w/api.php?action=query&list=search"
+        f"&srsearch={urlquote(clean)}&utf8=&format=json&srlimit=8"
+    )
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
+            res = await client.get(search_url, headers=headers)
+            hits = res.json().get("query", {}).get("search", [])
+            img_source = None
+            matched = None
+            for hit in hits:
+                title = hit.get("title") or ""
+                if title.lower() in skip:
+                    continue
+                img_api = (
+                    f"https://ru.wikipedia.org/w/api.php?action=query&titles={urlquote(title)}"
+                    "&prop=pageimages&format=json&piprop=original"
+                )
+                img_res = await client.get(img_api, headers=headers)
+                pages = img_res.json().get("query", {}).get("pages", {})
+                if not pages:
+                    continue
+                page = list(pages.values())[0]
+                if "original" not in page:
+                    continue
+                cand = page["original"]["source"]
+                if cand.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    img_source = cand
+                    matched = title
+                    break
+            if not img_source:
+                return None
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            file_res = await client.get(img_source, headers=headers, timeout=25.0)
+            if file_res.status_code == 200 and len(file_res.content) > 8000:
+                dest.write_bytes(file_res.content)
+                logger.info("wiki page image '%s' -> %s", matched, dest)
+                return str(dest)
+    except Exception as exc:
+        logger.warning("wiki page image %s: %s", query[:40], type(exc).__name__)
+    return None
+
+
 def pick_entry(
     data_path: Path,
     history_path: Path,
     *,
     rubric: str | None = None,
+    global_cooldown_days: int | None = None,
 ) -> dict | None:
     data = load_json(data_path)
     rubrics = data.get("rubrics", data)
@@ -109,20 +177,46 @@ def pick_entry(
             used = {}
     key = rubric or "_all"
     used_ids = set((used.get("by_rubric") or {}).get(key, []))
-    pool = [
-        e
-        for e in entries
-        if e.get("id") not in used_ids
-        and not e.get("deprecated")
-        and (entry_quote(e) or e.get("text"))
-    ] or [
-        e for e in entries if not e.get("deprecated") and (entry_quote(e) or e.get("text"))
-    ]
+    last_by_id: dict = dict(used.get("last_by_id") or {})
+    cooldown_blocked: set[str] = set()
+    if global_cooldown_days and global_cooldown_days > 0:
+        from datetime import timedelta
+
+        now = datetime.utcnow()
+        window = timedelta(days=int(global_cooldown_days))
+        for eid, ts in last_by_id.items():
+            if not eid or not ts:
+                continue
+            try:
+                when = datetime.fromisoformat(str(ts).replace("Z", ""))
+            except ValueError:
+                continue
+            if now - when < window:
+                cooldown_blocked.add(str(eid))
+
+    def _ok(e: dict) -> bool:
+        return (
+            not e.get("deprecated")
+            and bool(entry_quote(e) or e.get("text"))
+            and str(e.get("id") or "") not in cooldown_blocked
+        )
+
+    pool = [e for e in entries if e.get("id") not in used_ids and _ok(e)]
+    if not pool:
+        # Новый цикл: все id из пула уже были — начинаем сначала.
+        used_ids = set()
+        pool = [e for e in entries if _ok(e)]
+    if not pool:
+        return None
     entry = random.choice(pool)
     by_rubric = used.setdefault("by_rubric", {})
-    ids = list(by_rubric.get(key, []))
+    ids = [i for i in list(by_rubric.get(key, [])) if i in used_ids]
     ids.append(entry.get("id"))
-    by_rubric[key] = ids[-40:]
+    by_rubric[key] = ids
+    eid = entry.get("id")
+    if eid:
+        last_by_id[str(eid)] = datetime.utcnow().isoformat()
+        used["last_by_id"] = last_by_id
     used["last"] = datetime.utcnow().isoformat()
     history_path.parent.mkdir(parents=True, exist_ok=True)
     history_path.write_text(json.dumps(used, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -17,12 +17,17 @@ opkg install block-mount kmod-fs-ext4 kmod-fs-ntfs3 kmod-fs-vfat ntfs-3g \
 block detect >/dev/null 2>&1 || true
 sleep 2
 
-DEV=""
-for d in /dev/sd*[0-9]; do
-  [ -b "$d" ] || continue
-  FSTYPE="$(blkid -s TYPE -o value "$d" 2>/dev/null || true)"
-  case "$FSTYPE" in ntfs|ext4|ext3|vfat|exfat) DEV="$d"; break ;; esac
-done
+KNOWN_UUID="01D63D133C7B6100"
+DEV="$(blkid -U "$KNOWN_UUID" 2>/dev/null || blkid -t "UUID=$KNOWN_UUID" -o device 2>/dev/null | head -1 || true)"
+if [ -z "$DEV" ] || [ ! -b "$DEV" ]; then
+  DEV=""
+  for d in /dev/sd*[0-9]; do
+    [ -b "$d" ] || continue
+    FSTYPE="$(blkid -s TYPE -o value "$d" 2>/dev/null || true)"
+    # только NTFS: ext3 на этом диске — старый swap-слайс, не шара
+    [ "$FSTYPE" = ntfs ] && DEV="$d" && break
+  done
+fi
 
 if [ -z "$DEV" ]; then
   log "USB не найден — вставьте диск и запустите снова"
@@ -59,12 +64,13 @@ for s in "$MNT/transmission/settings.json" "$DL/settings.json" "$MNT/.config/tra
   if [ -f "$s" ]; then T_SETTINGS="$s"; break; fi
 done
 
-uci -q set transmission.transmission=transmission 2>/dev/null || true
-uci set transmission.transmission.enabled='1'
-uci set transmission.transmission.download_dir="$DL"
-uci set transmission.transmission.incomplete_dir="$DL/.incomplete"
-uci set transmission.transmission.incomplete_dir_enabled='1'
-uci set transmission.transmission.config_dir='/etc/transmission/config'
+uci -q delete transmission.transmission 2>/dev/null || true
+uci set transmission.@transmission[0].enabled='1'
+uci set transmission.@transmission[0].config_overwrite='0'
+uci set transmission.@transmission[0].download_dir="$DL"
+uci set transmission.@transmission[0].incomplete_dir="$DL/.incomplete"
+uci set transmission.@transmission[0].incomplete_dir_enabled='1'
+uci set transmission.@transmission[0].config_dir='/etc/transmission/config'
 mkdir -p /etc/transmission/config
 
 if [ -n "$T_SETTINGS" ]; then
@@ -74,8 +80,8 @@ if [ -n "$T_SETTINGS" ]; then
   sed -i "s|\"download-dir\".*|\"download-dir\": \"$DL\",|" /etc/transmission/config/settings.json 2>/dev/null || true
 fi
 
-uci set transmission.transmission.rpc_enabled='1'
-uci set transmission.transmission.rpc_whitelist_enabled='0'
+uci set transmission.@transmission[0].rpc_enabled='1'
+uci set transmission.@transmission[0].rpc_whitelist_enabled='0'
 uci commit transmission
 
 # Samba — сетевой диск как на Keenetic

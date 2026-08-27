@@ -1,0 +1,16 @@
+[Unit]
+Description=Empire vulnerability auto-remediation (pip + apt security)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+Environment=EMPIRE_APT_AUTOFIX=1
+ExecStart=/root/projects/empire/scripts/empire_vuln_remediate.sh
+User=root
+Nice=15
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

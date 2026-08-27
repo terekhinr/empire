@@ -38,6 +38,13 @@ from planning_db import (
     update_task,
     update_task_status,
 )
+from planning_assistant import (
+    archive_all_done,
+    archive_task,
+    list_someday,
+    run_assistant,
+    search_tasks,
+)
 from planning_push import (
     process_due_reminder_pushes,
     push_configured,
@@ -55,8 +62,11 @@ from planning_insights import (
 from health_workout_program import (
     calendar_to_dict,
     get_session_for_date,
+    list_programs,
     next_scheduled_session,
+    program_note_prefix,
     program_summary,
+    resolve_program_id,
     session_to_dict,
 )
 from planning_stats import task_stats
@@ -207,6 +217,11 @@ class GoogleCalendarBody(BaseModel):
     ical_url: str | None = None
 
 
+class AssistantMessage(BaseModel):
+    message: str = Field(..., min_length=1, max_length=4000)
+    history: list[dict[str, str]] = Field(default_factory=list)
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
@@ -280,6 +295,27 @@ def api_list_tasks(
             tag=tag,
         )
     }
+
+
+@app.get("/api/planning/tasks/search", dependencies=[Depends(_require_token)])
+def api_tasks_search(q: str = "", limit: int = 25):
+    return {"tasks": search_tasks(q, limit=max(1, min(limit, 100)))}
+
+
+@app.get("/api/planning/tasks/someday", dependencies=[Depends(_require_token)])
+def api_tasks_someday(limit: int = 100):
+    return {"tasks": list_someday(limit=max(1, min(limit, 300)))}
+
+
+@app.get("/api/planning/tasks/archive", dependencies=[Depends(_require_token)])
+def api_tasks_archive(limit: int = 200):
+    rows = list_tasks(status="archived", include_done=True)[: max(1, min(limit, 500))]
+    return {"tasks": rows}
+
+
+@app.post("/api/planning/tasks/archive-done", dependencies=[Depends(_require_token)])
+def api_archive_done():
+    return {"archived": archive_all_done()}
 
 
 @app.get("/api/planning/reminders/due", dependencies=[Depends(_require_token)])
@@ -455,6 +491,14 @@ def api_complete_task(task_id: int):
         "task": get_task(task_id),
         "spawned": get_task(spawned) if spawned else None,
     }
+
+
+@app.post("/api/planning/tasks/{task_id}/archive", dependencies=[Depends(_require_token)])
+def api_archive_task(task_id: int):
+    row = archive_task(task_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="task_not_found")
+    return {"task": row}
 
 
 @app.delete("/api/planning/tasks/{task_id}", dependencies=[Depends(_require_token)])
@@ -702,6 +746,7 @@ class WorkoutBatchCreate(BaseModel):
     logged_on: str = Field(..., min_length=8, max_length=10)
     entries: list["ProgramWorkoutEntry"] = Field(default_factory=list)
     replace_program: bool = False
+    program_id: str | None = None
 
 
 class ProgramWorkoutEntry(BaseModel):
@@ -713,39 +758,69 @@ class ProgramWorkoutEntry(BaseModel):
     note: str | None = None
 
 
+def _safe_program_id(program: str | None) -> str:
+    try:
+        return resolve_program_id(program)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/planning/workouts/program/list", dependencies=[Depends(_require_token)])
+def api_workout_program_list():
+    return {"programs": list_programs()}
+
+
 @app.get("/api/planning/workouts/program/summary", dependencies=[Depends(_require_token)])
-def api_workout_program_summary():
-    summary = program_summary()
+def api_workout_program_summary(
+    program: str | None = None,
+    anchor: str | None = None,
+    start_day: str | None = None,
+):
+    pid = _safe_program_id(program)
+    summary = program_summary(pid, anchor=anchor, start_day=start_day)
     if not summary.get("calendar_days"):
         raise HTTPException(status_code=404, detail="workout_program_not_found")
-    today = session_to_dict(get_session_for_date(date.today().isoformat()))
-    nxt = session_to_dict(next_scheduled_session())
-    return {**summary, "today": today, "next": nxt}
+    today = session_to_dict(get_session_for_date(date.today().isoformat(), pid, anchor, start_day))
+    nxt = session_to_dict(next_scheduled_session(program_id=pid, anchor=anchor, start_day=start_day))
+    return {**summary, "today": today, "next": nxt, "programs": list_programs()}
 
 
 @app.get("/api/planning/workouts/program/session", dependencies=[Depends(_require_token)])
-def api_workout_program_session(on: str | None = None):
+def api_workout_program_session(
+    on: str | None = None,
+    program: str | None = None,
+    anchor: str | None = None,
+    start_day: str | None = None,
+):
+    pid = _safe_program_id(program)
     target = on or date.today().isoformat()
-    session = session_to_dict(get_session_for_date(target))
+    session = session_to_dict(get_session_for_date(target, pid, anchor, start_day))
     if not session:
         raise HTTPException(status_code=404, detail="no_session_for_date")
     return session
 
 
 @app.get("/api/planning/workouts/program/calendar", dependencies=[Depends(_require_token)])
-def api_workout_program_calendar():
-    cal = calendar_to_dict()
+def api_workout_program_calendar(
+    program: str | None = None,
+    anchor: str | None = None,
+    start_day: str | None = None,
+):
+    pid = _safe_program_id(program)
+    cal = calendar_to_dict(pid, anchor=anchor, start_day=start_day)
     if not cal:
         raise HTTPException(status_code=404, detail="workout_program_not_found")
-    return {"calendar": cal}
+    return {"program_id": pid, "calendar": cal, "anchor": anchor, "start_day": start_day}
 
 
 @app.post("/api/planning/workouts/program/log-batch", dependencies=[Depends(_require_token)])
 def api_workout_program_log_batch(body: WorkoutBatchCreate):
+    pid = _safe_program_id(body.program_id)
+    prefix = program_note_prefix(pid)
     if body.replace_program:
-        delete_program_logs_for_date(body.logged_on)
+        delete_program_logs_for_date(body.logged_on, note_prefix=prefix)
     if not body.entries:
-        return {"saved": 0, "workout_ids": []}
+        return {"saved": 0, "workout_ids": [], "program_id": pid}
     for entry in body.entries:
         entry.logged_on = body.logged_on
     ids: list[int] = []
@@ -756,16 +831,30 @@ def api_workout_program_log_batch(body: WorkoutBatchCreate):
             continue
         if entry.reps < 1:
             continue
+        note = entry.note
+        # Normalize note prefix for this program if client sent bare "подход N/M"
+        if note and note.startswith("подход ") and prefix != "подход":
+            note = f"{prefix} {note[len('подход '):]}"
         wid = add_strength_log(
             body.logged_on,
             entry.exercise_key,
             weight_kg=entry.weight_kg,
             reps=entry.reps,
             sets=entry.sets,
-            note=entry.note,
+            note=note,
         )
         ids.append(wid)
-    return {"saved": len(ids), "workout_ids": ids}
+    return {"saved": len(ids), "workout_ids": ids, "program_id": pid}
+
+
+@app.post("/api/planning/assistant", dependencies=[Depends(_require_token)])
+async def api_planning_assistant(body: AssistantMessage):
+    history = [
+        {"role": str(h.get("role") or "user"), "content": str(h.get("content") or "")[:800]}
+        for h in (body.history or [])[-8:]
+        if isinstance(h, dict)
+    ]
+    return await run_assistant(body.message, history=history)
 
 
 @app.get("/api/planning/stats/tasks", dependencies=[Depends(_require_token)])
@@ -806,7 +895,7 @@ def api_insights_refresh(llm: bool = True):
     return {"ok": True, "path": path, **build_empire_insights(use_llm=llm)}
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def pwa_index():
     index = PLANNING_STATIC / "index.html"
     if not index.is_file():

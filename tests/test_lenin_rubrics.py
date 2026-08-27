@@ -105,3 +105,26 @@ def test_rubric_expansion_block_mentions_anchor():
     block = rubric_posts.rubric_expansion_prompt_block(seed)
     assert "ЖЁСТКИЙ ЯКОРЬ" in block
     assert "550" in block or "950" in block
+
+
+def test_pick_entry_no_repeat_within_cycle(tmp_path):
+    import rubric_posts
+
+    data = json.loads(
+        (Path(__file__).resolve().parents[1] / "data" / "lenin_rubrics.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    hist = tmp_path / "used.json"
+    hist.write_text("{}", encoding="utf-8")
+    for key in ("cinema", "art"):
+        n = len(data["rubrics"][key]["entries"])
+        seen = []
+        for _ in range(n):
+            e = rubric_posts.pick_entry(
+                Path(__file__).resolve().parents[1] / "data" / "lenin_rubrics.json",
+                hist,
+                rubric=key,
+            )
+            seen.append(e["id"])
+        assert len(seen) == len(set(seen)), seen

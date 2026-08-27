@@ -49,13 +49,15 @@ done
 
 chown -R transmission:transmission "$CFG"
 
-uci set transmission.transmission.enabled='1'
-uci set transmission.transmission.config_dir="$CFG"
-uci set transmission.transmission.download_dir="$DL"
-uci set transmission.transmission.incomplete_dir="$DL/.incomplete"
-uci set transmission.transmission.incomplete_dir_enabled='1'
-uci set transmission.transmission.rpc_enabled='1'
-uci set transmission.transmission.rpc_whitelist_enabled='0'
+uci set transmission.@transmission[0].enabled='1'
+uci set transmission.@transmission[0].config_dir="$CFG"
+uci set transmission.@transmission[0].config_overwrite='0'
+uci set transmission.@transmission[0].download_dir="$DL"
+uci set transmission.@transmission[0].incomplete_dir="$DL/.incomplete"
+uci set transmission.@transmission[0].incomplete_dir_enabled='1'
+uci set transmission.@transmission[0].rpc_enabled='1'
+uci set transmission.@transmission[0].rpc_whitelist_enabled='0'
+uci -q delete transmission.transmission 2>/dev/null || true
 uci commit transmission
 
 log "запуск transmission"

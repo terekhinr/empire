@@ -1,0 +1,61 @@
+#!/bin/sh /etc/rc.common
+# Empire Flint local watchdog — диагностика/починка на самом OpenWrt.
+# START=99
+USE_PROCD=0
+
+START=99
+STOP=10
+
+CRON_LINE='*/5 * * * * /usr/sbin/empire-flint-watchdog >/dev/null 2>&1'
+CRON_FILE=/etc/crontabs/root
+
+boot() {
+  start
+}
+
+start_service() {
+  start
+}
+
+start() {
+  [ -x /usr/sbin/empire-flint-watchdog ] || {
+    echo "empire-flint-watchdog not installed in /usr/sbin"
+    return 1
+  }
+  # убрать старые строки и добавить
+  if [ -f "$CRON_FILE" ]; then
+    grep -v 'empire-flint-watchdog' "$CRON_FILE" >"${CRON_FILE}.tmp" || true
+    mv "${CRON_FILE}.tmp" "$CRON_FILE"
+  else
+    mkdir -p /etc/crontabs
+    : >"$CRON_FILE"
+  fi
+  echo "$CRON_LINE" >>"$CRON_FILE"
+  /etc/init.d/cron enable 2>/dev/null || true
+  /etc/init.d/cron restart 2>/dev/null || true
+  # первый прогон через минуту не блокируем boot
+  ( sleep 20; /usr/sbin/empire-flint-watchdog ) >/dev/null 2>&1 &
+  echo "empire-flint-watchdog: cron every 5 min + first run in 20s"
+}
+
+stop() {
+  if [ -f "$CRON_FILE" ]; then
+    grep -v 'empire-flint-watchdog' "$CRON_FILE" >"${CRON_FILE}.tmp" || true
+    mv "${CRON_FILE}.tmp" "$CRON_FILE"
+    /etc/init.d/cron restart 2>/dev/null || true
+  fi
+}
+
+restart() {
+  stop
+  start
+}
+
+status() {
+  echo "cron:"
+  grep empire-flint-watchdog "$CRON_FILE" 2>/dev/null || echo "(not in crontab)"
+  echo "last state:"
+  cat /tmp/empire-flint-watchdog.state 2>/dev/null || echo "(no state yet)"
+  echo "log tail:"
+  tail -15 /tmp/empire-flint-watchdog.log 2>/dev/null || echo "(no log)"
+}

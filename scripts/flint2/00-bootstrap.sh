@@ -41,6 +41,7 @@ done
 
 log "=== verify ==="
 fetch "$FLINT2_BASE/11-youtube-verify.sh" | sh || true
+fetch "$FLINT2_BASE/18-torrent-sites.sh" | sh || true
 
 log "=== готово ==="
 log "LuCI: http://192.168.1.1  |  Podkop: Services → Podkop"

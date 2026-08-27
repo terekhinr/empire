@@ -1,5 +1,5 @@
 {
-  "_readme": "Июль 2026: автопост по расписанию для garden/lenin/gdepar/stern. Курированные дуэт/Stern matrix — с готовым image_file.",
+  "_readme": "2026-07-23: автопост curated с 24.07 МСК. Garden/Lenin — persona.enabled=false, публикуют только rubric markers (календарь 08:30 — lenin_calendar, без ручного approve). Gdepar/Stern — persona.enabled=true + rubrics.",
   "enabled": true,
   "scheduled_only": true,
   "notify_admin_compact": true,
@@ -71,8 +71,8 @@
         "[Ленин · биография]",
         "[Ленин в кино]"
       ],
-      "min_body_chars": 500,
-      "skip_body_floor": false,
+      "min_body_chars": 280,
+      "skip_body_floor": true,
       "require_image": true,
       "require_zero_regen": true,
       "require_zero_badimg": true,
@@ -106,7 +106,9 @@
       "topic_markers": [
         "[Печь и баня]",
         "[История бани]",
-        "[Баня и здоровье]"
+        "[Баня и здоровье]",
+        "[Веник]",
+        "[SPECIAL:book_rubric]"
       ],
       "min_body_chars": 280,
       "skip_body_floor": true,
@@ -132,7 +134,7 @@
       "max_selfcrit_issues": 99
     },
     "stern_week_arc": {
-      "enabled": true,
+      "enabled": false,
       "personas": [
         "stern"
       ],
@@ -180,6 +182,22 @@
       "require_zero_badimg": true,
       "max_selfcrit_issues": 99
     },
+    "gdepar_mono_curated": {
+      "enabled": true,
+      "personas": [
+        "gdepar"
+      ],
+      "topic_markers": [
+        "[Монолог]",
+        "[SPECIAL:mono_curated]"
+      ],
+      "min_body_chars": 100,
+      "skip_body_floor": true,
+      "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
     "stern_matrix_curated": {
       "enabled": true,
       "personas": [
@@ -193,7 +211,14 @@
         "[Срывы]",
         "[Мотивация]",
         "[Возрастной тренинг]",
-        "[Ответы]"
+        "[Ответы]",
+        "[Офис]",
+        "[Гиря]",
+        "[Дорога]",
+        "[Сон]",
+        "[Привычка]",
+        "[Возраст]",
+        "[Отказ]"
       ],
       "min_body_chars": 220,
       "skip_body_floor": true,
@@ -289,6 +314,22 @@
       "min_body_chars": 80,
       "skip_body_floor": true,
       "require_image": false,
+      "require_zero_regen": true,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "garden_curated": {
+      "enabled": true,
+      "personas": [
+        "garden"
+      ],
+      "topic_markers": [
+        "[Степаныч]",
+        "[SPECIAL:garden_curated]"
+      ],
+      "min_body_chars": 200,
+      "skip_body_floor": true,
+      "require_image": true,
       "require_zero_regen": true,
       "require_zero_badimg": true,
       "max_selfcrit_issues": 99

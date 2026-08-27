@@ -8,6 +8,14 @@ PY="${ROOT}/venv/bin/python"
 echo "== Prefetch Gdepar classic =="
 "$PY" scripts/prefetch_gdepar_classic_images.py || true
 
+echo "== Seed Lenin portrait pool if empty =="
+POOL="$ROOT/media/lenin/pool"
+mkdir -p "$POOL"
+if [ -z "$(find "$POOL" -maxdepth 1 -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' \) 2>/dev/null | head -1)" ]; then
+  cp -n "$ROOT/media/lenin/rubrics/_default_lenin.jpg" "$POOL/portrait_default.jpg" || true
+  echo "seeded $POOL"
+fi
+
 echo "== Prefetch Lenin rubrics =="
 "$PY" scripts/prefetch_lenin_rubric_images.py || true
 

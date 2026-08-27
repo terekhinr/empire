@@ -20,6 +20,17 @@
       "gear_home",
       "gear_chalk",
       "gear_shoes",
+      "gear_belt",
+      "gear_belt",
+      "gear_home",
+      "gear_shoes",
+      "gear_chalk",
+      "gear_shoes",
+      "gear_chalk",
+      "gear_home",
+      "gear_belt",
+      "gear_shoes",
+      "gear_chalk",
       "gear_belt"
     ],
     "sports_med": [
@@ -38,7 +49,8 @@
       "med_shoulder",
       "med_hr_zones",
       "med_lower_back",
-      "med_return"
+      "med_return",
+      "med_hr_zones"
     ],
     "kettlebell_fitness": [
       "fit_long_cycle"
@@ -79,5 +91,18 @@
       "strong_kryloff"
     ]
   },
-  "last": "2026-07-16T07:00:00.005397"
+  "last": "2026-07-22T09:56:25.607045",
+  "cycle_used": {
+    "equipment": [
+      "gear_shoes",
+      "gear_chalk",
+      "gear_belt"
+    ]
+  },
+  "last_by_id": {
+    "gear_belt": "2026-07-22T09:56:25.607045Z",
+    "gear_home": "2026-07-21T12:28:05.027345Z",
+    "gear_shoes": "2026-07-21T12:28:05.148354Z",
+    "gear_chalk": "2026-07-21T12:28:05.208159Z"
+  }
 }

@@ -367,6 +367,45 @@ def rubric_expansion_rules() -> str:
     )
 
 
+_GENERIC_LENIN_FILES = {
+    "Vladimir Lenin, 1917.jpg",
+    "Vladimir Lenin after finishing his exile in Siberia, 1900-1.jpg",
+    "Vladimir Lenin after finishing his exile in Siberia, 1900.jpg",
+    "Lenin-poster.jpg",
+    "Vladimir_Lenin.jpg",
+    "Vladimir Lenin giving a speech.jpg",
+}
+
+
+def _visual_query_for_rubric(key: str, entry: dict) -> str | None:
+    """Запрос для картины/фильма/памятника — не «Ленин портрет»."""
+    custom = (entry.get("wiki_query") or entry.get("visual_query") or "").strip()
+    if custom:
+        return custom
+    src = (entry.get("source") or "").strip()
+    quote = (entry.get("quote") or entry.get("text") or "").strip()
+    head = src.split("—")[0].split("–")[0].strip() if src else ""
+    if key == "cinema":
+        base = head or src or quote[:80]
+        return f"{base} фильм" if base else None
+    if key == "art":
+        return head or src or None
+    return None
+
+
+def _is_generic_lenin_image_path(path: str | None, entry: dict | None = None) -> bool:
+    if entry and (entry.get("image_file") or "") in _GENERIC_LENIN_FILES:
+        return True
+    if not path:
+        return True
+    name = Path(path).name.lower()
+    if name in {"_default_lenin.jpg", "vladimir_lenin.jpg"}:
+        return True
+    if "1917" in name and "lenin" in name:
+        return True
+    return False
+
+
 async def build_rubric_slot(
     rubric_key: str | None = None, *, weekday: int = 0
 ) -> tuple[str, str | None, str | None, dict | None]:
@@ -374,15 +413,40 @@ async def build_rubric_slot(
     key = rubric_key_for_weekday(weekday, rubric_key)
     data = rubric_posts.load_json(_RUBRICS_PATH)
     meta = (data.get("rubrics") or {}).get(key, {})
-    entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
+    entry = rubric_posts.pick_entry(
+        _RUBRICS_PATH,
+        _RUBRICS_HISTORY,
+        rubric=key,
+        global_cooldown_days=21,
+    )
     tag = RUBRIC_TOPIC_TAGS.get(key, "[Ленин · рубрика]")
     if not entry:
         body = f"{tag}\n\nСегодня без выпуска — завтра снова выпуск рубрики."
         return f"{tag} fallback", body, None, None
     topic = f"{tag} {entry.get('source', '')} (id={entry.get('id', '')})"
-    img = await rubric_posts.ensure_entry_image(entry, _RUBRICS_MEDIA, "_default_lenin.jpg")
+    allow_default = key not in ("art", "cinema")
+    default_name = "_default_lenin.jpg" if allow_default else "_no_default.jpg"
+    img = await rubric_posts.ensure_entry_image(entry, _RUBRICS_MEDIA, default_name)
+    visual_q = _visual_query_for_rubric(key, entry)
+    seed = {
+        "_kind": "lenin_rubric",
+        "rubric_key": key,
+        "entry_id": entry.get("id"),
+        "visual_query": visual_q,
+    }
+    # Искусство / кино: не оставляем типичный портрет 1917 — ищем картину/кадр.
+    if key in ("art", "cinema") and (
+        not img or _is_generic_lenin_image_path(img, entry)
+    ):
+        if visual_q:
+            dest = _RUBRICS_MEDIA / f"{entry.get('id') or 'item'}.jpg"
+            better = await rubric_posts.fetch_wiki_page_image(visual_q, dest)
+            if better:
+                img = better
+        if img and _is_generic_lenin_image_path(img, entry):
+            img = None
     body = format_rubric_post(key, entry)
-    return topic, body, img, None
+    return topic, body, img, seed
 
 
 async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) -> tuple[str, str, str | None]:
@@ -391,7 +455,12 @@ async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) 
     if prebuilt:
         return topic, prebuilt, img
     key = rubric_key_for_weekday(weekday, rubric_key)
-    entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
+    entry = rubric_posts.pick_entry(
+        _RUBRICS_PATH,
+        _RUBRICS_HISTORY,
+        rubric=key,
+        global_cooldown_days=21,
+    )
     if not entry:
         return topic, f"{topic}\n\nСегодня без выпуска.", img
     return topic, format_rubric_post(key, entry), img

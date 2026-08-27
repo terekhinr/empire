@@ -1,0 +1,17 @@
+table inet empire_doh {
+  set doh_dns {
+    type ipv4_addr
+    elements = {
+      1.1.1.1, 1.0.0.1,
+      8.8.8.8, 8.8.4.4,
+      9.9.9.9, 149.112.112.112,
+      94.140.14.14, 94.140.15.15,
+      185.228.168.9, 185.228.169.9
+    }
+  }
+  chain forward_doh {
+    type filter hook forward priority filter - 5; policy accept;
+    iifname "br-lan" ip daddr @doh_dns tcp dport { 443, 853 } drop
+    iifname "br-lan" ip daddr @doh_dns udp dport { 443, 853 } drop
+  }
+}

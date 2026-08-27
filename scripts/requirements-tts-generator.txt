@@ -1,0 +1,14 @@
+# Silero audiobook generator (CUDA). Install torch with CUDA for your driver first:
+#   https://pytorch.org/get-started/locally/
+# Example (CUDA 12.4 wheels):
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+torch>=2.1.0
+torchaudio>=2.1.0
+pydub>=0.25.1
+ruaccent>=1.5.5
+silero-stress>=1.0.0
+num2words>=0.5.13
+tqdm>=4.66.0
+nltk>=3.8.1
+numpy>=1.24.0

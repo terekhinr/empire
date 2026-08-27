@@ -22,18 +22,24 @@
 
 ## Доступ к Flint
 
-| Способ | Команда |
-|--------|---------|
-| С LAN | `ssh root@192.168.1.1` |
-| Через HA | `ssh root@100.80.133.85` → `ssh root@192.168.1.1` |
-| С VPS (туннель) | `ssh -p 6223 root@127.0.0.1` (если reverse SSH жив) |
-| LuCI | http://192.168.1.1 |
+| Способ | Команда / URL |
+|--------|----------------|
+| С LAN | `ssh root@192.168.1.1` · LuCI http://192.168.1.1 |
+| **PWA автопочинка** | **http://192.168.1.1/empire/** (токен `/etc/empire/flint-ui.token` на VPS) |
+| Зеркало PWA | https://neverretire.ru/home-ops/ |
+| HA с улицы (Tailscale) | https://moderate-amethys.tailed4746.ts.net:10000/ |
+| HA + LAN с телефона | Tailscale → Approve subnet `192.168.1.0/24` (`scripts/enable_ha_tailscale_subnet.sh`) → http://192.168.1.41:8123 |
+| **Телефон без VPS (LTE)** | **Tailscale на Flint** — [PHONE_ACCESS_NO_VPS.md](PHONE_ACCESS_NO_VPS.md) |
+| WireGuard phone | CGNAT (`100.83.x.x`): с мобильного **не работает** |
+| Через HA SSH | `ssh root@100.80.133.85` → `ssh root@192.168.1.1` |
+| С VPS (туннель) | `ssh -p 6223 root@127.0.0.1` |
 
-**Автоматика (с 2026-07-15):**
+**Автоматика:**
 
-- Каждые 30 мин `empire-router-watchdog` проверяет podkop / zapret / Amnezia / Transmission / Samba / USB / YouTube и чинит точечно.
-- Каждое утро ~07:05 МСК — короткий TG `empire-morning-brief`.
-- По воскресеньям — `empire-weekly-posting-metrics` → `data/empire_weekly_kpi.json`.
+- На Flint каждые 5 мин: `empire-flint-watchdog` (локально, без ИИ).
+- На VPS: `empire-service-healer`, `empire-router-watchdog`, morning-brief.
+
+Подробности: [SELF_HEAL.md](SELF_HEAL.md), [empire-flint-watchdog/README.md](../../scripts/flint2/empire-flint-watchdog/README.md).
 
 **Пароль root Flint:** `/root/.flint-admin.env` на VPS (не в git).
 
@@ -41,11 +47,12 @@
 
 | Что | Значение |
 |-----|----------|
-| Диск | `/dev/sda6` NTFS, UUID `01D63D133C7B6100` |
+| Диск | NTFS UUID `01D63D133C7B6100` (устройство `sda6` или `sdb6` после реконекта) |
 | Mount | `/mnt/usb` |
 | Загрузки | `/mnt/usb/download` |
 | Samba | `\\192.168.1.1\download` (Win+R, не ждать «Сеть») |
 | Transmission | 24/7, RPC `http://192.168.1.1:9091` |
+| Трекеры (rutracker и др.) | через VLESS, как YouTube (`18-torrent-sites.sh`) |
 | fstab | `UUID=01D63D133C7B6100 /mnt/usb ntfs-3g defaults,nofail 0 0` |
 
 ## Скрипты на VPS (bootstrap)

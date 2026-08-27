@@ -102,21 +102,29 @@ def main() -> int:
     print("==> area + name")
     asyncio.run(assign_area())
 
-    print("==> sensitivity High + timeout 10s")
+    print("==> sensitivity Low + timeout 10s (attr 32)")
+    try:
+        api("POST", "/api/services/select/select_option", {
+            "entity_id": "select.tualet_tualet_prisutstvie_chuvstvitelnost_obnaruzheniia",
+            "option": "Low",
+        })
+    except Exception:
+        pass
     api("POST", "/api/services/zha/set_zigbee_cluster_attribute", {
         "ieee": IEEE,
         "endpoint_id": 1,
         "cluster_id": 1030,
         "cluster_type": "in",
         "attribute": 34,
-        "value": 3,
+        "value": 1,
     })
+    # ultrasonic_o_to_u_delay = 0x0020 = 32 (НЕ 33)
     api("POST", "/api/services/zha/set_zigbee_cluster_attribute", {
         "ieee": IEEE,
         "endpoint_id": 1,
         "cluster_id": 1030,
         "cluster_type": "in",
-        "attribute": 33,
+        "attribute": 32,
         "value": 10,
     })
 

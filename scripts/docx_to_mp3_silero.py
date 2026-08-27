@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -17,9 +18,21 @@ from ruaccent import RUAccent
 
 SPEAKER = "eugene"
 SAMPLE_RATE = 48000
-MAX_CHUNK = 1500
-MIN_CHUNK_BYTES = 8000
+# Silero v4_ru предупреждает/ломается на строках >1000 символов.
+MAX_CHUNK = int(os.getenv("PDF_AUDIO_SILERO_MAX_CHUNK", "900"))
+MIN_CHUNK_BYTES = int(os.getenv("PDF_AUDIO_SILERO_MIN_CHUNK_BYTES", "2000"))
 RETRIES = 3
+
+
+def chunk_ok(path: Path) -> bool:
+    # Короткие фразы (заголовки) дают маленький wav — не режем их как fail.
+    if not path.is_file():
+        return False
+    size = path.stat().st_size
+    if size >= MIN_CHUNK_BYTES:
+        return True
+    # wav header + хоть немного PCM
+    return size >= 1000
 
 
 def load_text(path: Path) -> str:
@@ -69,6 +82,10 @@ def split_text(text: str, max_len: int = MAX_CHUNK) -> list[str]:
     return chunks
 
 
+def _has_cyrillic(text: str) -> bool:
+    return bool(re.search(r"[А-Яа-яЁё]", text))
+
+
 def save_wav(path: Path, audio_tensor) -> None:
     samples = (audio_tensor.detach().cpu().numpy() * 32767).astype("int16")
     with wave.open(str(path), "w") as wf:
@@ -76,10 +93,6 @@ def save_wav(path: Path, audio_tensor) -> None:
         wf.setsampwidth(2)
         wf.setframerate(SAMPLE_RATE)
         wf.writeframes(samples.tobytes())
-
-
-def chunk_ok(path: Path) -> bool:
-    return path.is_file() and path.stat().st_size >= MIN_CHUNK_BYTES
 
 
 def concat_wav_to_mp3(parts: list[Path], output: Path) -> None:
@@ -116,17 +129,29 @@ def concat_wav_to_mp3(parts: list[Path], output: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="DOCX/TXT -> MP3 (Silero + RUAccent)")
+    parser = argparse.ArgumentParser(description="DOCX/TXT -> MP3 (Silero TTS)")
     parser.add_argument("input", type=Path)
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--speaker", default=SPEAKER)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--keep-chunks", action="store_true")
+    parser.add_argument(
+        "--prepared",
+        action="store_true",
+        help="Текст уже с ударениями (+о / silero-stress); не гонять RUAccent снова",
+    )
     args = parser.parse_args()
 
     if not args.input.is_file():
         print(f"Missing input: {args.input}", file=sys.stderr)
         return 1
+
+    prepared = args.prepared or (os.getenv("PDF_AUDIO_TEXT_PREPARED") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     output = args.output or args.input.with_suffix(".mp3")
     text = load_text(args.input)
@@ -136,23 +161,27 @@ def main() -> int:
         return 1
 
     print(f"Input: {args.input}")
-    print(f"Speaker: {args.speaker} | chunks: {len(chunks)} | chars: {len(text)}")
+    print(f"Speaker: {args.speaker} | chunks: {len(chunks)} | chars: {len(text)} | prepared={prepared}")
 
     out_dir = output.parent / f".{output.stem}_chunks"
     out_dir.mkdir(parents=True, exist_ok=True)
     stressed_dir = out_dir / "_stressed"
     stressed_dir.mkdir(exist_ok=True)
 
-    print("Loading RUAccent (tiny)...", flush=True)
-    accentizer = RUAccent()
-    accentizer.load(omograph_model_size="turbo", use_dictionary=True, tiny_mode=True)
-    for i, chunk in enumerate(chunks, start=1):
-        stressed_path = stressed_dir / f"chunk_{i:04d}.txt"
-        if not stressed_path.exists():
-            stressed_path.write_text(accentizer.process_all(chunk), encoding="utf-8")
-    del accentizer
-    import gc
-    gc.collect()
+    if prepared:
+        for i, chunk in enumerate(chunks, start=1):
+            (stressed_dir / f"chunk_{i:04d}.txt").write_text(chunk, encoding="utf-8")
+    else:
+        print("Loading RUAccent (tiny)...", flush=True)
+        accentizer = RUAccent()
+        accentizer.load(omograph_model_size="turbo", use_dictionary=True, tiny_mode=True)
+        for i, chunk in enumerate(chunks, start=1):
+            stressed_path = stressed_dir / f"chunk_{i:04d}.txt"
+            if not stressed_path.exists():
+                stressed_path.write_text(accentizer.process_all(chunk), encoding="utf-8")
+        del accentizer
+        import gc
+        gc.collect()
 
     print("Loading Silero v4_ru...", flush=True)
     model, _ = torch.hub.load(
@@ -166,6 +195,7 @@ def main() -> int:
 
     parts: list[Path] = []
     failed: list[int] = []
+    skipped = 0
 
     for i, chunk in enumerate(chunks, start=1):
         out = out_dir / f"chunk_{i:04d}.wav"
@@ -175,6 +205,12 @@ def main() -> int:
             continue
 
         stressed = (stressed_dir / f"chunk_{i:04d}.txt").read_text(encoding="utf-8")
+        # Silero v4_ru (language=ru) падает на чисто латинских кусках (ValueError пустой).
+        if not _has_cyrillic(stressed):
+            skipped += 1
+            print(f"[{i}/{len(chunks)}] skip latin/empty: {stressed[:60]!r}", flush=True)
+            continue
+
         ok = False
         for attempt in range(1, RETRIES + 1):
             try:
@@ -202,11 +238,14 @@ def main() -> int:
         print(f"Failed chunks: {failed}", file=sys.stderr)
         return 2
 
-    if len(parts) != len(chunks):
-        print(f"Chunk count mismatch: {len(parts)} != {len(chunks)}", file=sys.stderr)
+    if not parts:
+        print("No audio chunks produced", file=sys.stderr)
         return 2
 
-    print(f"Merging {len(parts)} wav -> {output}", flush=True)
+    print(
+        f"Merging {len(parts)} wav (skipped latin={skipped}) -> {output}",
+        flush=True,
+    )
     concat_wav_to_mp3(parts, output)
 
     if not args.keep_chunks:

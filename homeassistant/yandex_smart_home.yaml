@@ -36,13 +36,10 @@ filter:
     # --- Спальня (W602 LocalTuya, 2× свет) ---
     - switch.spalnya_svet
     - switch.spalnya_svet_2
-    # --- Гостевая + комната Макса (Sonoff BASICR2) ---
+    # --- Гостевая + комната Семёна (Sonoff BASICR2) ---
     - switch.basicr2_ded_sonoff_10011f1029
     - switch.basicr2_max_sonoff_10011f28d9
-    - script.svet_gostevaya_vkl
-    - script.svet_gostevaya_vyk
-    - script.svet_maks_vkl
-    - script.svet_maks_vyk
+    # script.svet_* оставлены в HA для ручных вызовов; в Алису только switch «Свет»
   exclude_entities:
     - light.tz3000_mgusv51k_ts0052
     - light.zbeacon_ts0001
@@ -147,23 +144,7 @@ entity_config:
     slow: true
   switch.basicr2_max_sonoff_10011f28d9:
     name: Свет
-    room: Комната Макса
-    slow: true
-  script.svet_gostevaya_vkl:
-    name: Свет гостевая
-    room: Гостевая
-    slow: true
-  script.svet_gostevaya_vyk:
-    name: Выключить свет гостевая
-    room: Гостевая
-    slow: true
-  script.svet_maks_vkl:
-    name: Свет Макс
-    room: Комната Макса
-    slow: true
-  script.svet_maks_vyk:
-    name: Выключить свет Макс
-    room: Комната Макса
+    room: Комната Семёна
     slow: true
   # Примеры (раскомментировать с реальными entity_id):
   # light.kuhnya_potolok:

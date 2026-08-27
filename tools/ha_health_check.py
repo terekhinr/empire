@@ -19,7 +19,7 @@ EMPIRE_DIR = Path(__file__).resolve().parents[1]
 CHECKS = {
     "cameras": [
         ("camera.teckin_tc100", "Кухня", {"idle", "recording", "streaming"}),
-        ("camera.teckin_tc100_2", "Комната Макса", {"idle", "recording", "streaming"}),
+        ("camera.teckin_tc100_2", "Детская", {"idle", "recording", "streaming"}),
         ("camera.ezviz_prihozhaya", "Прихожая", {"idle", "recording", "streaming"}),
         ("camera.ezviz_podezd", "Подъезд", {"idle", "recording", "streaming"}),
     ],
@@ -27,8 +27,8 @@ CHECKS = {
         ("sensor.sber_th_temperatura", "Кухня t°", None),
         ("sensor.spalnya_temperatura", "Спальня t°", None),
         ("sensor.balkon_temperatura", "Балкон t°", None),
-        ("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2", "Макс t°", None),
-        ("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura", "Семён t°", None),
+        ("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2", "Семён t°", None),
+        ("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura", "Детская t°", None),
     ],
     "safety": [
         ("binary_sensor.hobeian_zg_222z", "Протечка ванная", None),

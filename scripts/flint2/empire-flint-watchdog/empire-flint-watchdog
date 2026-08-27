@@ -1,0 +1,635 @@
+#!/bin/sh
+# empire-flint-watchdog — самодиагностика и автопочинка НА роутере Flint (OpenWrt).
+# Не нужен VPS, Cursor, ИИ. Только cron/procd на самом роутере.
+#
+# Установка: sh install.sh  (с VPS) или скопировать файлы в /usr/sbin + /etc/init.d
+# Запуск:    empire-flint-watchdog
+# Только проверка: empire-flint-watchdog --check
+# Принудительно: empire-flint-watchdog --force
+#
+# Лог:   /tmp/empire-flint-watchdog.log
+# State: /tmp/empire-flint-watchdog.state
+set -eu
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin:/opt/sbin:$PATH"
+
+LOG="${EMPIRE_FLINT_LOG:-/tmp/empire-flint-watchdog.log}"
+STATE="${EMPIRE_FLINT_STATE:-/tmp/empire-flint-watchdog.state}"
+COOLDOWN_SEC="${EMPIRE_FLINT_COOLDOWN:-900}"  # 15 мин между рестартами одного сервиса
+MAX_LOG_LINES=400
+
+CHECK_ONLY=0
+FORCE=0
+for a in "$@"; do
+  case "$a" in
+    --check|-c) CHECK_ONLY=1 ;;
+    --force|-f) FORCE=1 ;;
+    --help|-h)
+      echo "Usage: empire-flint-watchdog [--check|--force]"
+      exit 0
+      ;;
+  esac
+done
+
+log() {
+  line="$(date -Is 2>/dev/null || date) $*"
+  echo "$line" >>"$LOG"
+  # truncate
+  if [ -f "$LOG" ]; then
+    lines=$(wc -l <"$LOG" 2>/dev/null || echo 0)
+    if [ "$lines" -gt "$MAX_LOG_LINES" ]; then
+      tail -n 200 "$LOG" >"${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
+    fi
+  fi
+  echo "$line"
+}
+
+now_epoch() { date +%s; }
+
+json_escape() {
+  # Минимальный escape для JSON string (для вызова HA API)
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' '
+}
+
+ha_telegram_send() {
+  # Telegram-уведомление через Home Assistant rest_command empire_telegram.
+  # HA доставляет в Telegram (в т.ч. через мост на VPS), токены Telegram на роутере не нужны.
+  msg="$1"
+  ENV_FILE="/etc/empire-flint-ui.env"
+  HA_URL="http://192.168.1.41:8123"
+  HA_TOKEN=""
+
+  if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$ENV_FILE" 2>/dev/null || true
+  fi
+
+  HA_URL="${HA_URL:-http://192.168.1.41:8123}"
+  HA_TOKEN="${HA_TOKEN:-}"
+  [ -n "$HA_TOKEN" ] || return 1
+
+  payload="{\"message\":\"$(json_escape "$msg")\"}"
+  curl -s -m 12 -X POST \
+    -H "Authorization: Bearer $HA_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "$HA_URL/api/services/rest_command/empire_telegram" >/dev/null 2>&1 || return 1
+  return 0
+}
+
+state_get() {
+  # state_get KEY → value
+  [ -f "$STATE" ] || { echo ""; return 0; }
+  sed -n "s/^$1=//p" "$STATE" | tail -1
+}
+
+state_set() {
+  key="$1"
+  val="$2"
+  tmp="${STATE}.new"
+  if [ -f "$STATE" ]; then
+    grep -v "^${key}=" "$STATE" >"$tmp" || true
+  else
+    : >"$tmp"
+  fi
+  echo "${key}=${val}" >>"$tmp"
+  mv "$tmp" "$STATE"
+}
+
+can_fix() {
+  # can_fix name → 0 если можно чинить
+  name="$1"
+  [ "$FORCE" = "1" ] && return 0
+  last=$(state_get "fix_${name}_ts")
+  [ -z "$last" ] && return 0
+  now=$(now_epoch)
+  ago=$((now - last))
+  [ "$ago" -ge "$COOLDOWN_SEC" ] && return 0
+  log "SKIP fix $name (cooldown ${ago}s < ${COOLDOWN_SEC}s)"
+  return 1
+}
+
+mark_fix() {
+  state_set "fix_$1_ts" "$(now_epoch)"
+}
+
+# --- checks ---
+
+ok_singbox() {
+  pgrep -f 'sing-box|singbox' >/dev/null 2>&1
+}
+
+ok_podkop_svc() {
+  # status часто врёт — смотрим процесс
+  ok_singbox && return 0
+  /etc/init.d/podkop status 2>/dev/null | grep -qi running && return 0
+  return 1
+}
+
+ok_zapret() {
+  pgrep -f 'nfqws2|nfqws' >/dev/null 2>&1 && return 0
+  if [ -x /etc/init.d/zapret2 ]; then
+    /etc/init.d/zapret2 status 2>/dev/null | grep -qi running && return 0
+  fi
+  if [ -x /etc/init.d/zapret ]; then
+    /etc/init.d/zapret status 2>/dev/null | grep -qi running && return 0
+  fi
+  return 1
+}
+
+ok_awg() {
+  # Раньше: только «интерфейс есть» → пропускали мёртвый handshake.
+  # Теперь: свежий handshake (<=180s при keepalive 25) + probe через awg0.
+  out=$(awg show awg0 2>/dev/null || wg show awg0 2>/dev/null) || return 1
+  echo "$out" | grep -qi 'latest handshake' || return 1
+  echo "$out" | grep -qi 'latest handshake: never' && return 1
+  line=$(echo "$out" | grep -i 'latest handshake' | head -1)
+  age=0
+  d=$(echo "$line" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) day.*/\1/p')
+  [ -z "$d" ] && d=$(echo "$line" | sed -n 's/^\([0-9][0-9]*\) day.*/\1/p')
+  h=$(echo "$line" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) hour.*/\1/p')
+  [ -z "$h" ] && h=$(echo "$line" | sed -n 's/^\([0-9][0-9]*\) hour.*/\1/p')
+  m=$(echo "$line" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) minute.*/\1/p')
+  [ -z "$m" ] && m=$(echo "$line" | sed -n 's/^\([0-9][0-9]*\) minute.*/\1/p')
+  s=$(echo "$line" | sed -n 's/.*[^0-9]\([0-9][0-9]*\) second.*/\1/p')
+  [ -z "$s" ] && s=$(echo "$line" | sed -n 's/^\([0-9][0-9]*\) second.*/\1/p')
+  [ -n "$d" ] && age=$((age + d * 86400))
+  [ -n "$h" ] && age=$((age + h * 3600))
+  [ -n "$m" ] && age=$((age + m * 60))
+  [ -n "$s" ] && age=$((age + s))
+  # если единицы не распарсились, но строка есть — считаем мёртвым
+  if [ "$age" -eq 0 ] && ! echo "$line" | grep -Eq '[0-9]+[[:space:]]+second'; then
+    return 1
+  fi
+  max_age="${EMPIRE_AWG_MAX_AGE:-180}"
+  [ "$age" -le "$max_age" ] || return 1
+  code=$(curl --interface awg0 -4 -s -o /dev/null -w '%{http_code}' \
+    --connect-timeout 8 --max-time 12 https://1.1.1.1/ 2>/dev/null || echo 000)
+  case "$code" in
+    200|301|302) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+ok_dns() {
+  nslookup youtube.com 127.0.0.1 >/dev/null 2>&1 || nslookup youtube.com >/dev/null 2>&1
+}
+
+ok_youtube() {
+  # generate_204 + главная — ловим и «сайт мёртв», и DPI
+  code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
+    https://www.youtube.com/generate_204 2>/dev/null || echo 000)
+  case "$code" in
+    204|200) ;;
+    *)
+      code2=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
+        https://www.youtube.com/ 2>/dev/null || echo 000)
+      case "$code2" in
+        200|301|302) code="$code2" ;;
+        *) return 1 ;;
+      esac
+      ;;
+  esac
+  # картинка CDN — ближе к реальному видео, чем одна 204
+  img=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
+    https://i.ytimg.com/generate_204 2>/dev/null || echo 000)
+  case "$img" in
+    204|200|404) return 0 ;;  # 404 на generate_204 у ytimg бывает, но TCP/TLS жив
+    *)
+      # если сайт YT ок, а ytimg упал — всё равно чиним
+      return 1
+      ;;
+  esac
+}
+
+ok_routes() {
+  # Telegram + LAN FakeIP routes must not be wiped by podkop/slim scripts
+  CFG=/etc/sing-box/config.json
+  [ -f "$CFG" ] || return 1
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -e '
+    [.route.rules[]? | select(.outbound=="main-out") | (.rule_set // [])[]?]
+    | index("main-telegram-community-ruleset")
+  ' "$CFG" >/dev/null 2>&1 || return 1
+  jq -e '
+    [.route.rules[]? | select(.outbound=="main-out") | (.rule_set // [])[]?]
+    | index("main-local-subnets-ruleset")
+  ' "$CFG" >/dev/null 2>&1 || return 1
+  jq -e '.inbounds[]|select(.tag=="tproxy-in")|.type=="redirect"' "$CFG" >/dev/null 2>&1 || return 1
+  nft list set inet PodkopTable podkop_subnets 2>/dev/null | grep -q '149.154' || return 1
+  nft list chain inet PodkopTable proxy 2>/dev/null | grep -q 'redirect to :1602' || return 1
+  return 0
+}
+
+ok_telegram() {
+  # Desktop бьёт в DC IP; web/API — дополнительный сигнал
+  code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
+    https://telegram.org/ 2>/dev/null || echo 000)
+  case "$code" in
+    200|301|302) ;;
+    *) return 1 ;;
+  esac
+  code2=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
+    https://api.telegram.org/ 2>/dev/null || echo 000)
+  case "$code2" in
+    200|301|302|401|404) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+save_golden() {
+  CFG=/etc/sing-box/config.json
+  GOLD=/etc/podkop/sing-box.golden.json
+  [ -f "$CFG" ] || return 0
+  # только если маршруты целы
+  ok_routes || return 0
+  cp -a "$CFG" "$GOLD" 2>/dev/null || true
+  chmod 600 "$GOLD" 2>/dev/null || true
+}
+
+restore_golden() {
+  CFG=/etc/sing-box/config.json
+  GOLD=/etc/podkop/sing-box.golden.json
+  [ -f "$GOLD" ] || return 1
+  cp -a "$GOLD" "$CFG"
+  killall sing-box 2>/dev/null || true
+  sleep 1
+  mkdir -p /tmp/sing-box
+  /usr/bin/sing-box run -c "$CFG" -D /usr/share/sing-box >/tmp/sing-box-empire.log 2>&1 &
+  sleep 2
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  return 0
+}
+
+USB_UUID="01D63D133C7B6100"
+
+ok_usb() {
+  # NTFS по UUID (после реконекта бывает sdb6, не sda6). ext3-оверлей = пустой download.
+  line=$(grep ' /mnt/usb ' /proc/mounts 2>/dev/null | tail -1 || true)
+  [ -n "$line" ] || return 1
+  echo "$line" | grep -qE 'fuseblk|ntfs' || return 1
+  echo "$line" | grep -q ' ext3 ' && return 1
+  dev=$(echo "$line" | awk '{print $1}')
+  uuid=$(blkid -s UUID -o value "$dev" 2>/dev/null || true)
+  [ "$uuid" = "$USB_UUID" ] || return 1
+  [ -d /mnt/usb/download ] || return 1
+  return 0
+}
+
+ok_download_share() {
+  ok_usb || return 1
+  # share path должен быть на NTFS, не пустая заглушка на ext3
+  return 0
+}
+
+ok_transmission() {
+  pgrep -f transmission-daemon >/dev/null 2>&1
+}
+
+# Трекеры должны быть FakeIP 198.18.x (VLESS). Реальный IP / NXDOMAIN = снова «не открываются».
+ok_torrents() {
+  ip=$(nslookup rutracker.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+  case "$ip" in
+    198.18.*) return 0 ;;
+  esac
+  return 1
+}
+
+ok_samba() {
+  pgrep -f 'smbd|samba' >/dev/null 2>&1
+}
+
+ok_reverse_tunnel() {
+  pgrep -f "ssh.*-R 127.0.0.1:6223" >/dev/null 2>&1
+}
+
+# --- fixes ---
+
+fix_podkop() {
+  can_fix podkop || return 1
+  log "FIX podkop/sing-box restart"
+  /etc/init.d/podkop enable 2>/dev/null || true
+  /etc/init.d/podkop restart 2>/dev/null || /etc/init.d/podkop start 2>/dev/null || true
+  # restore FakeIP LAN redirect (podkop regenerates tproxy/fwmark)
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  sleep 4
+  mark_fix podkop
+  ok_podkop_svc && log "FIX podkop OK" && return 0
+  log "FIX podkop STILL BAD"
+  return 1
+}
+
+fix_zapret() {
+  can_fix zapret || return 1
+  log "FIX zapret restart"
+  if [ -x /etc/init.d/zapret2 ]; then
+    /etc/init.d/zapret2 enable 2>/dev/null || true
+    /etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret2 start 2>/dev/null || true
+  elif [ -x /etc/init.d/zapret ]; then
+    /etc/init.d/zapret enable 2>/dev/null || true
+    /etc/init.d/zapret restart 2>/dev/null || true
+  fi
+  sleep 2
+  mark_fix zapret
+  ok_zapret && log "FIX zapret OK" && return 0
+  log "FIX zapret STILL BAD"
+  return 1
+}
+
+fix_youtube() {
+  # YouTube = podkop + zapret
+  fix_podkop || true
+  fix_zapret || true
+  sleep 3
+  if ok_youtube; then
+    log "FIX youtube OK"
+    return 0
+  fi
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  sleep 2
+  if ok_youtube; then log "FIX youtube OK after lan-fix"; return 0; fi
+  log "FIX youtube STILL BAD after podkop+zapret"
+  return 1
+}
+
+fix_routes() {
+  can_fix routes || return 1
+  log "FIX routes (lan-fix + golden)"
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  sleep 2
+  if ok_routes; then
+    mark_fix routes
+    log "FIX routes OK"
+    return 0
+  fi
+  log "FIX routes: restore golden config"
+  restore_golden || true
+  sleep 2
+  mark_fix routes
+  if ok_routes; then
+    log "FIX routes OK after golden"
+    return 0
+  fi
+  log "FIX routes STILL BAD"
+  return 1
+}
+
+fix_telegram() {
+  can_fix telegram || return 1
+  log "FIX telegram (routes + podkop)"
+  fix_routes || true
+  fix_podkop || true
+  sleep 3
+  mark_fix telegram
+  if ok_telegram; then
+    log "FIX telegram OK"
+    return 0
+  fi
+  log "FIX telegram STILL BAD"
+  return 1
+}
+
+fix_awg() {
+  can_fix awg || return 1
+  log "FIX amnezia awg0 (ifup + split + awg-quick)"
+  # UCI/netifd путь надёжнее голого awg-quick на OpenWrt
+  ifdown awg0 2>/dev/null || true
+  sleep 1
+  ifup awg0 2>/dev/null || true
+  /etc/init.d/amnezia-split restart 2>/dev/null || true
+  sh /etc/amnezia/start-split.sh 2>/dev/null || true
+  # fallback
+  if ! awg show awg0 >/dev/null 2>&1; then
+    awg-quick down awg0 2>/dev/null || true
+    awg-quick up awg0 2>/dev/null || true
+  fi
+  sleep 5
+  mark_fix awg
+  if ok_awg; then
+    log "FIX awg OK"
+    return 0
+  fi
+  log "FIX awg STILL BAD"
+  return 1
+}
+
+fix_usb() {
+  can_fix usb || return 1
+  log "FIX usb: NTFS by UUID (not hardcoded sda6)"
+  /etc/init.d/empire-usb-mount start 2>/dev/null || true
+  sleep 1
+  mark_fix usb
+  if ok_usb; then
+    log "FIX usb OK (NTFS download)"
+    /etc/init.d/samba4 restart 2>/dev/null || /etc/init.d/samba restart 2>/dev/null || true
+    return 0
+  fi
+  log "FIX usb STILL BAD"
+  return 1
+}
+
+fix_transmission() {
+  can_fix transmission || return 1
+  log "FIX transmission"
+  uci -q delete transmission.transmission 2>/dev/null || true
+  uci set transmission.@transmission[0].enabled=1 2>/dev/null || true
+  uci set transmission.@transmission[0].config_dir=/etc/transmission/config 2>/dev/null || true
+  uci set transmission.@transmission[0].config_overwrite=0 2>/dev/null || true
+  uci commit transmission 2>/dev/null || true
+  /etc/init.d/transmission enable 2>/dev/null || true
+  /etc/init.d/transmission restart 2>/dev/null || true
+  mark_fix transmission
+  sleep 2
+  ok_transmission && log "FIX transmission OK" && return 0
+  return 1
+}
+
+fix_torrents() {
+  can_fix torrents || return 1
+  log "FIX torrents: user_domains FakeIP + VLESS"
+  DOMAINS="rutracker.org www.rutracker.org rutracker.net rutracker.cc static.rutracker.cc feed.rutracker.cc rutracker.wiki bt.t-ru.org bt2.t-ru.org bt3.t-ru.org bt4.t-ru.org tr.t-ru.org rutor.info www.rutor.info nnmclub.to nnm-club.me nnmstatic.win kinozal.tv 1337x.to flibusta.is www.flibusta.is http.flibusta.is mobile.flibusta.is proxy.flibusta.is"
+  if [ -f /etc/podkop/torrent-domains.txt ]; then
+    DOMAINS="$(grep -v '^#' /etc/podkop/torrent-domains.txt | grep -v '^[[:space:]]*$' | tr '\n' ' ')"
+  fi
+  uci set podkop.main.user_domain_list_type='text'
+  CUR="$(uci -q get podkop.main.user_domains_text || true)"
+  PAD=" $CUR "
+  for d in $DOMAINS; do
+    echo "$PAD" | grep -q " $d " && continue
+    CUR="${CUR:+$CUR }$d"
+    PAD=" $CUR "
+  done
+  uci set podkop.main.user_domains_text="$CUR"
+  uci commit podkop
+  rm -f /tmp/sing-box/cache.db
+  /etc/init.d/podkop restart 2>/dev/null || true
+  sleep 4
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  mark_fix torrents
+  sleep 2
+  ok_torrents && log "FIX torrents OK" && return 0
+  log "FIX torrents STILL BAD"
+  return 1
+}
+
+fix_samba() {
+  can_fix samba || return 1
+  log "FIX samba"
+  /etc/init.d/samba4 restart 2>/dev/null || /etc/init.d/samba restart 2>/dev/null || true
+  mark_fix samba
+  sleep 1
+  ok_samba && return 0
+  return 1
+}
+
+fix_reverse() {
+  can_fix reverse || return 1
+  log "FIX reverse tunnel start.sh"
+  if [ -x /etc/flint2-tunnel/start.sh ]; then
+    /etc/flint2-tunnel/start.sh >/tmp/flint2-tunnel-start.out 2>&1 || true
+  fi
+  mark_fix reverse
+  sleep 2
+  return 0
+}
+
+fix_dns() {
+  can_fix dns || return 1
+  log "FIX dnsmasq restart"
+  /etc/init.d/dnsmasq restart 2>/dev/null || true
+  mark_fix dns
+  sleep 2
+  ok_dns && return 0
+  return 1
+}
+
+# --- main ---
+
+main() {
+  log "=== START check_only=$CHECK_ONLY force=$FORCE ==="
+  problems=""
+  fixed=""
+  report=""
+
+  check_one() {
+    name="$1"
+    if "ok_$name"; then
+      report="${report}OK $name; "
+      log "OK $name"
+      return 0
+    fi
+    report="${report}FAIL $name; "
+    log "FAIL $name"
+    problems="${problems}${name} "
+    if [ "$CHECK_ONLY" = "1" ]; then
+      return 1
+    fi
+    case "$name" in
+      singbox|podkop_svc)
+        fix_podkop && fixed="${fixed}podkop " || true
+        ;;
+      zapret) fix_zapret && fixed="${fixed}zapret " || true ;;
+      routes) fix_routes && fixed="${fixed}routes " || true ;;
+      telegram) fix_telegram && fixed="${fixed}telegram " || true ;;
+      youtube) fix_youtube && fixed="${fixed}youtube " || true ;;
+      awg) fix_awg && fixed="${fixed}awg " || true ;;
+      dns) fix_dns && fixed="${fixed}dns " || true ;;
+      usb)
+        if can_fix tg_usb_fail; then
+          ha_telegram_send "USB-диск роутера: НЕДОСТУПЕН (попытка автопочинки fix_usb)" || true
+          mark_fix tg_usb_fail
+        fi
+        if fix_usb; then
+          fixed="${fixed}usb "
+          if can_fix tg_usb_ok; then
+            ha_telegram_send "USB-диск роутера: восстановлен (fix_usb OK)" || true
+            mark_fix tg_usb_ok
+          fi
+        else
+          if can_fix tg_usb_still_bad; then
+            ha_telegram_send "USB-диск роутера: STILL BAD после автопочинки fix_usb" || true
+            mark_fix tg_usb_still_bad
+          fi
+        fi
+        ;;
+      transmission) fix_transmission && fixed="${fixed}transmission " || true ;;
+      torrents) fix_torrents && fixed="${fixed}torrents " || true ;;
+      samba) fix_samba && fixed="${fixed}samba " || true ;;
+      reverse_tunnel) fix_reverse && fixed="${fixed}reverse " || true ;;
+    esac
+    return 1
+  }
+
+  # порядок: база → маршруты → сервисы
+  check_one podkop_svc || true
+  check_one routes || true
+  check_one zapret || true
+  check_one dns || true
+  check_one youtube || true
+  check_one telegram || true
+  check_one torrents || true
+  check_one awg || true
+  check_one usb || true
+  check_one transmission || true
+  check_one samba || true
+  check_one reverse_tunnel || true
+
+  # итоговая перепроверка если чинили
+  if [ -n "$fixed" ] && [ "$CHECK_ONLY" = "0" ]; then
+    sleep 2
+    if ok_youtube; then
+      log "RECHECK youtube OK"
+    else
+      log "RECHECK youtube STILL FAIL"
+      problems="${problems}youtube_recheck "
+    fi
+    if ok_telegram; then
+      log "RECHECK telegram OK"
+    else
+      log "RECHECK telegram STILL FAIL"
+      problems="${problems}telegram_recheck "
+    fi
+    if ok_routes; then
+      log "RECHECK routes OK"
+    else
+      log "RECHECK routes STILL FAIL"
+      problems="${problems}routes_recheck "
+    fi
+    if ok_awg; then
+      log "RECHECK awg OK"
+    else
+      log "RECHECK awg STILL FAIL"
+      problems="${problems}awg_recheck "
+    fi
+  fi
+
+  # снимок рабочего конфига — чтобы было из чего восстановить
+  if [ -z "$problems" ] || { ok_routes && ok_youtube && ok_telegram; }; then
+    save_golden
+  fi
+
+  state_set last_run "$(date -Is 2>/dev/null || date)"
+  state_set last_report "$report"
+  state_set last_problems "$problems"
+  state_set last_fixed "$fixed"
+
+  if [ -z "$problems" ]; then
+    log "=== DONE all OK ==="
+    exit 0
+  fi
+  log "=== DONE problems=[$problems] fixed=[$fixed] ==="
+  # exit 1 если остались проблемы после фикса
+  still=""
+  ok_podkop_svc || still="${still}podkop "
+  ok_zapret || still="${still}zapret "
+  ok_routes || still="${still}routes "
+  ok_youtube || still="${still}youtube "
+  ok_telegram || still="${still}telegram "
+  ok_torrents || still="${still}torrents "
+  ok_awg || still="${still}awg "
+  ok_dns || still="${still}dns "
+  ok_reverse_tunnel || still="${still}reverse "
+  [ -z "$still" ] && exit 0
+  exit 1
+}
+
+main

@@ -11,6 +11,8 @@ _ROOT = Path(__file__).resolve().parent
 _DATA_PATH = _ROOT / "data" / "stern_curated.json"
 _HISTORY_PATH = _ROOT / "data" / "stern_curated_used.json"
 _COOLDOWN_DAYS = 28
+# Совпадает с data/auto_publish.json → rubrics.stern_matrix_curated.min_body_chars
+_MIN_BODY_CHARS = 220
 
 CURATED_TAG = "[Stern curated]"
 
@@ -35,9 +37,40 @@ def _save_history(data: dict) -> None:
     _HISTORY_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _body_len(text: str) -> int:
+    lines = [ln for ln in (text or "").splitlines() if ln.strip()]
+    body = [ln for ln in lines if not ln.lstrip().startswith("#")]
+    return len("\n".join(body))
+
+
+def _image_exists(entry: dict) -> bool:
+    raw = (entry.get("image_file") or "").strip()
+    if not raw:
+        return False
+    p = Path(raw)
+    if p.is_file():
+        return True
+    return (_ROOT / raw).is_file()
+
+
+def _publishable(e: dict) -> bool:
+    if e.get("deprecated"):
+        return False
+    if not _image_exists(e):
+        return False
+    body = (e.get("body_html") or "").strip()
+    if not body:
+        return False
+    return _body_len(body) >= _MIN_BODY_CHARS
+
+
 def pick_entry(*, slot: str) -> dict | None:
     entries = _load_data().get("entries") or []
-    filtered = [e for e in entries if str(e.get("slot") or "") == slot]
+    filtered = [
+        e
+        for e in entries
+        if str(e.get("slot") or "") == slot and _publishable(e)
+    ]
     if not filtered:
         return None
 

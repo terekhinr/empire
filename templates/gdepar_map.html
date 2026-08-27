@@ -9,7 +9,6 @@
     {% if metrika_id %}
     <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
     {% endif %}
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="canonical" href="{{ canonical_page_url }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Где Пар">
@@ -32,7 +31,7 @@
     <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
     <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
     <link rel="stylesheet" href="/static/gdepar/map.css?v={{ asset_version }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="stylesheet" href="/static/gdepar/vendor/leaflet/leaflet.css?v={{ asset_version }}">
 </head>
 <body>
 {% include "gdepar_metrika.inc.html" %}
@@ -125,11 +124,18 @@
 {% if spots_data %}
 <script type="application/json" id="spots-data">{{ spots_data|tojson }}</script>
 <script src="/static/gdepar/summary_render.js?v={{ asset_version }}"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/static/gdepar/vendor/leaflet/leaflet.js?v={{ asset_version }}"></script>
 <script>
 (function () {
     var el = document.getElementById('spots-data');
-    if (!el || !window.L) return;
+    var mapHostEarly = document.getElementById('banya-map');
+    if (!window.L) {
+        if (mapHostEarly) {
+            mapHostEarly.innerHTML = '<p class="muted" style="padding:1rem">Карта не загрузилась. Обновите страницу.</p>';
+        }
+        return;
+    }
+    if (!el) return;
     var spots;
     try { spots = JSON.parse(el.textContent); } catch (e) { return; }
     if (!spots.length) return;
@@ -488,11 +494,30 @@
         }
     }
 
+    function addBaseTiles(targetMap) {
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        });
+        var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        });
+        var failed = 0;
+        var switched = false;
+        osm.on('tileerror', function () {
+            failed += 1;
+            if (switched || failed < 4) return;
+            switched = true;
+            try { targetMap.removeLayer(osm); } catch (e0) {}
+            carto.addTo(targetMap);
+        });
+        osm.addTo(targetMap);
+    }
+
     var map = L.map('banya-map', { scrollWheelZoom: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+    addBaseTiles(map);
 
     (function bindPopupOutboundClicks() {
         var pp = map.getPane('popupPane');

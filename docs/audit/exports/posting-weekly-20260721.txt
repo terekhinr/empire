@@ -1,0 +1,13 @@
+📈 Постинг · неделя с 2026-07-20
+Опубликовано: 32 · skip: 5 · success 86%
+
+── По персонам ──
+  garden: +4 skip=0 (100%)
+  gdepar: +12 skip=0 (100%)
+  lenin: +8 skip=2 (80%)
+  stern: +8 skip=3 (73%)
+
+── Оценка ──
+• Автопост приемлемый; проверьте skip_reasons
+
+JSON: /root/projects/empire/data/empire_weekly_kpi.json

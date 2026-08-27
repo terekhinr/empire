@@ -4,6 +4,10 @@ import os
 import html
 from datetime import datetime
 from dotenv import load_dotenv
+import importlib.util
+import logging
+from pathlib import Path
+from typing import Any
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
@@ -19,8 +23,28 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 os.makedirs("media", exist_ok=True)
+
+# --- PDF AUDIO conversion module (local) ---
+# Функции PDF->MP3 лежат в pdf_audio_bot.py. Подключаем модуль по пути,
+# потому что папка bots/stepanich не является python-пакетом.
+import sys as _sys
+
+_PDF_AUDIO_BOT_PATH = Path(__file__).with_name("pdf_audio_bot.py")
+_spec = importlib.util.spec_from_file_location("empire_pdf_audio_bot", _PDF_AUDIO_BOT_PATH)
+assert _spec and _spec.loader
+_pdf_audio_mod: Any = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
+_sys.modules["empire_pdf_audio_bot"] = _pdf_audio_mod
+_spec.loader.exec_module(_pdf_audio_mod)
+
+convert_pdf_to_mp3s = _pdf_audio_mod.convert_pdf_to_mp3s
+MEDIA_ROOT = Path(_pdf_audio_mod.MEDIA_ROOT)
+
+PDF_AUDIO_MAX_PDF_MB = int(os.getenv("PDF_AUDIO_MAX_PDF_MB", "20"))
+PDF_AUDIO_KEEP_WORKDIR = os.getenv("PDF_AUDIO_KEEP_WORKDIR", "0") == "1"
+pdf_audio_lock = asyncio.Lock()
 
 # --- 2. БАЗА ДАННЫХ ---
 engine = create_async_engine(DATABASE_URL, echo=False)
@@ -126,6 +150,25 @@ async def generate_and_download_image(image_prompt: str, draft_id: int) -> str:
             return None
 
 # --- 5. АДМИНКА ---
+# Примечание: прод-бот — main.py (empire_main). Здесь дублируем PDF-handler
+# на случай отдельного запуска stepanich.
+
+PDF_HELP_TEXT = (
+    "<b>📖 PDF → MP3</b>\n\n"
+    "1) Пришли PDF <b>документом</b> (скрепка → Файл), не фото.\n"
+    f"2) Лимит до <b>{PDF_AUDIO_MAX_PDF_MB} МБ</b>, нужен текстовый слой (не чистый скан).\n"
+    "3) Бот почистит текст, озвучит через Gemini и вернёт MP3 (длинные книги — частями).\n"
+    "4) Не дублируй файл, пока идёт обработка.\n\n"
+    "Команды: /pdf · /help"
+)
+
+@dp.message(Command("start", "help", "pdf"))
+async def cmd_pdf_guide(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет прав.")
+        return
+    await message.answer(PDF_HELP_TEXT, parse_mode="HTML")
+
 @dp.message(Command("draft"))
 async def cmd_draft(message: types.Message):
     # ПРОВЕРКА ПРАВ: Если бот ответит этим сообщением, значит ID в .env не совпадает
@@ -173,6 +216,74 @@ async def cmd_draft(message: types.Message):
         if image_path:
             await message.answer_photo(photo=FSInputFile(image_path))
         await message.answer(admin_caption, reply_markup=keyboard, parse_mode="HTML")
+
+# --- PDF -> MP3 ---
+@dp.message(F.document)
+async def handle_pdf_document(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нет прав для этого действия.")
+        return
+
+    document = message.document
+    if not document:
+        return
+    if not (document.file_name or "").lower().endswith(".pdf"):
+        await message.answer("Нужен именно PDF-файл. Инструкция: /pdf")
+        return
+
+    if document.file_size and document.file_size > PDF_AUDIO_MAX_PDF_MB * 1024 * 1024:
+        await message.answer(
+            f"PDF слишком большой для этого бота: больше {PDF_AUDIO_MAX_PDF_MB} MB.\n/pdf"
+        )
+        return
+
+    if not GEMINI_API_KEY:
+        await message.answer("Не задан GEMINI_API_KEY в .env (для озвучки).")
+        return
+
+    async with pdf_audio_lock:
+        status = await message.answer(
+            "Скачиваю PDF и готовлю озвучку. Для больших книг это может занять несколько минут.\n"
+            "Не дублируй файл. Подробности: /pdf"
+        )
+        workdir = MEDIA_ROOT / f"{message.chat.id}_{message.message_id}_{int(datetime.utcnow().timestamp())}"
+        workdir.mkdir(parents=True, exist_ok=True)
+        pdf_path = workdir / (document.file_name or "input.pdf")
+
+        try:
+            await bot.download(document, destination=pdf_path)
+            await status.edit_text("PDF скачан. Извлекаю текст и озвучиваю...")
+
+            title, mp3_paths, total_chars = await asyncio.to_thread(
+                convert_pdf_to_mp3s, pdf_path, workdir
+            )
+
+            await status.edit_text(
+                f"Готово. Отправляю аудио.\nНазвание: {title[:200]}\nСимволов после очистки: {total_chars}"
+            )
+
+            for idx, mp3_path in enumerate(mp3_paths, start=1):
+                caption = title
+                if len(mp3_paths) > 1:
+                    caption = f"{title}\nЧасть {idx} из {len(mp3_paths)}"
+                await message.answer_audio(
+                    audio=FSInputFile(mp3_path),
+                    title=mp3_path.stem[:64],
+                    caption=caption[:1024],
+                )
+
+            await status.edit_text("Все части отправлены. Ещё PDF? /pdf")
+        except Exception as exc:
+            logging.exception("PDF->MP3 failed")
+            await status.edit_text(f"Ошибка обработки PDF: {exc}\n/pdf")
+        finally:
+            if not PDF_AUDIO_KEEP_WORKDIR:
+                try:
+                    import shutil as _shutil
+
+                    _shutil.rmtree(workdir, ignore_errors=True)
+                except Exception:
+                    pass
 
 # --- 6. ОБРАБОТЧИК КНОПОК ---
 @dp.callback_query(F.data.startswith("approve_"))

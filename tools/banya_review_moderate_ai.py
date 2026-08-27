@@ -11,7 +11,8 @@
 
 Переменные окружения (.env):
   OPENROUTER_API_KEY — обязательно для не-dry вызова API
-  BANYA_MODERATE_MODEL — по умолчанию openai/gpt-4o-mini (дешёвый класс на OpenRouter)
+  BANYA_MODERATE_MODEL — по умолчанию deepseek/deepseek-chat
+    (openai/* на аккаунте может отдавать 403 ToS)
 
 Примеры:
   python3 tools/banya_review_moderate_ai.py                    # быстро: сколько pending, превью
@@ -36,7 +37,10 @@ DB = ROOT / "empire.db"
 RAG_PATH = ROOT / "data" / "review_moderation_rag.md"
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = os.getenv("BANYA_MODERATE_MODEL", "openai/gpt-4o-mini").strip() or "openai/gpt-4o-mini"
+DEFAULT_MODEL = (
+    os.getenv("BANYA_MODERATE_MODEL", "deepseek/deepseek-chat").strip()
+    or "deepseek/deepseek-chat"
+)
 EMBED_MODEL = os.getenv(
     "BANYA_MODERATE_EMBED_MODEL",
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -12,7 +12,30 @@ from typing import Any
 from health_db import STRENGTH_EXERCISES
 
 BASE_DIR = Path(__file__).resolve().parent
-PROGRAM_PATH = BASE_DIR / "docs" / "health" / "workout_program_2026.md"
+
+PROGRAM_REGISTRY: dict[str, dict[str, Any]] = {
+    "gym_2026": {
+        "id": "gym_2026",
+        "title": "Программа 2026",
+        "short": "Зал",
+        "path": BASE_DIR / "docs" / "health" / "workout_program_2026.md",
+        "note_prefix": "подход",
+    },
+    "outside_hall": {
+        "id": "outside_hall",
+        "title": "Работа вне зала",
+        "short": "Вне зала",
+        "path": BASE_DIR / "docs" / "health" / "workout_program_outside_hall.md",
+        "note_prefix": "внезала подход",
+        "rolling_sessions": 9,
+    },
+}
+SLOT_WEEKDAYS = (0, 2, 4)  # Mon, Wed, Fri
+DAY_CYCLE = ("A", "B", "C")
+HOLD_SEC_RE = re.compile(r"(\d+)\s*сек", re.I)
+DEFAULT_PROGRAM_ID = "gym_2026"
+# Backward-compatible alias
+PROGRAM_PATH = PROGRAM_REGISTRY[DEFAULT_PROGRAM_ID]["path"]
 
 CALENDAR_LINE_RE = re.compile(
     r"^- \[[ xX]\] \[\[(\d{4}-\d{2}-\d{2})\]\].*?—\s*(.+?)\s*$"
@@ -32,6 +55,38 @@ def _norm_day(letter: str) -> str:
     return _CYR_TO_LAT.get(letter, letter.upper())
 
 
+def resolve_program_id(program_id: str | None = None) -> str:
+    pid = (program_id or DEFAULT_PROGRAM_ID).strip() or DEFAULT_PROGRAM_ID
+    if pid not in PROGRAM_REGISTRY:
+        raise ValueError(f"unknown_program:{pid}")
+    return pid
+
+
+def get_program_meta(program_id: str | None = None) -> dict[str, Any]:
+    pid = resolve_program_id(program_id)
+    meta = PROGRAM_REGISTRY[pid]
+    return {
+        "id": meta["id"],
+        "title": meta["title"],
+        "short": meta["short"],
+        "note_prefix": meta["note_prefix"],
+        "path": str(meta["path"]),
+    }
+
+
+def list_programs() -> list[dict[str, Any]]:
+    out = []
+    for pid in PROGRAM_REGISTRY:
+        meta = get_program_meta(pid)
+        summary = program_summary(pid)
+        out.append({**meta, **summary})
+    return out
+
+
+def program_note_prefix(program_id: str | None = None) -> str:
+    return get_program_meta(program_id)["note_prefix"]
+
+
 @dataclass
 class WorkoutExercise:
     exercise_key: str
@@ -43,6 +98,8 @@ class WorkoutExercise:
     reps_max: int | None = None
     is_max: bool = False
     suggested_weight_kg: float | None = None
+    is_time_hold: bool = False
+    hold_seconds: int | None = None
 
     @property
     def exercise_label(self) -> str:
@@ -80,6 +137,7 @@ class WorkoutSession:
     day: str
     template: WorkoutDayTemplate | None
     note: str = ""
+    program_id: str = DEFAULT_PROGRAM_ID
 
 
 def _parse_sets_reps(prescription: str) -> tuple[int, int | None, int | None, int | None, bool]:
@@ -100,6 +158,46 @@ def _parse_sets_reps(prescription: str) -> tuple[int, int | None, int | None, in
         val = int(digits[0])
         return sets, val, val, val, False
     return sets, None, None, None, False
+
+
+def _detect_time_hold(
+    exercise_key: str,
+    detail: str,
+    reps: int | None,
+    reps_min: int | None,
+    reps_max: int | None,
+) -> tuple[bool, int | None]:
+    """Return (is_time_based, hold_seconds).
+
+    is_time_based — лог в секундах (планка 60 сек).
+    hold_seconds — длительность таймера; у Макгилла может быть
+    при логе в повторах (8–10 повт × удержание 10 сек).
+    """
+    detail_l = detail.lower()
+    key_l = exercise_key.lower()
+    hold_from_text: int | None = None
+    m = HOLD_SEC_RE.search(detail_l)
+    if m:
+        hold_from_text = int(m.group(1))
+
+    if "сек на каждую сторону" in detail_l:
+        return True, reps_max or reps_min or reps or hold_from_text
+    if "планка" in key_l and reps and reps >= 30:
+        return True, hold_from_text or reps
+    if hold_from_text and ("статик" in detail_l or (reps is not None and reps >= 30)):
+        return True, hold_from_text
+    if hold_from_text and reps is not None and reps >= 30:
+        return True, hold_from_text
+
+    # Гибрид: повторы + таймер удержания (Макгилл, собака-птица)
+    if hold_from_text and (
+        "удержан" in detail_l
+        or "макгилл" in key_l
+        or "собака_птица" in key_l
+    ):
+        return False, hold_from_text
+
+    return False, hold_from_text
 
 
 def _parse_weight(detail: str) -> float | None:
@@ -123,6 +221,7 @@ def _parse_exercise_line(line: str) -> WorkoutExercise | None:
     prescription = parts[0] if parts else ""
     detail = " | ".join(parts[1:]) if len(parts) > 1 else ""
     sets, reps, rmin, rmax, is_max = _parse_sets_reps(prescription)
+    is_time_hold, hold_seconds = _detect_time_hold(key, detail, reps, rmin, rmax)
     return WorkoutExercise(
         exercise_key=key,
         prescription=prescription,
@@ -133,6 +232,8 @@ def _parse_exercise_line(line: str) -> WorkoutExercise | None:
         reps_max=rmax,
         is_max=is_max,
         suggested_weight_kg=_parse_weight(detail),
+        is_time_hold=is_time_hold,
+        hold_seconds=hold_seconds,
     )
 
 
@@ -229,22 +330,139 @@ def parse_program(text: str) -> tuple[dict[tuple[int, str], WorkoutDayTemplate],
     return templates, calendar
 
 
-@lru_cache(maxsize=1)
-def load_program() -> tuple[dict[tuple[int, str], WorkoutDayTemplate], list[CalendarEntry]]:
-    path = PROGRAM_PATH
+def default_anchor(today: date | None = None) -> date:
+    """Next Monday on or after today (if today is Monday — next week's Monday)."""
+    today = today or date.today()
+    days_ahead = (0 - today.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    return today + timedelta(days=days_ahead)
+
+
+def _snap_to_slot(d: date, slot_weekdays: tuple[int, ...] = SLOT_WEEKDAYS) -> date:
+    if d.weekday() in slot_weekdays:
+        return d
+    for _ in range(7):
+        d += timedelta(days=1)
+        if d.weekday() in slot_weekdays:
+            return d
+    return d
+
+
+def _generate_slot_dates(
+    anchor: date,
+    count: int,
+    slot_weekdays: tuple[int, ...] = SLOT_WEEKDAYS,
+) -> list[date]:
+    dates: list[date] = []
+    d = _snap_to_slot(anchor, slot_weekdays)
+    while len(dates) < count:
+        if d.weekday() in slot_weekdays:
+            dates.append(d)
+        d += timedelta(days=1)
+    return dates
+
+
+def _outside_session_specs(start_day: str, count: int) -> list[tuple[int, str, str, str]]:
+    day = _norm_day(start_day)
+    if day not in DAY_CYCLE:
+        day = "A"
+    start_idx = DAY_CYCLE.index(day)
+    specs: list[tuple[int, str, str, str]] = []
+    for i in range(count):
+        letter = DAY_CYCLE[(start_idx + i) % 3]
+        specs.append((1, letter, f"Фаза 1 / День {letter}", ""))
+    return specs
+
+
+def _rotate_specs_to_start_day(
+    specs: list[tuple[int, str, str, str]],
+    start_day: str,
+) -> list[tuple[int, str, str, str]]:
+    day = _norm_day(start_day)
+    if day not in DAY_CYCLE or not specs:
+        return specs
+    start_idx = next((i for i, s in enumerate(specs) if s[1] == day), 0)
+    return specs[start_idx:] + specs[:start_idx]
+
+
+def _static_session_specs(program_id: str) -> list[tuple[int, str, str, str]]:
+    _, calendar = load_program(program_id)
+    return [(e.phase, e.day, e.label, e.note) for e in calendar]
+
+
+def build_rolling_calendar(
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> list[CalendarEntry]:
+    pid = resolve_program_id(program_id)
+    meta = PROGRAM_REGISTRY[pid]
+    slot = tuple(meta.get("slot_weekdays", SLOT_WEEKDAYS))
+    start = _norm_day(start_day or "A")
+
+    if pid == "outside_hall":
+        count = int(meta.get("rolling_sessions", 9))
+        specs = _outside_session_specs(start, count)
+    else:
+        specs = _rotate_specs_to_start_day(_static_session_specs(pid), start)
+        count = len(specs)
+
+    if isinstance(anchor, str):
+        anchor = date.fromisoformat(anchor)
+    anchor_d = _snap_to_slot(anchor or default_anchor(), slot)
+    dates = _generate_slot_dates(anchor_d, count, slot)
+
+    return [
+        CalendarEntry(on=d, label=label, phase=phase, day=day, note=note)
+        for d, (phase, day, label, note) in zip(dates, specs)
+    ]
+
+
+def resolve_schedule(
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> tuple[date, str, list[CalendarEntry]]:
+    pid = resolve_program_id(program_id)
+    start = _norm_day(start_day or "A")
+    if isinstance(anchor, str):
+        anchor = date.fromisoformat(anchor)
+    cal = build_rolling_calendar(pid, anchor, start)
+    anchor_d = cal[0].on if cal else _snap_to_slot(anchor or default_anchor())
+    return anchor_d, start, cal
+
+
+@lru_cache(maxsize=8)
+def load_program(
+    program_id: str | None = None,
+) -> tuple[dict[tuple[int, str], WorkoutDayTemplate], list[CalendarEntry]]:
+    pid = resolve_program_id(program_id)
+    path = PROGRAM_REGISTRY[pid]["path"]
     if not path.is_file():
         return {}, []
     return parse_program(path.read_text(encoding="utf-8"))
 
 
-def get_calendar() -> list[CalendarEntry]:
-    return load_program()[1]
+def get_calendar(
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> list[CalendarEntry]:
+    return resolve_schedule(program_id, anchor, start_day)[2]
 
 
-def get_session_for_date(on: date | str) -> WorkoutSession | None:
+def get_session_for_date(
+    on: date | str,
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> WorkoutSession | None:
     if isinstance(on, str):
         on = date.fromisoformat(on)
-    templates, calendar = load_program()
+    pid = resolve_program_id(program_id)
+    templates, _ = load_program(pid)
+    _, _, calendar = resolve_schedule(pid, anchor, start_day)
     for entry in calendar:
         if entry.on == on:
             template = templates.get((entry.phase, entry.day))
@@ -255,15 +473,23 @@ def get_session_for_date(on: date | str) -> WorkoutSession | None:
                 day=entry.day,
                 template=template,
                 note=entry.note,
+                program_id=pid,
             )
     return None
 
 
-def next_scheduled_session(after: date | None = None) -> WorkoutSession | None:
+def next_scheduled_session(
+    after: date | None = None,
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> WorkoutSession | None:
     after = after or date.today()
-    for entry in get_calendar():
+    pid = resolve_program_id(program_id)
+    templates, _ = load_program(pid)
+    _, _, calendar = resolve_schedule(pid, anchor, start_day)
+    for entry in calendar:
         if entry.on >= after:
-            templates = load_program()[0]
             return WorkoutSession(
                 on=entry.on,
                 label=entry.label,
@@ -271,19 +497,34 @@ def next_scheduled_session(after: date | None = None) -> WorkoutSession | None:
                 day=entry.day,
                 template=templates.get((entry.phase, entry.day)),
                 note=entry.note,
+                program_id=pid,
             )
     return None
 
 
-def program_summary() -> dict[str, Any]:
-    templates, calendar = load_program()
+def program_summary(
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> dict[str, Any]:
+    pid = resolve_program_id(program_id)
+    meta = get_program_meta(pid)
+    templates, _ = load_program(pid)
+    anchor_d, start, calendar = resolve_schedule(pid, anchor, start_day)
     return {
-        "path": str(PROGRAM_PATH),
+        "program_id": pid,
+        "title": meta["title"],
+        "short": meta["short"],
+        "note_prefix": meta["note_prefix"],
+        "path": meta["path"],
         "phases": len({t.phase for t in templates.values()}),
         "templates": len(templates),
         "calendar_days": len(calendar),
         "start": calendar[0].on.isoformat() if calendar else None,
         "end": calendar[-1].on.isoformat() if calendar else None,
+        "schedule_anchor": anchor_d.isoformat(),
+        "schedule_start_day": start,
+        "slot_weekdays": list(PROGRAM_REGISTRY[pid].get("slot_weekdays", SLOT_WEEKDAYS)),
     }
 
 
@@ -300,6 +541,8 @@ def _exercise_to_dict(ex: WorkoutExercise) -> dict[str, Any]:
         "is_max": ex.is_max,
         "is_rest": ex.is_rest,
         "suggested_weight_kg": ex.suggested_weight_kg,
+        "is_time_hold": ex.is_time_hold,
+        "hold_seconds": ex.hold_seconds,
     }
 
 
@@ -308,6 +551,7 @@ def session_to_dict(session: WorkoutSession | None) -> dict[str, Any] | None:
         return None
     tpl = session.template
     return {
+        "program_id": session.program_id,
         "on": session.on.isoformat(),
         "label": session.label,
         "phase": session.phase,
@@ -319,7 +563,11 @@ def session_to_dict(session: WorkoutSession | None) -> dict[str, Any] | None:
     }
 
 
-def calendar_to_dict() -> list[dict[str, Any]]:
+def calendar_to_dict(
+    program_id: str | None = None,
+    anchor: date | str | None = None,
+    start_day: str | None = None,
+) -> list[dict[str, Any]]:
     return [
         {
             "on": e.on.isoformat(),
@@ -328,5 +576,5 @@ def calendar_to_dict() -> list[dict[str, Any]]:
             "day": e.day,
             "note": e.note,
         }
-        for e in get_calendar()
+        for e in get_calendar(program_id, anchor, start_day)
     ]

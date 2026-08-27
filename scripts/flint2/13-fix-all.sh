@@ -32,12 +32,15 @@ mkdir -p "$MNT"
 block detect >/dev/null 2>&1 || true
 sleep 3
 
-DEV=""
-for d in /dev/sd*[0-9]; do
-  [ -b "$d" ] || continue
-  DEV="$d"
-  break
-done
+KNOWN_UUID="01D63D133C7B6100"
+DEV="$(blkid -U "$KNOWN_UUID" 2>/dev/null || blkid -t "UUID=$KNOWN_UUID" -o device 2>/dev/null | head -1 || true)"
+if [ -z "$DEV" ] || [ ! -b "$DEV" ]; then
+  DEV=""
+  for d in /dev/sd*[0-9]; do
+    [ -b "$d" ] || continue
+    [ "$(blkid -s TYPE -o value "$d" 2>/dev/null)" = ntfs ] && DEV="$d" && break
+  done
+fi
 
 if [ -z "$DEV" ]; then
   # попытка rescan
@@ -45,11 +48,13 @@ if [ -z "$DEV" ]; then
     [ -f "$h" ] && echo '- - -' >"$h" 2>/dev/null || true
   done
   sleep 3
-  for d in /dev/sd*[0-9]; do
-    [ -b "$d" ] || continue
-    DEV="$d"
-    break
-  done
+  DEV="$(blkid -U "$KNOWN_UUID" 2>/dev/null || true)"
+  if [ -z "$DEV" ]; then
+    for d in /dev/sd*[0-9]; do
+      [ -b "$d" ] || continue
+      [ "$(blkid -s TYPE -o value "$d" 2>/dev/null)" = ntfs ] && DEV="$d" && break
+    done
+  fi
 fi
 
 if [ -n "$DEV" ]; then
@@ -86,14 +91,15 @@ if [ -d "$MNT" ] && mountpoint -q "$MNT" 2>/dev/null; then
     [ -f "$s" ] && T_SETTINGS="$s" && break
   done
 
-  uci -q set transmission.transmission=transmission 2>/dev/null || true
-  uci set transmission.transmission.enabled='1'
-  uci set transmission.transmission.download_dir="$DL"
-  uci set transmission.transmission.incomplete_dir="$DL/.incomplete"
-  uci set transmission.transmission.incomplete_dir_enabled='1'
-  uci set transmission.transmission.config_dir='/etc/transmission/config'
-  uci set transmission.transmission.rpc_enabled='1'
-  uci set transmission.transmission.rpc_whitelist_enabled='0'
+  uci -q delete transmission.transmission 2>/dev/null || true
+  uci set transmission.@transmission[0].enabled='1'
+  uci set transmission.@transmission[0].config_overwrite='0'
+  uci set transmission.@transmission[0].download_dir="$DL"
+  uci set transmission.@transmission[0].incomplete_dir="$DL/.incomplete"
+  uci set transmission.@transmission[0].incomplete_dir_enabled='1'
+  uci set transmission.@transmission[0].config_dir='/etc/transmission/config'
+  uci set transmission.@transmission[0].rpc_enabled='1'
+  uci set transmission.@transmission[0].rpc_whitelist_enabled='0'
   mkdir -p /etc/transmission/config
   if [ -n "$T_SETTINGS" ]; then
     cp -a "$T_SETTINGS" /etc/transmission/config/settings.json
@@ -105,7 +111,7 @@ if [ -d "$MNT" ] && mountpoint -q "$MNT" 2>/dev/null; then
 
   uci -q set samba4=samba 2>/dev/null || true
   uci set samba4.@samba[0].name='FLINT'
-  uci set samba4.@samba[0].workgroup='WORKGROUP'
+  uci set samba4.@samba[0].workgroup='HOME'
   uci set samba4.@samba[0].charset='UTF-8'
   uci -q delete samba4.download 2>/dev/null || true
   uci set samba4.download=sambashare
@@ -117,13 +123,7 @@ if [ -d "$MNT" ] && mountpoint -q "$MNT" 2>/dev/null; then
   uci set samba4.download.dir_mask='0775'
   uci commit samba4
 
-  curl -fsSL "$BASE/transmission-schedule.sh" -o /etc/transmission-schedule.sh 2>/dev/null || true
-  chmod +x /etc/transmission-schedule.sh 2>/dev/null || true
-  ( crontab -l 2>/dev/null | grep -v transmission-schedule
-    echo "0 1 * * * /etc/transmission-schedule.sh start"
-    echo "0 6 * * * /etc/transmission-schedule.sh stop"
-    echo "*/10 * * * * /etc/transmission-schedule.sh"
-  ) | crontab - 2>/dev/null || true
+  # Transmission 24/7 — ночное окно Keenetic не включаем (ломает вечерние закачки).
 
   /etc/init.d/samba4 enable
   /etc/init.d/samba4 restart

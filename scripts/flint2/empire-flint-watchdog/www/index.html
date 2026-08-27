@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b3d2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="Cache-Control" content="no-cache">
+  <title>Empire Heal</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">Empire Heal</div>
+    <p class="sub">Автопочинка роутера · HA</p>
+  </header>
+
+  <section id="migrate-banner" class="card warn-card hidden">
+    <h2>Иконка с Wi‑Fi не работает с LTE</h2>
+    <p class="hint">Эта страница — домашний адрес роутера. Для приложения на телефоне открой HTTPS-зеркало и поставь иконку оттуда.</p>
+    <a id="migrate-link" class="btn primary big" href="https://neverretire.ru/home-ops/">Открыть neverretire.ru/home-ops</a>
+  </section>
+
+  <section id="auth-gate" class="card hidden">
+    <h2>Токен доступа</h2>
+    <p class="hint">Один раз введи токен. На HTTPS-зеркале это другой «сайт» — токен с 192.168.1.1 сюда сам не переносится.</p>
+    <input id="token-input" type="password" autocomplete="off" placeholder="токен">
+    <button type="button" id="btn-save-token" class="btn primary">Сохранить</button>
+  </section>
+
+  <section id="status" class="card">
+    <div class="row-between">
+      <h2>Статус</h2>
+      <button type="button" id="btn-refresh" class="btn ghost">Обновить</button>
+    </div>
+    <div id="checks" class="checks"></div>
+    <p id="watchdog-meta" class="meta"></p>
+  </section>
+
+  <section class="card">
+    <h2>Действия</h2>
+    <div class="actions">
+      <button type="button" class="btn primary big" data-act="fix">Починить всё</button>
+      <button type="button" class="btn" data-act="restart" data-svc="podkop">YouTube / podkop</button>
+      <button type="button" class="btn" data-act="restart" data-svc="zapret">Zapret</button>
+      <button type="button" class="btn" data-act="restart" data-svc="awg">Amnezia</button>
+      <button type="button" class="btn" data-act="restart" data-svc="tunnel">Туннель VPS</button>
+      <button type="button" class="btn warn" data-act="ha_restart">Перезапуск HA</button>
+    </div>
+    <pre id="out" class="out" hidden></pre>
+  </section>
+
+  <section class="card">
+    <h2>Открыть</h2>
+    <div class="links">
+      <a class="link" href="http://192.168.1.41:8123" target="_blank" rel="noopener">Home Assistant</a>
+      <a class="link" href="http://192.168.1.1/" target="_blank" rel="noopener">LuCI роутер</a>
+      <a class="link" href="http://192.168.1.1:9091" target="_blank" rel="noopener">Transmission</a>
+    </div>
+    <p class="hint">Снаружи дома: лучше ставить приложение с <a href="https://neverretire.ru/home-ops/">neverretire.ru/home-ops</a> (HTTPS). Иконка с 192.168.1.1 без Wi‑Fi/Tailscale не откроется. Либо Tailscale ON + Accept routes.</p>
+  </section>
+
+  <section class="card">
+    <h2>Лог сторожа</h2>
+    <pre id="log" class="out log"></pre>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

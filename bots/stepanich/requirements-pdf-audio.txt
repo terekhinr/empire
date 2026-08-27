@@ -1,0 +1,9 @@
+aiogram
+python-dotenv
+PyMuPDF
+google-genai
+edge-tts
+ru-normalizr
+silero-stress
+omegaconf
+torch

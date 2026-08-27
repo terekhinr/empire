@@ -1206,7 +1206,7 @@ def _assistant_llm_rollout_for_client_today(client_fp: str) -> bool:
 
 
 def _assistant_llm_model() -> str:
-    return (os.getenv("GDEPAR_ASSISTANT_MODEL") or "openai/gpt-4o-mini").strip()
+    return (os.getenv("GDEPAR_ASSISTANT_MODEL") or "deepseek/deepseek-chat").strip()
 
 
 def _assistant_llm_timeout_sec() -> float:
@@ -2538,7 +2538,7 @@ def _popup_summary_llm_selected_for_spot_today(spot_id: int) -> bool:
 
 
 def _popup_summary_llm_model() -> str:
-    return (os.getenv("GDEPAR_POPUP_SUMMARY_MODEL") or os.getenv("GDEPAR_ASSISTANT_MODEL") or "openai/gpt-4o-mini").strip()
+    return (os.getenv("GDEPAR_POPUP_SUMMARY_MODEL") or os.getenv("GDEPAR_ASSISTANT_MODEL") or "deepseek/deepseek-chat").strip()
 
 
 def _popup_summary_llm_timeout_sec() -> float:

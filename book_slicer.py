@@ -1,6 +1,6 @@
 import os
 import json
-import PyPDF2
+import pypdf as PyPDF2
 import re
 
 QUEUE_FILE = "data/lenin_books_queue.json"

@@ -1,7 +1,7 @@
 # Сценарии для голоса Алисы (Yandex Smart Home — script без type: scenario в YAML).
 # После установки интеграции отметьте эти script в UI или см. yandex_smart_home.example.yaml
 #
-# Sonoff BASICR2 (eWeLink): гостевая = Ded, комната Макса = Max
+# Sonoff BASICR2 (eWeLink): гостевая = Ded, комната Семёна = Max (entity id)
 
 script:
   empire_svet_vyklyuchit_ruchnoy:
@@ -241,8 +241,9 @@ script:
         target:
           entity_id: switch.basicr2_ded_sonoff_10011f1029
 
+  # entity_id legacy (*_maks_*): физически — комната Семёна (бывш. Макса)
   svet_maks_vkl:
-    alias: "Свет Макс — включить"
+    alias: "Свет комната Семёна — включить"
     mode: restart
     sequence:
       - service: input_boolean.turn_off
@@ -255,7 +256,7 @@ script:
           entity_id: switch.basicr2_max_sonoff_10011f28d9
 
   svet_maks_vyk:
-    alias: "Свет Макс — выключить"
+    alias: "Свет комната Семёна — выключить"
     mode: restart
     sequence:
       - service: switch.turn_off

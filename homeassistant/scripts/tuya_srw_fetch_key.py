@@ -65,23 +65,41 @@ def _cloud_row(cloud: tinytuya.Cloud) -> dict | None:
 
 def main() -> int:
     try:
+        if not CREDS.exists():
+            return _fail({"ok": False, "error": "no .tuya_cloud.json"})
         creds = json.loads(CREDS.read_text())
         cloud = tinytuya.Cloud(
             apiRegion=creds.get("apiRegion", "eu"),
             apiKey=creds["apiKey"],
             apiSecret=creds["apiSecret"],
         )
-        st = cloud.getstatus(DEVICE_ID)
-        if not st or not st.get("success"):
-            return _fail({"ok": False, "error": st})
+        st = None
+        try:
+            st = cloud.getstatus(DEVICE_ID)
+        except Exception as exc:
+            st = {"success": False, "error": str(exc)[:200]}
 
         row = _cloud_row(cloud)
         if not row:
             return _fail({"ok": False, "error": "device not in cloud", "status": st})
 
         key = _pick_key(row)
-        ip = row.get("ip") or row.get("ip_address") or "0.0.0.0"
-        ver = row.get("version") or row.get("product_version") or "3.3"
+        # Сохраняем известный LAN IP из .srw_local / кандидатов, облачный ip часто 0.0.0.0
+        prev = {}
+        if OUT.exists():
+            try:
+                prev = json.loads(OUT.read_text())
+            except Exception:
+                prev = {}
+        ip = (
+            (prev.get("ip") or "").strip()
+            or row.get("ip")
+            or row.get("ip_address")
+            or "192.168.1.143"
+        )
+        if ip in ("0.0.0.0", "127.0.0.1", ""):
+            ip = prev.get("ip") or "192.168.1.143"
+        ver = row.get("version") or row.get("product_version") or prev.get("version") or "3.3"
         scan_ip, scan_ver = _scan_ip()
         if scan_ip:
             ip = scan_ip
@@ -93,9 +111,11 @@ def main() -> int:
             json.dumps({"ip": ip, "local_key": key, "version": str(ver)}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        vals = {x["code"]: x["value"] for x in st.get("result", [])}
+        vals = {}
+        if isinstance(st, dict) and st.get("success"):
+            vals = {x["code"]: x["value"] for x in st.get("result", [])}
         ERR.unlink(missing_ok=True)
-        print(json.dumps({"ok": True, "ip": ip, "version": ver, "temp": vals.get("va_temperature")}))
+        print(json.dumps({"ok": True, "ip": ip, "version": ver, "temp": vals.get("va_temperature"), "cloud_status_ok": bool(vals)}))
         return 0
     except Exception as exc:
         return _fail({"ok": False, "error": str(exc)[:300]})

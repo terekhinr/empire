@@ -1,6 +1,6 @@
 {
-  "name": "Empire",
-  "short_name": "Empire",
+  "name": "Задачник",
+  "short_name": "Задачник",
   "description": "Задачи, замеры тела и тренировки — синхронизация между телефоном и ПК",
   "start_url": "/tasks/",
   "scope": "/tasks/",
@@ -25,6 +25,16 @@
     {
       "name": "Новая задача",
       "url": "/tasks/?action=new",
+      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ИИ-ассистент",
+      "url": "/tasks/?view=assistant",
+      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Когда-нибудь",
+      "url": "/tasks/?view=someday",
       "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
     },
     {

@@ -1,0 +1,28 @@
+# Торрент-трекеры: DNS FakeIP + VLESS (как YouTube).
+# Пиры BitTorrent остаются в WAN (direct) — в этот список не входят IP пиров.
+# CSS/JS: static.rutracker.cc, nnmstatic.win — без них страница «голая»/белая.
+rutracker.org
+www.rutracker.org
+rutracker.net
+rutracker.cc
+static.rutracker.cc
+feed.rutracker.cc
+rutracker.wiki
+bt.t-ru.org
+bt2.t-ru.org
+bt3.t-ru.org
+bt4.t-ru.org
+tr.t-ru.org
+rutor.info
+www.rutor.info
+nnmclub.to
+nnm-club.me
+nnmstatic.win
+kinozal.tv
+1337x.to
+flibusta.is
+www.flibusta.is
+http.flibusta.is
+mobile.flibusta.is
+proxy.flibusta.is
+

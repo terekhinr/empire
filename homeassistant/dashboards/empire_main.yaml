@@ -141,7 +141,7 @@ views:
               action: toggle
           - type: custom:mushroom-entity-card
             entity: switch.basicr2_max_sonoff_10011f28d9
-            name: Комната Макса
+            name: Комната Семёна
             icon: mdi:ceiling-light
             tap_action:
               action: toggle
@@ -151,12 +151,12 @@ views:
         cards:
           - type: custom:mushroom-entity-card
             entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
-            name: Семён
+            name: Детская
             icon: mdi:thermometer
             layout: vertical
           - type: custom:mushroom-entity-card
             entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
-            name: Макс
+            name: Семён
             icon: mdi:thermometer
             layout: vertical
       - type: custom:mushroom-title-card
@@ -427,12 +427,12 @@ views:
         name: Звонок
         icon: mdi:phone-ring
 
-  - title: Комната Семена
-    path: komnata_semiona
+  - title: Детская
+    path: detskaya
     icon: mdi:account-child
     cards:
       - type: custom:mushroom-title-card
-        title: Комната Семена
+        title: Детская
         subtitle: eWeLink CK-TLSR8656 · ZHA
       - type: custom:mini-graph-card
         name: Температура и влажность
@@ -466,12 +466,12 @@ views:
             icon: mdi:battery
             layout: vertical
 
-  - title: Комната Макса
-    path: komnata_maksa
+  - title: Комната Семёна
+    path: komnata_semiona
     icon: mdi:account-child-circle
     cards:
       - type: custom:mushroom-title-card
-        title: Комната Макса
+        title: Комната Семёна
         subtitle: eWeLink CK-TLSR8656 · ZHA
       - type: custom:mini-graph-card
         name: Температура и влажность
@@ -527,7 +527,7 @@ views:
               action: toggle
           - type: custom:mushroom-entity-card
             entity: switch.basicr2_max_sonoff_10011f28d9
-            name: Max
+            name: Семён
             icon: mdi:power-socket
             tap_action:
               action: toggle

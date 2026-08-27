@@ -549,10 +549,11 @@ def format_classic_banya_post(entry: dict) -> str:
         "Классическая баня",
         "📖",
         entry,
-        hashtags=f"#баня #гдепар #классика #{tag} #литература",
+        hashtags=f"#баня #гдепар #{tag}",
         source_label="Источник",
         commentary_prefix="📖 <b>О чём писал автор:</b>",
-        show_commentary=True,
+        # До окт 2026: без школьного «сочинения» — только цитата + источник.
+        show_commentary=False,
     )
 
 
@@ -836,8 +837,11 @@ async def resolve_gdepar_slot(slot_value, *, resolve_topic_fn) -> tuple[str, str
         return topic, None, None
     if special in ("banya_week", "[SPECIAL:banya_week]"):
         return build_banya_week_topic(), None, None
+    import gdepar_mono_curated as gmono
     import gdepar_duo_curated as gduo
 
+    if gmono.is_mono_curated_slot(slot_value):
+        return await gmono.build_mono_curated_slot(pool=gmono.pool_from_slot(slot_value))
     if gduo.is_duo_curated_slot(slot_value):
         return await gduo.build_duo_curated_slot(pool=gduo.pool_from_slot(slot_value))
     topic = await resolve_topic_fn("gdepar", slot_value)

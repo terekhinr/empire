@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire PDF Audio Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/empire
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/bots/stepanich/pdf_audio_bot.py
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

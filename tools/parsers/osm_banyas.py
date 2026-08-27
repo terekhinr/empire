@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Парсер общественных бань из OpenStreetMap (Overpass API).
 
-Идея: даём «остов» точек по регионам (МО, СПб, ...). Все записи попадают
-в `banya_spots` со `status='draft'`. На сайт идут только опубликованные
-(через TG-команду `/banya pub`).
+Идея: даём «остов» точек по регионам (МО, СПб, Урал, Сибирь, ДВ…). Все записи
+попадают в `banya_spots` со `status='draft'`. На сайт идут только опубликованные
+(через TG-команду `/banya pub` / pubauto).
 
 Запуск:
     python tools/parsers/osm_banyas.py                 # МО + СПб (дефолт)
-    python tools/parsers/osm_banyas.py --regions MO    # только МО
     python tools/parsers/osm_banyas.py --regions MO,SPB,LO,MSK
+    python tools/parsers/osm_banyas.py --regions URAL,SIB,FAR_EAST
+    python tools/parsers/osm_banyas.py --regions RU_ALL --sleep 12
     python tools/parsers/osm_banyas.py --dry           # только посмотреть, не писать
+    ./scripts/run_osm_ru_all.sh                        # вся РФ → logs/osm_ru_all.log
 
 Скрипт автономен — не импортирует main.py (нет HF/torch и др.).
 """
@@ -25,7 +27,6 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,7 +34,13 @@ DB_PATH = ROOT / "empire.db"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.banya_regions import REGIONS, REGION_FALLBACK_CITY, expand_region_tokens
+from tools.banya_regions import (
+    REGIONS,
+    REGION_AREA_ISOS,
+    REGION_AREA_NAME,
+    REGION_FALLBACK_CITY,
+    expand_region_tokens,
+)
 from tools.banya_schema_mvp import ensure_banya_mvp_schema
 
 OVERPASS_URLS = (
@@ -44,19 +51,31 @@ UA = "GdeParBot/1.0 (+https://gdepar.ru; info@gdepar.ru)"
 TIMEOUT = 90
 OVERPASS_RETRY_WAITS = (20, 45, 90, 120, 180, 240)
 
-# Что считаем «баней» в OSM:
-#   leisure=sauna             — финские/русские сауны и бани (основной тег)
-#   amenity=public_bath       — публичные бани (более редкий тег)
-#   building=sauna            — встречается, но без 'leisure' даёт мусор; включаем мягко
-OVERPASS_QUERY_TEMPLATE = (
-    '[out:json][timeout:{timeout}];'
-    'area["ISO3166-2"="{iso}"]->.a;'
+# Общая часть: что тянем внутри area `.a`
+_OVERPASS_NWR = (
     '('
     '  nwr["leisure"="sauna"](area.a);'
     '  nwr["amenity"="public_bath"](area.a);'
     '  nwr["amenity"="sauna"](area.a);'
+    '  nwr["building"="sauna"](area.a);'
+    '  nwr["bath:type"="banya"](area.a);'
+    '  nwr["bath:type"="sauna"](area.a);'
+    '  nwr["bath:type"="hammam"](area.a);'
+    '  nwr["building"="bath"]["name"](area.a);'
     ');'
-    'out center 500;'
+    'out center;'
+)
+
+OVERPASS_QUERY_ISO = (
+    '[out:json][timeout:{timeout}];'
+    'area["ISO3166-2"="{iso}"]->.a;'
+    + _OVERPASS_NWR
+)
+
+OVERPASS_QUERY_NAME = (
+    '[out:json][timeout:{timeout}];'
+    'area["name"="{name}"]["admin_level"="4"]->.a;'
+    + _OVERPASS_NWR
 )
 
 # Что отметаем сразу (явные частные сауны, не относящиеся к общественным баням):
@@ -67,6 +86,16 @@ NEG_NAME_PATTERNS = (
 NEG_TAG_VALUES = {
     "private", "yes-private", "members_only",
 }
+
+# Безымянные объекты: только «сильные» теги → синтетическое имя (иначе шум дач).
+_NAME_FALLBACK_BY_TAG = (
+    (("amenity", "public_bath"), "Общественная баня"),
+    (("leisure", "sauna"), "Сауна"),
+    (("amenity", "sauna"), "Сауна"),
+    (("bath:type", "banya"), "Баня"),
+    (("bath:type", "hammam"), "Хаммам"),
+    (("bath:type", "sauna"), "Сауна"),
+)
 
 
 def slugify(s: str) -> str:
@@ -89,9 +118,8 @@ def _overpass_http_error(exc: urllib.error.HTTPError) -> bool:
     return exc.code in (429, 502, 503, 504)
 
 
-def query_overpass(iso: str) -> list[dict]:
-    q = OVERPASS_QUERY_TEMPLATE.format(iso=iso, timeout=TIMEOUT)
-    body = urllib.parse.urlencode({"data": q}).encode()
+def _query_overpass_raw(query: str) -> list[dict]:
+    body = urllib.parse.urlencode({"data": query}).encode()
     last_err: Exception | None = None
     for attempt, wait in enumerate(OVERPASS_RETRY_WAITS):
         url = OVERPASS_URLS[attempt % len(OVERPASS_URLS)]
@@ -110,7 +138,7 @@ def query_overpass(iso: str) -> list[dict]:
                 time.sleep(wait)
                 continue
             raise
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, TimeoutError) as e:
             last_err = e
             if attempt + 1 < len(OVERPASS_RETRY_WAITS):
                 print(f"  Overpass сеть ({e}), пауза {wait} с…", file=sys.stderr, flush=True)
@@ -122,13 +150,108 @@ def query_overpass(iso: str) -> list[dict]:
     return []
 
 
+def _dedupe_elements(elements: list[dict]) -> list[dict]:
+    seen: set[tuple] = set()
+    out: list[dict] = []
+    for el in elements:
+        key = (el.get("type"), el.get("id"))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(el)
+    return out
+
+
+def query_overpass_for_region(rcode: str) -> list[dict]:
+    """Overpass по ISO (+альтернативы) и при необходимости по name admin_level=4."""
+    iso_primary, _label = REGIONS[rcode]
+    isos = list(REGION_AREA_ISOS.get(rcode, (iso_primary,)))
+    if iso_primary not in isos:
+        isos.insert(0, iso_primary)
+
+    best: list[dict] = []
+    errors = 0
+    last_err: Exception | None = None
+    for iso in isos:
+        q = OVERPASS_QUERY_ISO.format(iso=iso, timeout=TIMEOUT)
+        try:
+            els = _query_overpass_raw(q)
+        except Exception as e:
+            last_err = e
+            errors += 1
+            print(f"  ISO {iso}: ошибка {e}", file=sys.stderr, flush=True)
+            continue
+        print(f"  ISO {iso}: {len(els)} объектов", flush=True)
+        if len(els) > len(best):
+            best = els
+        if els:
+            break
+
+    if not best:
+        name = REGION_AREA_NAME.get(rcode)
+        if name:
+            q = OVERPASS_QUERY_NAME.format(name=name, timeout=TIMEOUT)
+            try:
+                els = _query_overpass_raw(q)
+                print(f"  name={name!r}: {len(els)} объектов", flush=True)
+                best = els
+            except Exception as e:
+                last_err = e
+                errors += 1
+                print(f"  name={name!r}: ошибка {e}", file=sys.stderr, flush=True)
+
+    if not best and errors and last_err is not None and errors >= len(isos):
+        # Все area-селекторы упали сетью — не маскируем как «пустой регион».
+        raise last_err
+    return _dedupe_elements(best)
+
+
+def query_overpass(iso: str) -> list[dict]:
+    """Совместимость: один ISO-код."""
+    return _query_overpass_raw(OVERPASS_QUERY_ISO.format(iso=iso, timeout=TIMEOUT))
+
+
+def _resolve_name(tags: dict) -> str | None:
+    name = (tags.get("name") or tags.get("name:ru") or tags.get("alt_name") or "").strip()
+    if name:
+        return name
+    # building=bath / building=sauna без имени — почти всегда частная дача
+    if tags.get("building") in {"bath", "sauna"} and tags.get("amenity") not in {
+        "public_bath", "sauna",
+    } and tags.get("leisure") != "sauna":
+        return None
+    for (k, v), label in _NAME_FALLBACK_BY_TAG:
+        if tags.get(k) == v:
+            return label
+    return None
+
+
+def _resolve_city(tags: dict, fallback_city: str | None) -> str:
+    city = (
+        tags.get("addr:city")
+        or tags.get("addr:town")
+        or tags.get("addr:village")
+        or tags.get("addr:hamlet")
+        or tags.get("addr:place")
+        or tags.get("addr:suburb")
+        or fallback_city
+        or ""
+    ).strip()
+    low = city.lower()
+    if low in {"saint petersburg", "st petersburg", "st. petersburg"}:
+        return "Санкт-Петербург"
+    if low in {"moscow", "moskva"}:
+        return "Москва"
+    return city
+
+
 def osm_to_spot(el: dict, fallback_city: str | None, region_code: str) -> dict | None:
     """Привести элемент Overpass к словарю BanyaSpot. Возвращает None если объект отбраковали."""
     osm_id = el.get("id")
     tags = el.get("tags", {}) or {}
     if not osm_id or not tags:
         return None
-    name = (tags.get("name") or tags.get("name:ru") or "").strip()
+    name = _resolve_name(tags)
     if not name:
         return None
     for pat in NEG_NAME_PATTERNS:
@@ -143,11 +266,7 @@ def osm_to_spot(el: dict, fallback_city: str | None, region_code: str) -> dict |
     if lat is None or lon is None:
         return None
 
-    city = (tags.get("addr:city") or tags.get("addr:suburb") or fallback_city or "").strip()
-    # Питер OSM-тегирует как «Saint Petersburg»/«Санкт-Петербург»; нормализуем.
-    if city.lower() in {"saint petersburg", "st petersburg", "st. petersburg"}:
-        city = "Санкт-Петербург"
-    # Если для МО город всё ещё пустой — оставим пустым, модерация подскажет.
+    city = _resolve_city(tags, fallback_city)
 
     street = (tags.get("addr:street") or "").strip()
     house = (tags.get("addr:housenumber") or "").strip()
@@ -155,35 +274,45 @@ def osm_to_spot(el: dict, fallback_city: str | None, region_code: str) -> dict |
     address = ", ".join(address_parts) if address_parts else ""
 
     # Сайт/телефон бывают в разных тегах
-    site_url = (tags.get("website") or tags.get("contact:website") or "").strip() or None
-    phone = (tags.get("phone") or tags.get("contact:phone") or "").strip() or None
+    site_url = (
+        tags.get("website")
+        or tags.get("contact:website")
+        or tags.get("url")
+        or ""
+    ).strip() or None
+    phone = (
+        tags.get("phone")
+        or tags.get("contact:phone")
+        or tags.get("contact:mobile")
+        or ""
+    ).strip() or None
 
     # heating: пытаемся вытащить из подсказок, иначе unknown
     heating = "unknown"
-    fuel = (tags.get("fuel") or "").lower()
-    if "wood" in fuel:
+    fuel = (tags.get("fuel") or tags.get("sauna:fuel") or "").lower()
+    if "wood" in fuel or fuel in {"firewood", "древесина"}:
         heating = "wood"
-    elif "electric" in fuel:
+    elif "electric" in fuel or "электро" in fuel:
         heating = "electric"
     elif tags.get("sauna:wood_stove") == "yes":
         heating = "wood"
 
-    # kind: public_bath → 'public', sauna без access — 'public' по умолчанию, но
-    # если access=private — это уже точно частная.
     access = (tags.get("access") or "").lower()
     if access in NEG_TAG_VALUES:
         return None
     kind = "public" if tags.get("amenity") == "public_bath" else "public"
 
     tags_out = []
-    if tags.get("leisure") == "sauna":
+    if tags.get("leisure") == "sauna" or tags.get("building") == "sauna":
         tags_out.append("сауна")
-    if tags.get("amenity") == "public_bath":
+    if tags.get("amenity") == "public_bath" or tags.get("bath:type") == "banya":
         tags_out.append("общественные")
+    if tags.get("bath:type") == "hammam":
+        tags_out.append("хаммам")
     if heating == "wood":
         tags_out.append("дровяные")
 
-    description = (tags.get("description") or "").strip() or None
+    description = (tags.get("description") or tags.get("description:ru") or "").strip() or None
 
     return {
         "_osm_id": osm_id,
@@ -250,7 +379,7 @@ def upsert(con: sqlite3.Connection, spot: dict) -> str:
     """Upsert по osm_id; если по slug совпало с ранее заведённым — обновляем,
     но НЕ перезатираем уже заполненные руками поля."""
     cur = con.cursor()
-    now = datetime.utcnow().isoformat(timespec="seconds")
+    now = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
     osm_id_str = str(spot["_osm_id"])
 
     row = cur.execute(
@@ -311,14 +440,67 @@ def upsert(con: sqlite3.Connection, spot: dict) -> str:
     return "created"
 
 
+def _ingest_region(
+    con: sqlite3.Connection | None,
+    rcode: str,
+    *,
+    dry: bool,
+    limit: int,
+    total: dict,
+) -> bool:
+    """True если Overpass ответил; False при сетевой/API ошибке."""
+    iso, label = REGIONS[rcode]
+    fallback_city = REGION_FALLBACK_CITY.get(rcode)
+    print(f"\n=== {label}  (ISO {iso}) ===", flush=True)
+    try:
+        elements = query_overpass_for_region(rcode)
+    except Exception as e:
+        print(f"  Overpass упал: {e}", file=sys.stderr, flush=True)
+        total["failed_regions"] += 1
+        return False
+    total["queried"] += len(elements)
+    if limit:
+        elements = elements[:limit]
+    kept_here = 0
+    for el in elements:
+        spot = osm_to_spot(el, fallback_city, rcode)
+        if not spot:
+            total["skipped"] += 1
+            continue
+        total["kept"] += 1
+        kept_here += 1
+        if dry:
+            print(f"  + {spot['title']:40s}  {spot['city'] or '—':22s}  {spot['lat']},{spot['lon']}")
+            continue
+        assert con is not None
+        outcome = upsert(con, spot)
+        total[outcome] += 1
+    print(f"  OSM: {len(elements)} → keep {kept_here}", flush=True)
+    if con is not None and not dry:
+        con.commit()
+    return True
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="OSM-парсер общественных бань.")
     parser.add_argument(
         "--regions", default="MO,SPB",
-        help="через запятую: MO,SPB, EUROPE_RU, CFO, NW, VOLGA или код области (по умолчанию MO,SPB)",
+        help="через запятую: MO,SPB, EUROPE_RU, RU_ALL, URAL, SIB, FAR_EAST, CFO… (по умолчанию MO,SPB)",
     )
     parser.add_argument("--dry", action="store_true", help="только показать, не писать в БД")
     parser.add_argument("--limit", type=int, default=0, help="ограничить число объектов на регион (для отладки)")
+    parser.add_argument(
+        "--sleep", type=float, default=10.0,
+        help="пауза между областями, сек (по умолчанию 10; для RU_ALL лучше 12–15)",
+    )
+    parser.add_argument(
+        "--retry-failed", action="store_true", default=True,
+        help="повторно запросить регионы с ошибкой Overpass (по умолчанию вкл.)",
+    )
+    parser.add_argument(
+        "--no-retry-failed", action="store_false", dest="retry_failed",
+        help="не ретраить упавшие регионы в конце прогона",
+    )
     args = parser.parse_args(argv)
 
     regs = expand_region_tokens([r for r in args.regions.split(",") if r.strip()])
@@ -327,49 +509,46 @@ def main(argv: list[str]) -> int:
         print(f"Неизвестные регионы: {unknown}. Доступно: {list(REGIONS)}", file=sys.stderr)
         return 2
 
-    con = sqlite3.connect(str(DB_PATH))
-    con.execute("PRAGMA journal_mode=WAL")
-    con.execute("PRAGMA busy_timeout=30000")
+    con: sqlite3.Connection | None = None
     if not args.dry:
+        con = sqlite3.connect(str(DB_PATH))
+        con.execute("PRAGMA journal_mode=WAL")
+        con.execute("PRAGMA busy_timeout=30000")
         ensure_schema(con)
         ensure_banya_mvp_schema(con)
 
     total = {"queried": 0, "kept": 0, "created": 0, "updated": 0, "skipped": 0, "failed_regions": 0}
     failed: list[str] = []
-    for rcode in regs:
-        iso, label = REGIONS[rcode]
-        fallback_city = REGION_FALLBACK_CITY.get(rcode)
-        print(f"\n=== {label}  (ISO {iso}) ===", flush=True)
-        try:
-            elements = query_overpass(iso)
-        except Exception as e:
-            print(f"  Overpass упал: {e}", file=sys.stderr, flush=True)
-            total["failed_regions"] += 1
+    for i, rcode in enumerate(regs):
+        ok = _ingest_region(con, rcode, dry=args.dry, limit=args.limit, total=total)
+        if not ok:
             failed.append(rcode)
-            continue
-        total["queried"] += len(elements)
-        if args.limit:
-            elements = elements[: args.limit]
-        for el in elements:
-            spot = osm_to_spot(el, fallback_city, rcode)
-            if not spot:
-                total["skipped"] += 1
-                continue
-            total["kept"] += 1
-            if args.dry:
-                print(f"  + {spot['title']:40s}  {spot['city'] or '—':22s}  {spot['lat']},{spot['lon']}")
-                continue
-            outcome = upsert(con, spot)
-            total[outcome] += 1
-        time.sleep(8.0)  # Пауза между областями (Overpass 429/504)
+        if i + 1 < len(regs) or (failed and args.retry_failed):
+            time.sleep(max(0.0, args.sleep))
+
+    if failed and args.retry_failed:
+        print(f"\n=== Ретрай упавших ({len(failed)}): {','.join(failed)} ===", flush=True)
+        time.sleep(max(args.sleep, 30.0))
+        still: list[str] = []
+        for i, rcode in enumerate(failed):
+            ok = _ingest_region(con, rcode, dry=args.dry, limit=args.limit, total=total)
+            if not ok:
+                still.append(rcode)
+            if i + 1 < len(failed):
+                time.sleep(max(args.sleep, 15.0))
+        # failed_regions считался с двойным инкрементом при ретрае — нормализуем
+        total["failed_regions"] = len(still)
+        failed = still
+    else:
+        total["failed_regions"] = len(failed)
 
     if failed:
         print(f"\n--- Пропущенные регионы ({len(failed)}): {','.join(failed)} ---", flush=True)
         print("  Повтор: python tools/parsers/osm_banyas.py --regions " + ",".join(failed), flush=True)
 
-    if not args.dry:
+    if con is not None:
         con.commit()
-    con.close()
+        con.close()
 
     print("\n--- ИТОГ ---", flush=True)
     print(f"  Overpass отдал:  {total['queried']}", flush=True)
@@ -378,10 +557,10 @@ def main(argv: list[str]) -> int:
     if not args.dry:
         print(f"  Новых записей:   {total['created']}", flush=True)
         print(f"  Обновлено:       {total['updated']}", flush=True)
-        print(f"  Регионов с ошибкой: {total['failed_regions']}", flush=True)
+        print(f"  Регионов с ошибкой: {len(failed)}", flush=True)
     else:
         print("  (dry-run: ничего не писали в БД)", flush=True)
-    return 0
+    return 0 if not failed else 1
 
 
 if __name__ == "__main__":

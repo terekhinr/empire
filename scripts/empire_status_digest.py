@@ -32,6 +32,20 @@ def main() -> int:
         print("outside digest window, skip", flush=True)
         return 0
 
+    # Перед отчётом — тихая ремедиация уязвимостей (без Telegram)
+    rem = ROOT / "scripts/empire_vuln_remediate.sh"
+    if rem.is_file():
+        try:
+            subprocess.run(
+                ["bash", str(rem)],
+                cwd=str(ROOT),
+                timeout=900,
+                env={**os.environ, "EMPIRE_APT_AUTOFIX": os.getenv("EMPIRE_APT_AUTOFIX", "1")},
+                check=False,
+            )
+        except Exception as exc:
+            print(f"vuln remediate warn: {exc}", flush=True)
+
     env = {**os.environ, "EMPIRE_DIAG_NO_TELEGRAM": "1", "EMPIRE_DIAG_PRINT_REPORT": "1"}
     py = ROOT / "venv/bin/python"
     report = ""
@@ -51,8 +65,15 @@ def main() -> int:
     if not report:
         report = _fallback_report()
 
+    try:
+        from empire_gdepar_parse_summary import build_gdepar_parse_summary
+
+        gdepar = build_gdepar_parse_summary()
+    except Exception as exc:
+        gdepar = f"── Где Пар · парсинг ──\n⚠ {exc}"
+
     label = "🌅 Утро" if "morning" in slot else "🌆 Вечер"
-    text = f"{label} · Empire VPS\n\n{report}"
+    text = f"{label} · Empire VPS\n\n{report}\n\n{gdepar}"
     if len(text) > 4000:
         text = text[:3980] + "\n… (обрезано)"
 

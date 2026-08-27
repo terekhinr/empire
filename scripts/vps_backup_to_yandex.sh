@@ -70,25 +70,52 @@ rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
   --exclude "data/gdepar/**" \
   --exclude "data/audio/**" \
   --exclude "data/obsidian_vault/**" \
+  --exclude "data/pension/**" \
+  --exclude "content/**" \
+  --exclude "kb_sources/**" \
   --exclude "vector_db/**" \
   --exclude "media/stern/technique_clips/**" \
-  --exclude "desktop/empire-tasks/dist/**" \
+  --exclude "desktop/**" \
   --exclude "scripts/keenetic-xkeen/blobs/**" \
+  --exclude "*.pdf" \
   --exclude "**/*.pdf" \
-  --max-size 50M \
-  --transfers 2 \
-  --checkers 4 \
-  --retries 10 \
-  --low-level-retries 20 \
-  --stats 5m \
+  --exclude "*.PDF" \
+  --exclude "**/*.epub" \
+  --exclude "**/*.zip" \
+  --exclude "**/*.img" \
+  --exclude "**/*.iso" \
+  --max-size 20M \
+  --transfers 4 \
+  --checkers 8 \
+  --retries 5 \
+  --low-level-retries 10 \
+  --stats 2m \
   --stats-one-line \
-  --timeout 5m \
+  --timeout 2m \
+  --contimeout 30s \
   -v || log "WARN: rclone copy empire — частичные ошибки (WebDAV)"
 
-log "Upload /etc/empire + systemd + sqlite backups"
+log "Upload /etc/empire + systemd + sqlite backups (только свежие 3 БД)"
 [[ -f "$ETC_TAR" ]] && rclone copy "$ETC_TAR" "${REMOTE}:${REMOTE_DAY}/" -v
 [[ -d "$SYSTEMD_STAGING" ]] && rclone copy "$SYSTEMD_STAGING" "${REMOTE}:${REMOTE_DAY}/systemd" -v
-rclone copy "$LOCAL_DB_BACKUP" "${REMOTE}:${REMOTE_DAY}/sqlite-backups" -v --max-age 48h
+SQLITE_LATEST="${STAGING}/sqlite-latest"
+mkdir -p "$SQLITE_LATEST"
+for prefix in analytics sales; do
+  newest="$(ls -1t "${LOCAL_DB_BACKUP}/${prefix}-"*.db 2>/dev/null | head -1 || true)"
+  [[ -n "$newest" && -f "$newest" ]] && cp -a "$newest" "$SQLITE_LATEST/"
+done
+# empire.db ~30МБ на WebDAV часто зависает — льём gzip
+emp_newest="$(ls -1t "${LOCAL_DB_BACKUP}/empire-"*.db 2>/dev/null | head -1 || true)"
+if [[ -n "$emp_newest" && -f "$emp_newest" ]]; then
+  gzip -c "$emp_newest" > "${SQLITE_LATEST}/empire-latest.db.gz" || cp -a "$emp_newest" "$SQLITE_LATEST/"
+fi
+if compgen -G "${SQLITE_LATEST}/*" >/dev/null; then
+  rclone copy "$SQLITE_LATEST" "${REMOTE}:${REMOTE_DAY}/sqlite-backups" \
+    --transfers 3 --checkers 3 --retries 3 --timeout 90s --contimeout 30s -v \
+    || log "WARN: sqlite upload partial"
+else
+  log "WARN: нет локальных sqlite для выгрузки"
+fi
 
 # Infra: домашняя сеть, docs snapshot, rclone backup
 if [[ -d "$ROOT/data/infra" ]]; then

@@ -1,78 +1,77 @@
 [
   {
-    "generated_at": "2026-07-16T04:05:42.160440+00:00",
+    "generated_at": "2026-07-19T05:31:21.696263+00:00",
     "week": "2026-07-13",
     "period_days": 7,
     "autopublish": {
-      "published": 70,
-      "skip": 11,
-      "success_rate": 0.864,
+      "published": 51,
+      "skip": 9,
+      "success_rate": 0.85,
       "by_persona": {
-        "lenin": {
-          "published": 12,
-          "skip": 7,
-          "success_rate": 0.632,
-          "top_skip_reasons": {
-            "short:247<500": 2,
-            "short:286<500": 1,
-            "short:388<500": 1
-          }
-        },
         "stern": {
-          "published": 19,
-          "skip": 2,
-          "success_rate": 0.905,
+          "published": 13,
+          "skip": 4,
+          "success_rate": 0.765,
           "top_skip_reasons": {
             "p0:P0: stern — «гиревой спорт»": 1,
-            "short:330<700": 1
+            "short:330<700": 1,
+            "short:308<700": 1
           }
         },
         "gdepar": {
-          "published": 20,
-          "skip": 1,
-          "success_rate": 0.952,
-          "top_skip_reasons": {
-            "short:125<280": 1
-          }
+          "published": 18,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
         },
         "garden": {
-          "published": 19,
+          "published": 9,
           "skip": 1,
-          "success_rate": 0.95,
+          "success_rate": 0.9,
           "top_skip_reasons": {
             "no_image": 1
+          }
+        },
+        "lenin": {
+          "published": 11,
+          "skip": 4,
+          "success_rate": 0.733,
+          "top_skip_reasons": {
+            "short:354<500": 1,
+            "short:246<500": 1,
+            "short:247<500": 1
           }
         }
       }
     },
     "database": {
       "queue_pending_by_persona": {
-        "garden": 39,
-        "gdepar": 41,
-        "lenin": 80,
+        "garden": 42,
+        "gdepar": 42,
+        "lenin": 84,
         "pension": 151,
-        "stern": 54
+        "stern": 56
       },
       "published_in_db_week": {
-        "garden": 22,
-        "gdepar": 18,
+        "garden": 17,
+        "gdepar": 17,
         "lenin": 12,
-        "stern": 17
+        "stern": 12
       },
       "status_breakdown": {
         "garden": {
-          "pending": 39,
-          "published": 254,
+          "pending": 42,
+          "published": 260,
           "rejected": 2
         },
         "gdepar": {
-          "pending": 41,
-          "published": 166,
+          "pending": 42,
+          "published": 174,
           "rejected": 27
         },
         "lenin": {
-          "pending": 80,
-          "published": 160,
+          "pending": 84,
+          "published": 166,
           "rejected": 8
         },
         "pension": {
@@ -82,16 +81,16 @@
           "rejected": 15
         },
         "stern": {
-          "pending": 54,
-          "published": 262,
+          "pending": 56,
+          "published": 267,
           "rejected": 12
         }
       }
     },
     "kpi": {
-      "tg_posts_published": 70,
-      "autopost_failures": 11,
-      "autopost_success_rate": 0.864,
+      "tg_posts_published": 51,
+      "autopost_failures": 9,
+      "autopost_success_rate": 0.85,
       "expenses_rub_week": null,
       "revenue_rub": 0,
       "orders": 0,
@@ -99,6 +98,546 @@
     },
     "efficiency_notes": [
       "Автопост приемлемый; проверьте skip_reasons"
+    ]
+  },
+  {
+    "generated_at": "2026-07-26T05:30:49.971677+00:00",
+    "week": "2026-07-20",
+    "period_days": 7,
+    "autopublish": {
+      "published": 15,
+      "skip": 2,
+      "success_rate": 0.882,
+      "by_persona": {
+        "lenin": {
+          "published": 6,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "gdepar": {
+          "published": 5,
+          "skip": 1,
+          "success_rate": 0.833,
+          "top_skip_reasons": {
+            "no_image": 1
+          }
+        },
+        "garden": {
+          "published": 2,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "stern": {
+          "published": 2,
+          "skip": 1,
+          "success_rate": 0.667,
+          "top_skip_reasons": {
+            "short:121<220": 1
+          }
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {},
+      "published_in_db_week": {
+        "garden": 2,
+        "gdepar": 9,
+        "lenin": 10,
+        "stern": 6
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 262,
+          "rejected": 46
+        },
+        "gdepar": {
+          "published": 185,
+          "rejected": 76
+        },
+        "lenin": {
+          "published": 178,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "published": 274,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 15,
+      "autopost_failures": 2,
+      "autopost_success_rate": 0.882,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "Автопост приемлемый; проверьте skip_reasons"
+    ]
+  },
+  {
+    "generated_at": "2026-08-02T05:30:07.238147+00:00",
+    "week": "2026-07-27",
+    "period_days": 7,
+    "autopublish": {
+      "published": 50,
+      "skip": 1,
+      "success_rate": 0.98,
+      "by_persona": {
+        "lenin": {
+          "published": 20,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "stern": {
+          "published": 9,
+          "skip": 1,
+          "success_rate": 0.9,
+          "top_skip_reasons": {
+            "no_video": 1
+          }
+        },
+        "gdepar": {
+          "published": 17,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "garden": {
+          "published": 4,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "gdepar": 4,
+        "lenin": 1,
+        "stern": 1
+      },
+      "published_in_db_week": {
+        "garden": 4,
+        "gdepar": 15,
+        "lenin": 17,
+        "stern": 8
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 266,
+          "rejected": 46
+        },
+        "gdepar": {
+          "pending": 4,
+          "published": 202,
+          "rejected": 76
+        },
+        "lenin": {
+          "pending": 1,
+          "published": 197,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "pending": 1,
+          "published": 283,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 50,
+      "autopost_failures": 1,
+      "autopost_success_rate": 0.98,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "Автопост стабилен (≥95% слотов)",
+      "Мало черновиков: lenin, stern"
+    ]
+  },
+  {
+    "generated_at": "2026-08-09T05:30:26.745902+00:00",
+    "week": "2026-08-03",
+    "period_days": 7,
+    "autopublish": {
+      "published": 43,
+      "skip": 10,
+      "success_rate": 0.811,
+      "by_persona": {
+        "stern": {
+          "published": 9,
+          "skip": 1,
+          "success_rate": 0.9,
+          "top_skip_reasons": {
+            "no_video": 1
+          }
+        },
+        "lenin": {
+          "published": 12,
+          "skip": 9,
+          "success_rate": 0.571,
+          "top_skip_reasons": {
+            "no_image": 9
+          }
+        },
+        "gdepar": {
+          "published": 18,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "garden": {
+          "published": 4,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "gdepar": 7,
+        "lenin": 10,
+        "stern": 2
+      },
+      "published_in_db_week": {
+        "garden": 4,
+        "gdepar": 16,
+        "lenin": 10,
+        "stern": 8
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 270,
+          "rejected": 46
+        },
+        "gdepar": {
+          "pending": 7,
+          "published": 220,
+          "rejected": 76
+        },
+        "lenin": {
+          "pending": 10,
+          "published": 210,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "pending": 2,
+          "published": 292,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 43,
+      "autopost_failures": 10,
+      "autopost_success_rate": 0.811,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "Автопост приемлемый; проверьте skip_reasons"
+    ]
+  },
+  {
+    "generated_at": "2026-08-16T05:32:49.872869+00:00",
+    "week": "2026-08-10",
+    "period_days": 7,
+    "autopublish": {
+      "published": 42,
+      "skip": 14,
+      "success_rate": 0.75,
+      "by_persona": {
+        "stern": {
+          "published": 9,
+          "skip": 1,
+          "success_rate": 0.9,
+          "top_skip_reasons": {
+            "no_video": 1
+          }
+        },
+        "gdepar": {
+          "published": 21,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "lenin": {
+          "published": 8,
+          "skip": 13,
+          "success_rate": 0.381,
+          "top_skip_reasons": {
+            "no_image": 13
+          }
+        },
+        "garden": {
+          "published": 4,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "gdepar": 7,
+        "lenin": 23,
+        "stern": 3
+      },
+      "published_in_db_week": {
+        "garden": 4,
+        "gdepar": 18,
+        "lenin": 6,
+        "stern": 8
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 274,
+          "rejected": 46
+        },
+        "gdepar": {
+          "pending": 7,
+          "published": 241,
+          "rejected": 76
+        },
+        "lenin": {
+          "pending": 23,
+          "published": 218,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "pending": 3,
+          "published": 301,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 42,
+      "autopost_failures": 14,
+      "autopost_success_rate": 0.75,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "⚠ Много skip — пополните queue или ослабьте curated-only"
+    ]
+  },
+  {
+    "generated_at": "2026-08-23T05:30:34.578929+00:00",
+    "week": "2026-08-17",
+    "period_days": 7,
+    "autopublish": {
+      "published": 30,
+      "skip": 25,
+      "success_rate": 0.545,
+      "by_persona": {
+        "gdepar": {
+          "published": 16,
+          "skip": 4,
+          "success_rate": 0.8,
+          "top_skip_reasons": {
+            "no_image": 4
+          }
+        },
+        "lenin": {
+          "published": 9,
+          "skip": 12,
+          "success_rate": 0.429,
+          "top_skip_reasons": {
+            "no_image": 12
+          }
+        },
+        "stern": {
+          "published": 1,
+          "skip": 9,
+          "success_rate": 0.1,
+          "top_skip_reasons": {
+            "bad_text": 7,
+            "no_image": 1,
+            "no_video": 1
+          }
+        },
+        "garden": {
+          "published": 4,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "gdepar": 12,
+        "lenin": 35,
+        "stern": 12
+      },
+      "published_in_db_week": {
+        "garden": 4,
+        "gdepar": 14,
+        "lenin": 7,
+        "stern": 1
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 278,
+          "rejected": 46
+        },
+        "gdepar": {
+          "pending": 12,
+          "published": 257,
+          "rejected": 76
+        },
+        "lenin": {
+          "pending": 35,
+          "published": 227,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "pending": 12,
+          "published": 302,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 30,
+      "autopost_failures": 25,
+      "autopost_success_rate": 0.545,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "⚠ Много skip — пополните queue или ослабьте curated-only"
+    ]
+  },
+  {
+    "generated_at": "2026-08-27T04:07:07.828526+00:00",
+    "week": "2026-08-24",
+    "period_days": 7,
+    "autopublish": {
+      "published": 29,
+      "skip": 24,
+      "success_rate": 0.547,
+      "by_persona": {
+        "gdepar": {
+          "published": 14,
+          "skip": 4,
+          "success_rate": 0.778,
+          "top_skip_reasons": {
+            "no_image": 4
+          }
+        },
+        "lenin": {
+          "published": 10,
+          "skip": 11,
+          "success_rate": 0.476,
+          "top_skip_reasons": {
+            "no_image": 11
+          }
+        },
+        "garden": {
+          "published": 4,
+          "skip": 0,
+          "success_rate": 1.0,
+          "top_skip_reasons": {}
+        },
+        "stern": {
+          "published": 1,
+          "skip": 9,
+          "success_rate": 0.1,
+          "top_skip_reasons": {
+            "bad_text": 7,
+            "no_image": 1,
+            "no_video": 1
+          }
+        }
+      }
+    },
+    "database": {
+      "queue_pending_by_persona": {
+        "gdepar": 17,
+        "lenin": 40,
+        "stern": 16
+      },
+      "published_in_db_week": {
+        "garden": 4,
+        "gdepar": 11,
+        "lenin": 8,
+        "stern": 1
+      },
+      "status_breakdown": {
+        "garden": {
+          "published": 280,
+          "rejected": 46
+        },
+        "gdepar": {
+          "pending": 17,
+          "published": 264,
+          "rejected": 76
+        },
+        "lenin": {
+          "pending": 40,
+          "published": 233,
+          "rejected": 97
+        },
+        "pension": {
+          "published": 14,
+          "rejected": 166
+        },
+        "stern": {
+          "pending": 16,
+          "published": 303,
+          "rejected": 69
+        }
+      }
+    },
+    "kpi": {
+      "tg_posts_published": 29,
+      "autopost_failures": 24,
+      "autopost_success_rate": 0.547,
+      "expenses_rub_week": null,
+      "revenue_rub": 0,
+      "orders": 0,
+      "empire_ok": 0
+    },
+    "efficiency_notes": [
+      "⚠ Много skip — пополните queue или ослабьте curated-only"
     ]
   }
 ]

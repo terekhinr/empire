@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import json
 import os
 import re
 import subprocess
@@ -92,6 +91,58 @@ def _sites_line() -> str:
     return " · ".join(parts)
 
 
+def _backup_lines() -> list[str]:
+    """HA + sqlite + Я.Диск — кратко для утреннего brief."""
+    lines: list[str] = []
+    audit = LOG_DIR / "daily-audit-latest.log"
+    ha = "❓ HA: нет аудита"
+    if audit.is_file():
+        try:
+            for ln in audit.read_text(encoding="utf-8", errors="replace").splitlines():
+                if "HA бэкапов:" in ln or "HA недоступен" in ln:
+                    clean = ln.split("] ", 1)[-1] if "] " in ln else ln
+                    if clean.startswith("OK:"):
+                        ha = f"✅ {clean[3:].strip()}"
+                    elif clean.startswith("ISSUE:"):
+                        ha = f"❌ {clean[6:].strip()}"
+                    else:
+                        ha = clean.strip()
+                    break
+        except Exception:
+            pass
+    lines.append(ha)
+
+    d = Path("/var/backups/empire")
+    dbs = sorted(d.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True) if d.is_dir() else []
+    if dbs:
+        age_h = (datetime.now(timezone.utc).timestamp() - dbs[0].stat().st_mtime) / 3600
+        icon = "✅" if age_h < 36 else "⚠"
+        lines.append(f"{icon} sqlite VPS: {age_h:.0f}ч назад")
+    else:
+        lines.append("❌ sqlite VPS: нет бэкапов")
+
+    # Я.Диск день из diagnostics state / rclone через короткий вызов
+    try:
+        r = subprocess.run(
+            ["rclone", "lsf", "yandex:VPS-backup/moderate-amethys/", "--dirs-only"],
+            capture_output=True,
+            text=True,
+            timeout=45,
+        )
+        days = sorted(
+            ln.strip().rstrip("/")
+            for ln in (r.stdout or "").splitlines()
+            if re.match(r"^\d{4}-\d{2}-\d{2}/?$", ln.strip())
+        )
+        if days:
+            lines.append(f"✅ Я.Диск настройки: {days[-1]}")
+        else:
+            lines.append("❌ Я.Диск: нет дневных папок")
+    except Exception:
+        lines.append("❓ Я.Диск: не проверен")
+    return lines
+
+
 def build_brief() -> str:
     now_msk = datetime.now(timezone.utc).astimezone(
         timezone.utc  # placeholder; label UTC for clarity
@@ -121,6 +172,16 @@ def build_brief() -> str:
         lines.append(f"💾 диск /: {pct}")
     except Exception:
         pass
+    lines.append("")
+    lines.append("── Бэкапы ──")
+    lines.extend(_backup_lines())
+    try:
+        from empire_gdepar_parse_summary import build_gdepar_parse_summary
+
+        lines.append("")
+        lines.append(build_gdepar_parse_summary())
+    except Exception as exc:
+        lines.append(f"── Где Пар · парсинг ──\n⚠ {exc}")
     lines.append("")
     lines.append("Полный лог: /var/log/empire/daily-audit-latest.log")
     return "\n".join(lines)

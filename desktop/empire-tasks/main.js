@@ -6,7 +6,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 480,
     height: 900,
-    title: "Empire",
+    title: "Задачник",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

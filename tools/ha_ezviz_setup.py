@@ -294,13 +294,46 @@ async def rename_entities(base: str, token: str) -> int:
         mid = 1
         resp = await ws_call(ws, mid, {"type": "config/entity_registry/list"})
         entities = resp.get("result", [])
-        cameras = [e for e in entities if e.get("entity_id", "").startswith("camera.")]
-        motions = [e for e in entities if e.get("entity_id", "").startswith("binary_sensor.") and "motion" in e.get("entity_id", "")]
+        # Только камеры платформы ezviz — не трогаем Teckin/generic/ONVIF.
+        cameras = [
+            e
+            for e in entities
+            if e.get("entity_id", "").startswith("camera.") and e.get("platform") == "ezviz"
+        ]
+        motions = [
+            e
+            for e in entities
+            if e.get("entity_id", "").startswith("binary_sensor.")
+            and e.get("platform") == "ezviz"
+            and "motion" in e.get("entity_id", "")
+        ]
         used: set[str] = set()
 
+        # Актуальные слоты: прихожая + подъезд (не «улица»).
+        name_to_slot = {
+            "прихож": "prihozhaya",
+            "prihozh": "prihozhaya",
+            "подъезд": "podezd",
+            "podezd": "podezd",
+            "улиц": "prihozhaya",  # legacy alias
+            "ulica": "prihozhaya",
+        }
+        display_name = {"prihozhaya": "Прихожая", "podezd": "Подъезд"}
+
         for cam in cameras:
-            name = cam.get("name") or cam.get("original_name") or cam.get("entity_id", "")
-            slot = guess_slot(name)
+            name = (cam.get("name") or cam.get("original_name") or cam.get("entity_id", "")).lower()
+            slot = None
+            for key, sl in name_to_slot.items():
+                if key in name:
+                    slot = sl
+                    break
+            if not slot:
+                # serial-based: BF0241992=прихожая, BF5488322=подъезд
+                uid = str(cam.get("unique_id") or "")
+                if uid == "BF0241992":
+                    slot = "prihozhaya"
+                elif uid == "BF5488322":
+                    slot = "podezd"
             if not slot or slot in used:
                 continue
             target = f"camera.ezviz_{slot}"
@@ -315,52 +348,36 @@ async def rename_entities(base: str, token: str) -> int:
                     "type": "config/entity_registry/update",
                     "entity_id": cam["entity_id"],
                     "new_entity_id": target,
-                    "name": "Улица" if slot == "ulica" else "Подъезд",
+                    "name": display_name[slot],
                 },
             )
             print(f"  rename {cam['entity_id']} → {target}")
             renamed += 1
             used.add(slot)
 
-        # Если имена не угадали — первые две камеры по порядку
-        remaining = [c for c in cameras if not c["entity_id"].startswith("camera.ezviz_")]
-        for slot in ("ulica", "podezd"):
-            if slot in used:
-                continue
-            if not remaining:
-                break
-            cam = remaining.pop(0)
-            target = f"camera.ezviz_{slot}"
-            mid += 1
-            await ws_call(
-                ws,
-                mid,
-                {
-                    "type": "config/entity_registry/update",
-                    "entity_id": cam["entity_id"],
-                    "new_entity_id": target,
-                    "name": "Улица" if slot == "ulica" else "Подъезд",
-                },
-            )
-            print(f"  rename (fallback) {cam['entity_id']} → {target}")
-            renamed += 1
-
         for mot in motions:
             low = (mot.get("name") or mot.get("entity_id", "")).lower()
-            slot = guess_slot(low)
+            slot = None
+            for key, sl in name_to_slot.items():
+                if key in low:
+                    slot = sl
+                    break
             if not slot:
                 # привязка по device_id к камере
                 dev = mot.get("device_id")
                 for cam in cameras:
                     if cam.get("device_id") == dev:
                         eid = cam.get("entity_id", "")
-                        if "ulica" in eid:
-                            slot = "ulica"
+                        if "prihozhaya" in eid or "ulica" in eid:
+                            slot = "prihozhaya"
                         elif "podezd" in eid:
                             slot = "podezd"
-                if not slot and len(cameras) == 2:
-                    idx = motions.index(mot) if mot in motions else 0
-                    slot = "ulica" if idx == 0 else "podezd"
+                if not slot:
+                    uid = str(mot.get("unique_id") or "")
+                    if "BF0241992" in uid:
+                        slot = "prihozhaya"
+                    elif "BF5488322" in uid:
+                        slot = "podezd"
             if not slot:
                 continue
             target = f"binary_sensor.ezviz_{slot}_motion_alarm"

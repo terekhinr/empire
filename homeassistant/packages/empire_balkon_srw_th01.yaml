@@ -4,6 +4,8 @@
 
 shell_command:
   balkon_srw_discover: "python3 /config/scripts/tuya_srw_status.py discover"
+  balkon_srw_probe: "python3 /config/scripts/tuya_srw_status.py probe"
+  balkon_srw_fetch_key: "python3 /config/scripts/tuya_srw_fetch_key.py"
   balkon_srw_sync_localtuya: "python3 /config/scripts/tuya_srw_sync_localtuya.py"
 
 automation:

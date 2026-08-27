@@ -11,12 +11,16 @@
 | [CHECKLIST_AFTER_DISASTER.md](CHECKLIST_AFTER_DISASTER.md) | Пошагово после поломки / нового VPS |
 | [../audit/2026-07-15_FULL_INFRA_AUDIT.md](../audit/2026-07-15_FULL_INFRA_AUDIT.md) | Полный аудит + приоритеты P0/P1/P2 |
 | [../audit/GEMINI_AUDIT_PROMPTS.md](../audit/GEMINI_AUDIT_PROMPTS.md) | Промпты для повторного аудита в Gemini |
+| [SELF_HEAL.md](SELF_HEAL.md) | Самопочинка + PWA на Flint + Tailscale/WG |
+| [../scripts/flint2/empire-flint-watchdog/README.md](../../scripts/flint2/empire-flint-watchdog/README.md) | Сторож + PWA на OpenWrt |
 
 **Мониторинг (systemd):**
 
 | Timer | Назначение |
 |-------|------------|
+| `empire-service-healer` | каждые 5 мин — **весь стек**: сайты, софт, HA, роутер, Docker + автопочинка + TG |
 | `empire-router-watchdog` | каждые 30 мин — podkop/zapret/torrent на Flint + автопочинка |
+| `empire-diagnostics-watchdog` | каждые 2 ч — таймеры, аудит, бэкапы |
 | `empire-morning-brief` | 07:05 MSK — короткий TG: VPS + роутер + постинг |
 | `empire-daily-audit` | 07:00 MSK — полный аудит |
 | `empire-weekly-posting-metrics` | вс 08:30 MSK — KPI постинга → `data/empire_weekly_kpi.json` |

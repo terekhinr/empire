@@ -1,0 +1,21 @@
+#!/bin/sh
+# /etc/hotplug.d/block/20-empire-usb
+# После реконекта USB (sda→sdb) смонтировать NTFS по UUID и перезапустить Samba.
+USB_UUID="01D63D133C7B6100"
+
+[ -n "$DEVNAME" ] || exit 0
+DEV="/dev/$DEVNAME"
+
+case "$ACTION" in
+  add)
+    uuid=$(blkid -s UUID -o value "$DEV" 2>/dev/null || true)
+    [ "$uuid" = "$USB_UUID" ] || exit 0
+    /etc/init.d/empire-usb-mount start 2>/dev/null || true
+    /etc/init.d/samba4 restart 2>/dev/null || true
+    ;;
+  remove)
+    if grep -q " $DEV " /proc/mounts 2>/dev/null || grep -q ' /mnt/usb ' /proc/mounts 2>/dev/null; then
+      umount /mnt/usb 2>/dev/null || umount -l /mnt/usb 2>/dev/null || true
+    fi
+    ;;
+esac

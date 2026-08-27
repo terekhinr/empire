@@ -41,8 +41,8 @@ curl -sS -X POST http://127.0.0.1:8001/api/gdepar/assistant/stream \
 - Лиды: `POST /api/banya/lead` (phone_reveal, whatsapp, booking_request, map_click); телефон скрыт в API до клика.
 - UI: `static/gdepar/lead.js` — «Показать телефон» на карте и карточке бани.
 - B2B: `/partners` + ссылка в навигации.
-- Регионы до Урала: `EUROPE_RU` — 56 областей в `tools/banya_regions.py`.
-- Парсинг: `./scripts/run_osm_europe_ru.sh` → `logs/osm_europe_ru.log` (retry Overpass 429, зеркало kumi).
+- Регионы: `EUROPE_RU` (56) + `URAL`/`SIB`/`FAR_EAST` → alias `RU_ALL` (~83) в `tools/banya_regions.py`.
+- Парсинг: `./scripts/run_osm_europe_ru.sh` или `./scripts/run_osm_ru_all.sh [RU_ALL|URAL|SIB|…]` → только `draft` (retry Overpass 429, зеркало kumi).
 
 **Следующий шаг (не блокер):**
 
@@ -58,3 +58,14 @@ curl -sS -X POST http://127.0.0.1:8001/api/banya/lead \
   -H 'Content-Type: application/json' \
   -d '{"spot_id":1,"lead_type":"phone_reveal","source":"test"}' | python3 -m json.tool
 ```
+
+## CP-20260719 — OSM RU_ALL (draft only)
+
+**Сделано:**
+
+- Реестр `tools/banya_regions.py`: **83** кода (`EUROPE_RU` + `URAL` + `SIB` + `FAR_EAST`, alias `RU_ALL`).
+- OSM-парсер усилен: больше тегов, name/city fallback, alt ISO для CR/SEV, name-area для KUR, retry упавших, commit по региону.
+- Прогон gaps+восток: `logs/osm_expand_east.log` → **~1626** новых draft, **83** региона в БД; **published без изменений** (карта не тронута).
+- Скрипт: `./scripts/run_osm_ru_all.sh [RU_ALL|URAL|SIB|…]`.
+
+**Не делать сразу:** массовый pubauto по новым регионам без Yandex enrich.

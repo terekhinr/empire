@@ -231,20 +231,29 @@ views:
                         name: "%"
                         color: "#38bdf8"
                         y_axis: secondary
-                  - type: custom:mushroom-template-card
-                    primary: Балкон
-                    secondary: >-
-                      {% set t = states('sensor.balkon_temperatura') %}
-                      {% if t in ['unknown', 'unavailable', 'none', ''] %}
-                        offline
-                      {% else %}
-                        {{ t }}° · {{ states('sensor.balkon_vlazhnost') }}%
-                      {% endif %}
+                  - type: custom:mini-graph-card
+                    name: Балкон
                     icon: mdi:balcony
-                    icon_color: >-
-                      {% set t = states('sensor.balkon_temperatura') %}
-                      {{ 'grey' if t in ['unknown', 'unavailable', 'none', ''] else '#ef4444' }}
-                    layout: vertical
+                    hours_to_show: 24
+                    points_per_hour: 2
+                    line_width: 2
+                    font_size: 75
+                    animate: true
+                    show:
+                      name: true
+                      icon: true
+                      state: true
+                      legend: false
+                      graph: sparkline
+                      fill: fade
+                    entities:
+                      - entity: sensor.balkon_temperatura
+                        name: t°
+                        color: "#ef4444"
+                      - entity: sensor.balkon_vlazhnost
+                        name: "%"
+                        color: "#38bdf8"
+                        y_axis: secondary
                   - type: custom:mini-graph-card
                     name: Спальня
                     icon: mdi:bed
@@ -269,28 +278,30 @@ views:
                         color: "#64748b"
                   - type: horizontal-stack
                     cards:
-                      - type: custom:mushroom-template-card
-                        primary: Семён
-                        secondary: >-
-                          {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-                          {% if v in ['unknown', 'unavailable', 'none', ''] %}
-                            Offline — нет связи Zigbee
-                          {% else %}
-                            {{ v }} °C · {{ states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost') }}%
-                          {% endif %}
-                        icon: mdi:account-child
-                        icon_color: >-
-                          {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-                          {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else '#00d4aa' }}
-                        layout: vertical
                       - type: custom:mini-graph-card
-                        name: Макс
+                        name: Детская
+                        icon: mdi:account-child
+                        hours_to_show: 12
+                        line_width: 2
+                        font_size: 65
+                        show:
+                          name: true
+                          icon: true
+                          state: true
+                          graph: sparkline
+                          fill: fade
+                        entities:
+                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                            color: "#00d4aa"
+                      - type: custom:mini-graph-card
+                        name: Семён
                         icon: mdi:account-child-circle
                         hours_to_show: 12
                         line_width: 2
                         font_size: 65
                         show:
                           name: true
+                          icon: true
                           state: true
                           graph: sparkline
                           fill: fade
@@ -359,7 +370,7 @@ views:
                           action: toggle
                       - type: custom:mushroom-entity-card
                         entity: switch.basicr2_max_sonoff_10011f28d9
-                        name: Макс
+                        name: Семён
                         icon: mdi:desk-lamp
                         layout: vertical
                         tap_action:
@@ -391,20 +402,16 @@ views:
                   yellow: 60
                   red: 75
                 needle: true
-              - type: custom:mushroom-template-card
-                primary: Семён
-                secondary: >-
-                  {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-                  {% if v in ['unknown', 'unavailable', 'none', ''] %}
-                    Offline — нет связи Zigbee
-                  {% else %}
-                    {{ v }} °C
-                  {% endif %}
-                icon: mdi:account-child
-                icon_color: >-
-                  {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-                  {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else 'green' }}
-                layout: vertical
+              - type: gauge
+                entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                name: Детская
+                min: 15
+                max: 35
+                severity:
+                  green: 20
+                  yellow: 26
+                  red: 30
+                needle: true
 
   - title: Камеры
     path: kamery
@@ -456,7 +463,7 @@ views:
                 ha-card { border: 1px solid rgba(56,189,248,0.4) !important; }
           - type: picture-entity
             entity: camera.teckin_tc100_2
-            name: Комната Макса
+            name: Детская
             camera_view: live
             aspect_ratio: "16:9"
             show_state: false
@@ -492,20 +499,23 @@ views:
                 name: влажность
                 color: "#38bdf8"
                 y_axis: secondary
-          - type: custom:mushroom-template-card
-            primary: Балкон
-            secondary: >-
-              {% set t = states('sensor.balkon_temperatura') %}
-              {% if t in ['unknown', 'unavailable', 'none', ''] %}
-                Датчик спит — нажмите кнопку на SRW-TH01
-              {% else %}
-                {{ t }} °C · {{ states('sensor.balkon_vlazhnost') }}%
-              {% endif %}
+          - type: custom:mini-graph-card
+            name: Балкон — 48 ч
             icon: mdi:balcony
-            icon_color: >-
-              {% set t = states('sensor.balkon_temperatura') %}
-              {{ 'grey' if t in ['unknown', 'unavailable', 'none', ''] else '#ef4444' }}
-            layout: horizontal
+            hours_to_show: 48
+            line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
+            entities:
+              - entity: sensor.balkon_temperatura
+                name: t°
+                color: "#ef4444"
+              - entity: sensor.balkon_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
           - type: custom:mini-graph-card
             name: Спальня — 48 ч
             icon: mdi:bed
@@ -526,24 +536,32 @@ views:
                 name: влажность
                 color: "#38bdf8"
                 y_axis: secondary
-          - type: custom:mushroom-template-card
-            primary: Комната Семёна
-            secondary: >-
-              {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-              {% if v in ['unknown', 'unavailable', 'none', ''] %}
-                Датчик offline — перепривязка ZHA (кнопка на датчике 5–10 с)
-              {% else %}
-                {{ v }} °C · {{ states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost') }}%
-              {% endif %}
-            icon: mdi:account-child
-            icon_color: >-
-              {% set v = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
-              {{ 'grey' if v in ['unknown', 'unavailable', 'none', ''] else '#00d4aa' }}
-            layout: horizontal
           - type: custom:mini-graph-card
-            name: Комната Макса
+            name: Детская — 48 ч
+            icon: mdi:account-child
             hours_to_show: 48
             line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
+            entities:
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                name: t°
+                color: "#00d4aa"
+              - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost
+                name: влажность
+                color: "#38bdf8"
+                y_axis: secondary
+          - type: custom:mini-graph-card
+            name: Комната Семёна — 48 ч
+            icon: mdi:account-child-circle
+            hours_to_show: 48
+            line_width: 2
+            show:
+              legend: true
+              fill: fade
+              graph: line
             entities:
               - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
                 name: t°

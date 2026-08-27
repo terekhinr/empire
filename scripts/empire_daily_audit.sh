@@ -131,8 +131,8 @@ if rclone listremotes 2>/dev/null | grep -q "^${REMOTE}:$"; then
       age_days="$(( ($(date +%s) - $(date -d "$latest_day" +%s 2>/dev/null || echo 0)) / 86400 ))"
       if [[ "$age_days" -gt "$YANDEX_BACKUP_MAX_AGE_DAYS" ]]; then
         add_issue "последний Yandex-бэкап $latest_day (старше ${YANDEX_BACKUP_MAX_AGE_DAYS}d)"
-      elif pgrep -f 'empire_night_pipeline|vps_backup_to_yandex|tox1-yandex|rclone copyto.*TOX1' >/dev/null 2>&1; then
-        add_ok "Yandex-бэкап в процессе (пайплайн/TOX1)"
+      elif pgrep -f 'empire_night_pipeline|vps_backup_to_yandex' >/dev/null 2>&1; then
+        add_ok "Yandex-бэкап в процессе (ночной пайплайн)"
       else
         add_warn "сегодняшний Yandex-бэкап ещё не завершён (latest=$latest_day)"
       fi
@@ -239,6 +239,15 @@ PY
   fi
 fi
 
+section "Авто-ремедиация уязвимостей"
+if [[ -x "$ROOT/scripts/empire_vuln_remediate.sh" ]]; then
+  EMPIRE_APT_AUTOFIX="${EMPIRE_APT_AUTOFIX:-0}" \
+    bash "$ROOT/scripts/empire_vuln_remediate.sh" || log "WARN: vuln remediate failed"
+  add_ok "vuln remediate прогнан (см. /var/log/empire/vuln-remediate-latest.log)"
+else
+  add_warn "нет scripts/empire_vuln_remediate.sh"
+fi
+
 section "Уязвимости Python (pip-audit)"
 PIP_AUDIT="$ROOT/venv/bin/pip-audit"
 if [[ ! -x "$PIP_AUDIT" ]]; then
@@ -248,15 +257,35 @@ else
   set +e
   "$PIP_AUDIT" --progress-spinner off --desc on 2>&1 | tee "$audit_out"
   audit_rc="${PIPESTATUS[0]}"
-  vuln_pkgs="$(grep -oE 'Found [0-9]+ known vulnerabilit' "$audit_out" | grep -oE '[0-9]+' | head -1 || true)"
-  vuln_pkgs="${vuln_pkgs:-0}"
+  set -e
+  # Строки пакетов с CVE (пропускаем заголовок Name/---)
+  mapfile -t vuln_lines < <(grep -E '^[a-zA-Z0-9_.-]+[[:space:]]+[0-9]' "$audit_out" || true)
+  fixable=0
+  only_torch=1
+  for ln in "${vuln_lines[@]+"${vuln_lines[@]}"}"; do
+    pkg="$(echo "$ln" | awk '{print tolower($1)}')"
+    if [[ "$pkg" != "torch" ]]; then
+      only_torch=0
+      # есть Fix Versions в колонке 4+?
+      fix_col="$(echo "$ln" | awk '{print $4}')"
+      if [[ -n "$fix_col" && "$fix_col" != "-" ]]; then
+        fixable=$((fixable + 1))
+      fi
+    fi
+  done
+  vuln_n="${#vuln_lines[@]}"
   rm -f "$audit_out"
-  if [[ "$vuln_pkgs" -gt 0 ]]; then
-    add_issue "pip-audit: уязвимости в $vuln_pkgs пакет(ах) (torch CVE без фикса — локальный JIT) — см. $REPORT"
-  elif [[ "$audit_rc" -ne 0 ]]; then
-    add_warn "pip-audit завершился с кодом $audit_rc"
-  else
+  if [[ "$vuln_n" -eq 0 ]]; then
     add_ok "pip-audit: уязвимостей не найдено"
+  elif [[ "$only_torch" -eq 1 ]]; then
+    add_warn "pip-audit: только torch CVE без фикса (локальный JIT) — принято"
+  elif [[ "$fixable" -gt 0 ]]; then
+    add_issue "pip-audit: $fixable пакет(ов) с доступным фиксом ещё уязвимы — см. $REPORT"
+  else
+    add_warn "pip-audit: $vuln_n уязвимост(ей) без авто-фикса — см. $REPORT"
+  fi
+  if [[ "$vuln_n" -eq 0 && "$audit_rc" -ne 0 ]]; then
+    add_warn "pip-audit завершился с кодом $audit_rc"
   fi
 fi
 

@@ -22,7 +22,7 @@ echo "==> guard_critical_files (smoke)"
 "$ROOT/scripts/guard_critical_files.sh"
 
 echo "==> systemd: ExecStartPre guard + таймер автопроверки main.py"
-for u in empire_main empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline empire-weekly-report empire-diagnostics-watchdog empire-status-digest; do
+for u in empire_main empire-vps-backup-yandex empire-main-py-guard empire-daily-audit empire-night-pipeline empire-weekly-report empire-diagnostics-watchdog empire-status-digest empire-vuln-remediate; do
   install -D -m 644 "$ROOT/deploy/${u}.service" "/etc/systemd/system/${u}.service"
 done
 install -D -m 644 "$ROOT/deploy/empire-vps-backup-yandex.timer" /etc/systemd/system/empire-vps-backup-yandex.timer
@@ -32,9 +32,10 @@ install -D -m 644 "$ROOT/deploy/empire-night-pipeline.timer" /etc/systemd/system
 install -D -m 644 "$ROOT/deploy/empire-weekly-report.timer" /etc/systemd/system/empire-weekly-report.timer
 install -D -m 644 "$ROOT/deploy/empire-diagnostics-watchdog.timer" /etc/systemd/system/empire-diagnostics-watchdog.timer
 install -D -m 644 "$ROOT/deploy/empire-status-digest.timer" /etc/systemd/system/empire-status-digest.timer
+install -D -m 644 "$ROOT/deploy/empire-vuln-remediate.timer" /etc/systemd/system/empire-vuln-remediate.timer
 systemctl daemon-reload
-systemctl enable empire-main-py-guard.timer empire-daily-audit.timer empire-night-pipeline.timer empire-weekly-report.timer empire-diagnostics-watchdog.timer empire-status-digest.timer
-systemctl start empire-main-py-guard.timer empire-daily-audit.timer empire-night-pipeline.timer empire-weekly-report.timer empire-diagnostics-watchdog.timer empire-status-digest.timer 2>/dev/null || true
+systemctl enable empire-main-py-guard.timer empire-daily-audit.timer empire-night-pipeline.timer empire-weekly-report.timer empire-diagnostics-watchdog.timer empire-status-digest.timer empire-vuln-remediate.timer
+systemctl start empire-main-py-guard.timer empire-daily-audit.timer empire-night-pipeline.timer empire-weekly-report.timer empire-diagnostics-watchdog.timer empire-status-digest.timer empire-vuln-remediate.timer 2>/dev/null || true
 systemctl disable empire-disk-cleanup-night.timer empire-vps-backup-yandex.timer 2>/dev/null || true
 
 echo "==> git (локальная история на VPS, без секретов)"
@@ -71,6 +72,7 @@ echo "  • аудит: systemctl status empire-daily-audit.timer"
 echo "  • неделя: systemctl status empire-weekly-report.timer"
 echo "  • watchdog: systemctl status empire-diagnostics-watchdog.timer"
 echo "  • digest (2×/день): systemctl status empire-status-digest.timer"
+echo "  • vuln fix (2×/день): systemctl status empire-vuln-remediate.timer"
 echo "  • отчёт: tail /var/log/empire/daily-audit-latest.log"
 echo "  • git:   cd $ROOT && git status"
 echo ""

@@ -1,0 +1,11 @@
+[Unit]
+Description=Empire vuln remediate twice daily before digests (06:30 / 19:30 MSK)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+OnCalendar=*-*-* 16:30:00
+Persistent=true
+RandomizedDelaySec=180
+
+[Install]
+WantedBy=timers.target

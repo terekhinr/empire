@@ -1,4 +1,4 @@
-infra bundle 2026-07-15T102246
+infra bundle 2026-08-27T040122
 host=moderate-amethys
 empire_root=/root/projects/empire
 docs=docs/infra/

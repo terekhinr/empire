@@ -38,17 +38,21 @@ def test_lenin_garden_curated_only_autopublish():
             encoding="utf-8"
         )
     )
+    # Lenin/Garden: persona выключена, в канал идут только включённые рубрики (без LLM).
     assert cfg["enabled"] is True
-    # LLM-слоты — только ручной approve; curated — по рубрикам.
     assert cfg["personas"]["lenin"]["enabled"] is False
     assert cfg["personas"]["garden"]["enabled"] is False
-    assert cfg["personas"]["gdepar"]["enabled"] is True
-    assert cfg["personas"]["stern"]["enabled"] is True
-    assert cfg["rubrics"]["gdepar_duo_curated"]["enabled"] is True
-    assert cfg["rubrics"]["stern_matrix_curated"]["enabled"] is True
-    assert cfg["rubrics"]["garden_lunar"]["enabled"] is True
-    assert cfg["rubrics"]["lenin_calendar"]["enabled"] is True
-
+    for name in (
+        "lenin_calendar",
+        "lenin_curated",
+        "lenin_pss",
+        "lenin_book",
+        "lenin_channel_support",
+        "garden_curated",
+        "garden_lunar",
+        "garden_bot_promo",
+    ):
+        assert cfg["rubrics"][name]["enabled"] is True, name
 
 def test_stern_default_hashtags_short():
     line = _default_hashtag_line("stern", None)

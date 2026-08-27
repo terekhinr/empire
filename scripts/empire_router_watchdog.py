@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Мониторинг Flint 2: podkop, zapret, Amnezia, Transmission, Samba. Автопочинка.
 
+Логика стабильности (не «сжёг лимит утром — день мёртв»):
+  • чиним только подтверждённые сбои (не «не проверено» / таймаут проверки)
+  • cooldown между одинаковыми фиксами + эскалация soft → fix-all
+  • после успеха сбрасываем серию неудач — днём снова можно чинить
+  • суточный потолок высокий (страховка от шторма), не основной тормоз
+
 Доступ к роутеру:
   1) reverse SSH с VPS: ssh -p 6223 root@127.0.0.1
   2) через HA Tailscale: ssh root@100.80.133.85 → ssh root@192.168.1.1
@@ -12,7 +18,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -26,8 +31,48 @@ LOG_PATH = LOG_DIR / "router-watchdog.log"
 
 FLINT = os.getenv("EMPIRE_FLINT_HOST", "192.168.1.1")
 HA_SSH = os.getenv("EMPIRE_HA_SSH", "root@100.80.133.85")
-REV_SSH = ["ssh", "-p", "6223", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new", "root@127.0.0.1"]
+REV_SSH = [
+    "ssh",
+    "-p",
+    "6223",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "StrictHostKeyChecking=accept-new",
+    "root@127.0.0.1",
+]
 FIX_SCRIPT = os.getenv("EMPIRE_FLINT_FIX_URL", "http://127.0.0.1:8789/13-fix-all.sh")
+
+# Секунды между повторными точечными фиксами одного компонента
+SOFT_COOLDOWN_SEC = int(os.getenv("EMPIRE_ROUTER_SOFT_COOLDOWN", "1200"))  # 20 мин
+# После N неудачных soft-фиксов подряд — полный fix-all
+ESCALATE_AFTER = int(os.getenv("EMPIRE_ROUTER_ESCALATE_AFTER", "2"))
+# Пауза между полными fix-all
+FIXALL_COOLDOWN_SEC = int(os.getenv("EMPIRE_ROUTER_FIXALL_COOLDOWN", "7200"))  # 2 ч
+# Страховка от шторма (не основной тормоз)
+DAILY_SOFT_CAP = int(os.getenv("EMPIRE_ROUTER_DAILY_SOFT_CAP", "24"))
+DAILY_FIXALL_CAP = int(os.getenv("EMPIRE_ROUTER_DAILY_FIXALL_CAP", "6"))
+
+# all_ok: без этого дом/AI/обход реально сломаны. USB — отдельно (часто снят).
+CRITICAL = ("podkop", "youtube", "transmission", "dns", "awg0")
+# Чиним при подтверждённом fail
+REMEDIABLE = (
+    "podkop",
+    "youtube",
+    "zapret",
+    "nfqws",
+    "awg0",
+    "transmission",
+    "samba",
+    "usb",
+    "dns",
+    "telegram",
+    "torrents",
+)
+
+AWG_MAX_AGE_SEC = int(os.getenv("EMPIRE_AWG_MAX_AGE", "180"))
 
 REMOTE_CHECKS = r"""
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin:/opt/sbin:$PATH"
@@ -46,7 +91,36 @@ if [ -x /etc/init.d/zapret2 ]; then /etc/init.d/zapret2 status 2>&1 | head -1; f
 if [ -x /etc/init.d/zapret ]; then /etc/init.d/zapret status 2>&1 | head -1; fi
 pgrep -af 'nfqws|nfqws2' 2>/dev/null | grep -v pgrep | head -1 || echo "nfqws: NO"
 echo "=== amnezia ==="
-awg show awg0 2>/dev/null | grep -E 'handshake|latest' | head -2 || echo "awg0: NO"
+if ! awg show awg0 >/dev/null 2>&1 && ! wg show awg0 >/dev/null 2>&1; then
+  echo "awg0: NO"
+else
+  hs=$(awg show awg0 2>/dev/null | grep -i 'latest handshake' | head -1)
+  [ -z "$hs" ] && hs=$(wg show awg0 2>/dev/null | grep -i 'latest handshake' | head -1)
+  echo "$hs"
+  if echo "$hs" | grep -qi 'never'; then
+    echo "awg0: STALE age=never"
+  else
+    age=0
+    d=$(echo "$hs" | sed -n 's/.*\([0-9][0-9]*\) day.*/\1/p')
+    h=$(echo "$hs" | sed -n 's/.*\([0-9][0-9]*\) hour.*/\1/p')
+    m=$(echo "$hs" | sed -n 's/.*\([0-9][0-9]*\) minute.*/\1/p')
+    s=$(echo "$hs" | sed -n 's/.*\([0-9][0-9]*\) second.*/\1/p')
+    [ -n "$d" ] && age=$((age + d * 86400))
+    [ -n "$h" ] && age=$((age + h * 3600))
+    [ -n "$m" ] && age=$((age + m * 60))
+    [ -n "$s" ] && age=$((age + s))
+    if [ "$age" -gt 180 ]; then
+      echo "awg0: STALE age=${age}s"
+    else
+      code=$(curl --interface awg0 -4 -s -o /dev/null -w '%{http_code}' \
+        --connect-timeout 8 --max-time 12 https://1.1.1.1/ 2>/dev/null || echo 000)
+      case "$code" in
+        200|301|302) echo "awg0: OK age=${age}s probe=$code" ;;
+        *) echo "awg0: DEAD_PROBE age=${age}s probe=$code" ;;
+      esac
+    fi
+  fi
+fi
 echo "=== transmission ==="
 if pgrep -x transmission-daemon >/dev/null 2>&1 || pgrep -af transmission-daemon | grep -v pgrep >/dev/null 2>&1; then
   echo "transmission: RUNNING"
@@ -57,11 +131,36 @@ fi
 echo "=== samba ==="
 /etc/init.d/samba4 status 2>&1 | head -1
 echo "=== usb ==="
-mountpoint -q /mnt/usb 2>/dev/null && echo "usb: MOUNTED" || echo "usb: NOT_MOUNTED"
+if grep -q ' /mnt/usb ' /proc/mounts && [ -d /mnt/usb/download ]; then
+  echo "usb: MOUNTED"
+  awk '$2=="/mnt/usb"{print}' /proc/mounts | tail -1
+else
+  echo "usb: NOT_MOUNTED"
+fi
 echo "=== dns ==="
 /etc/init.d/dnsmasq status 2>&1 | head -1 || /etc/init.d/dnsmasq-full status 2>&1 | head -1
+echo "=== telegram ==="
+tg=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 https://telegram.org/ 2>/dev/null || echo 000)
+case "$tg" in
+  200|301|302) echo "telegram: OK http=$tg" ;;
+  *) echo "telegram: FAIL http=$tg" ;;
+esac
+echo "=== torrents ==="
+tip=$(nslookup rutracker.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+case "$tip" in
+  198.18.*) echo "torrents: OK fakeip=$tip" ;;
+  *) echo "torrents: FAIL ip=${tip:-none}" ;;
+esac
 echo "=== youtube ==="
-curl -sI -m 8 https://www.youtube.com/generate_204 2>/dev/null | head -1 || echo "youtube: FAIL"
+yt_ok=0
+for i in 1 2 3; do
+  r=$(curl -sI -m 10 https://www.youtube.com/generate_204 2>/dev/null | head -1)
+  case "$r" in
+    *" 204"*|*" 200"*) echo "$r"; yt_ok=1; break ;;
+  esac
+  [ "$i" -lt 3 ] && sleep 2
+done
+[ "$yt_ok" -eq 0 ] && echo "${r:-youtube: FAIL}"
 """
 
 
@@ -98,17 +197,25 @@ def run_cmd(cmd: list[str], *, timeout: int = 45) -> tuple[int, str]:
         return 1, str(exc)
 
 
+def _ssh_ok(out: str) -> bool:
+    """OpenWrt ash часто возвращает rc≠0 из-за последней команды в пайпе — смотрим маркеры."""
+    return "=== hostname ===" in out and "=== youtube ===" in out
+
+
 def ssh_flint_via_reverse(remote_cmd: str) -> tuple[bool, str]:
     cmd = REV_SSH + [remote_cmd]
-    code, out = run_cmd(cmd, timeout=60)
-    return code == 0 and "=== hostname ===" in out, out
+    _code, out = run_cmd(cmd, timeout=90)
+    return _ssh_ok(out), out
 
 
 def ssh_flint_via_ha(remote_cmd: str) -> tuple[bool, str]:
     inner = remote_cmd.replace("'", "'\"'\"'")
     hop = f"ssh -o BatchMode=yes -o ConnectTimeout=12 root@{FLINT} '{inner}'"
-    code, out = run_cmd(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", HA_SSH, hop], timeout=90)
-    return code == 0 and "=== hostname ===" in out, out
+    _code, out = run_cmd(
+        ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", HA_SSH, hop],
+        timeout=120,
+    )
+    return _ssh_ok(out), out
 
 
 def fetch_router_status() -> tuple[str | None, str]:
@@ -122,10 +229,11 @@ def fetch_router_status() -> tuple[str | None, str]:
 
 
 def parse_status(raw: str) -> dict:
+    """ok: True/False подтверждено; None = unknown (не жжём бюджет, не валим all_ok)."""
     checks: dict[str, dict] = {}
     section = "general"
 
-    def set_check(name: str, ok: bool, detail: str = "") -> None:
+    def set_check(name: str, ok: bool | None, detail: str = "") -> None:
         checks[name] = {"ok": ok, "detail": (detail or "")[:200]}
 
     for line in raw.splitlines():
@@ -135,7 +243,7 @@ def parse_status(raw: str) -> dict:
             continue
         low = line.lower()
         if section == "podkop":
-            if "not running" in low or "inactive" in low or low.strip() == "stopped":
+            if "not_running" in low or "not running" in low or "inactive" in low or low.strip() == "stopped":
                 set_check("podkop", False, line)
             elif "running" in low or "started" in low:
                 set_check("podkop", True, line)
@@ -146,14 +254,18 @@ def parse_status(raw: str) -> dict:
                 set_check("zapret", False, line)
             elif "running" in low or "started" in low:
                 set_check("zapret", True, line)
-            elif "nfqws" in low and "no" not in low:
-                set_check("nfqws", True, line)
             elif line.startswith("nfqws:"):
                 set_check("nfqws", "no" not in low, line)
+            elif "nfqws" in low and "no" not in low:
+                set_check("nfqws", True, line)
         elif section == "amnezia":
-            if "handshake" in low or "latest" in low:
-                set_check("awg0", True, line)
-            elif "awg0: no" in low:
+            if line.startswith("awg0:"):
+                if "awg0: ok" in low:
+                    set_check("awg0", True, line)
+                else:
+                    # NO / STALE / DEAD_PROBE
+                    set_check("awg0", False, line)
+            elif "never" in low and "handshake" in low:
                 set_check("awg0", False, line)
         elif section == "transmission":
             if "running" in low or line.startswith("transmission: RUNNING"):
@@ -167,40 +279,102 @@ def parse_status(raw: str) -> dict:
                 set_check("samba", True, line)
         elif section == "usb":
             if line.startswith("usb:"):
-                set_check("usb", "mounted" in low, line)
+                # важно: "not_mounted" содержит подстроку "mounted"
+                if "not_mounted" in low or "not mounted" in low:
+                    set_check("usb", False, line)
+                elif "mounted" in low:
+                    set_check("usb", True, line)
         elif section == "dns":
             if "not running" in low or "inactive" in low:
                 set_check("dns", False, line)
             elif "running" in low or "started" in low:
                 set_check("dns", True, line)
+        elif section == "telegram":
+            if line.startswith("telegram:"):
+                set_check("telegram", "ok" in low, line)
+        elif section == "torrents":
+            if line.startswith("torrents:"):
+                set_check("torrents", "ok" in low, line)
         elif section == "youtube":
             if line.startswith("HTTP/"):
                 set_check("youtube", "204" in line or "200" in line, line)
             elif "youtube: fail" in low:
                 set_check("youtube", False, line)
 
-    # sing-box жив, если процесс найден; иначе — полагаемся на podkop+youtube
-    if checks.get("sing-box", {}).get("ok") and not checks.get("podkop", {}).get("ok"):
+    if checks.get("sing-box", {}).get("ok") and checks.get("podkop", {}).get("ok") is not True:
         checks["podkop"] = {"ok": True, "detail": "sing-box process alive"}
     if checks.get("podkop", {}).get("ok") and checks.get("youtube", {}).get("ok"):
         checks.setdefault("sing-box", {"ok": True, "detail": "podkop+youtube ok"})
 
-    for key in ("podkop", "zapret", "nfqws", "transmission", "samba", "usb", "dns", "youtube"):
-        checks.setdefault(key, {"ok": False, "detail": "не проверено"})
+    for key in (
+        "podkop",
+        "zapret",
+        "nfqws",
+        "transmission",
+        "samba",
+        "usb",
+        "dns",
+        "youtube",
+        "awg0",
+        "telegram",
+        "torrents",
+    ):
+        checks.setdefault(key, {"ok": None, "detail": "не проверено"})
 
-    # Критичные для all_ok — без false-positive по имени процесса
-    critical = ("podkop", "transmission", "usb", "youtube")
-    all_ok = all(checks.get(k, {}).get("ok") for k in critical)
-    return {"checks": checks, "all_ok": all_ok}
+    # all_ok только когда критичные явно зелёные
+    all_ok = all(checks.get(k, {}).get("ok") is True for k in CRITICAL)
+    confirmed_failed = [
+        k for k in REMEDIABLE if checks.get(k, {}).get("ok") is False
+    ]
+    unknown = [k for k, v in checks.items() if v.get("ok") is None]
+    return {
+        "checks": checks,
+        "all_ok": all_ok,
+        "confirmed_failed": confirmed_failed,
+        "unknown": unknown,
+    }
 
 
-def remediate(channel: str, st: dict, failed: list[str]) -> list[str]:
-    actions: list[str] = []
+def _ensure_rem(st: dict) -> dict:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     rem = st.setdefault("remediation", {})
     if rem.get("day") != today:
+        # сохраняем last_fix_ts / fail_streak между днями не нужно — сброс суток
         rem.clear()
         rem["day"] = today
+        rem["soft_n"] = 0
+        rem["fixall_n"] = 0
+        rem["last_fix_ts"] = {}
+        rem["fail_streak"] = {}
+    rem.setdefault("soft_n", 0)
+    rem.setdefault("fixall_n", 0)
+    rem.setdefault("last_fix_ts", {})
+    rem.setdefault("fail_streak", {})
+    return rem
+
+
+def _on_success(st: dict, checks: dict) -> None:
+    """После зелёных проверок сбрасываем серии неудач — день снова можно чинить."""
+    rem = _ensure_rem(st)
+    streak = rem.setdefault("fail_streak", {})
+    for name, info in checks.items():
+        if info.get("ok") is True and name in streak:
+            streak.pop(name, None)
+
+
+def remediate(channel: str, st: dict, failed: list[str], *, force: bool = False) -> list[str]:
+    """Точечная починка с cooldown + эскалацией. force=True — ручной/экстренный прогон."""
+    actions: list[str] = []
+    rem = _ensure_rem(st)
+    now = time.time()
+    last_ts: dict = rem.setdefault("last_fix_ts", {})
+    streak: dict = rem.setdefault("fail_streak", {})
+
+    if force:
+        for name in failed:
+            last_ts.pop(name, None)
+            streak.pop(name, None)
+        last_ts.pop("fix_all", None)
 
     def ssh(cmd: str) -> tuple[int, str]:
         if channel == "reverse":
@@ -209,55 +383,114 @@ def remediate(channel: str, st: dict, failed: list[str]) -> list[str]:
         hop = f"ssh -o BatchMode=yes root@{FLINT} '{inner}'"
         return run_cmd(["ssh", "-o", "BatchMode=yes", HA_SSH, hop], timeout=150)
 
-    # Только точечные restart по факту сломанных checks
-    checks = list(failed)
     fix_map = {
-        "podkop": ("/etc/init.d/podkop restart 2>&1 | tail -3", 2),
-        "youtube": ("/etc/init.d/podkop restart 2>&1 | tail -3", 2),
-        "zapret": ("/etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret restart 2>/dev/null; echo zapret-ok", 2),
-        "nfqws": ("/etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret restart 2>/dev/null; echo nfqws-ok", 2),
-        "transmission": (
-            "uci set transmission.transmission.enabled=1 2>/dev/null; "
-            "uci set transmission.@transmission[0].enabled=1 2>/dev/null; uci commit transmission 2>/dev/null; "
-            "/etc/init.d/transmission enable 2>/dev/null; /etc/init.d/transmission restart 2>&1 | tail -3",
-            2,
+        "podkop": "/etc/init.d/podkop restart 2>&1 | tail -3",
+        "youtube": "/etc/init.d/podkop restart 2>&1 | tail -3",
+        "zapret": (
+            "/etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret restart 2>/dev/null; "
+            "echo zapret-ok"
         ),
-        "samba": ("/etc/init.d/samba4 restart 2>&1 | tail -2", 1),
+        "nfqws": (
+            "/etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret restart 2>/dev/null; "
+            "echo nfqws-ok"
+        ),
+        "transmission": (
+            "uci -q delete transmission.transmission; "
+            "uci set transmission.@transmission[0].enabled=1; "
+            "uci set transmission.@transmission[0].config_dir=/etc/transmission/config; "
+            "uci set transmission.@transmission[0].config_overwrite=0; "
+            "uci commit transmission; "
+            "/etc/init.d/transmission enable 2>/dev/null; "
+            "/etc/init.d/transmission restart 2>&1 | tail -3"
+        ),
+        "samba": "/etc/init.d/samba4 restart 2>&1 | tail -2",
         "awg0": (
+            "ifdown awg0 2>/dev/null; sleep 1; ifup awg0 2>/dev/null; "
+            "/etc/init.d/amnezia-split restart 2>/dev/null; "
+            "sh /etc/amnezia/start-split.sh 2>/dev/null; "
             "awg show awg0 >/dev/null 2>&1 || ("
-            "/etc/init.d/amnezia-split restart 2>/dev/null || "
-            "sh /etc/amnezia/start-split.sh 2>/dev/null || "
-            "(awg-quick down awg0 2>/dev/null; awg-quick up awg0 2>/dev/null)"
-            "); echo awg-ok",
-            1,
+            "awg-quick down awg0 2>/dev/null; awg-quick up awg0 2>/dev/null"
+            "); sleep 3; echo awg-ok"
         ),
         "usb": (
-            "mkdir -p /mnt/usb; mount /mnt/usb 2>/dev/null || mount -a 2>/dev/null; "
-            "mountpoint -q /mnt/usb && echo usb-ok || echo usb-fail",
-            2,
+            "/etc/init.d/empire-usb-mount start 2>/dev/null; "
+            "/etc/init.d/samba4 restart 2>/dev/null; "
+            "grep -q ' /mnt/usb ' /proc/mounts && [ -d /mnt/usb/download ] && echo usb-ok || echo usb-fail"
+        ),
+        "dns": (
+            "/etc/init.d/dnsmasq restart 2>/dev/null || "
+            "/etc/init.d/dnsmasq-full restart 2>/dev/null; echo dns-ok"
+        ),
+        "telegram": (
+            "[ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null; "
+            "/etc/init.d/podkop restart 2>&1 | tail -3"
+        ),
+        "torrents": (
+            "[ -x /usr/sbin/empire-flint-watchdog ] && /usr/sbin/empire-flint-watchdog --force >/tmp/empire-wd-force.out 2>&1; "
+            "echo torrents-kick"
         ),
     }
-    for name in checks:
-        if name not in fix_map:
+
+    # youtube → тот же podkop: один cooldown-ключ, чтобы не долбить дважды
+    to_fix: list[str] = []
+    seen: set[str] = set()
+    for name in failed:
+        key = "podkop" if name in ("youtube", "podkop") else name
+        if key in seen or key not in fix_map:
             continue
-        cmd, limit = fix_map[name]
-        key = f"fix_{name}"
-        if rem.get(key, 0) >= limit:
+        seen.add(key)
+        to_fix.append(key)
+
+    did_soft = False
+    for name in to_fix:
+        prev = float(last_ts.get(name, 0) or 0)
+        if not force and prev and (now - prev) < SOFT_COOLDOWN_SEC:
+            left = int(SOFT_COOLDOWN_SEC - (now - prev))
+            log(f"SKIP {name}: cooldown {left}s")
+            actions.append(f"skip {name} (cooldown {left}s)")
             continue
+        if not force and int(rem.get("soft_n", 0)) >= DAILY_SOFT_CAP:
+            log(f"SKIP {name}: daily soft cap {DAILY_SOFT_CAP}")
+            actions.append(f"skip {name} (daily soft cap)")
+            continue
+
         log(f"REMEDIATE: {name}")
-        code, out = ssh(cmd)
-        rem[key] = rem.get(key, 0) + 1
+        code, out = ssh(fix_map[name])
+        last_ts[name] = now
+        rem["soft_n"] = int(rem.get("soft_n", 0)) + 1
+        streak[name] = int(streak.get(name, 0)) + 1
+        did_soft = True
         actions.append(f"fix {name} (rc={code})")
         log(f"  {out[-300:]}")
 
-    critical_failed = [n for n in ("podkop", "usb", "youtube") if n in checks]
-    if critical_failed and rem.get("fix_all", 0) < 1:
-        log("REMEDIATE: 13-fix-all.sh (критичные сбои)")
-        fix_cmd = f"curl -fsSL {FIX_SCRIPT} 2>/dev/null | sh 2>&1 | tail -8"
-        code, out = ssh(fix_cmd)
-        rem["fix_all"] = 1
-        actions.append(f"fix-all (rc={code})")
-        log(f"  {out[-500:]}")
+    # Эскалация: критичный подтверждённый сбой и soft уже не помогает / force
+    crit_failed = [n for n in ("podkop", "youtube", "transmission", "dns", "awg0") if n in failed]
+    # youtube в failed → считаем podkop-стрик
+    max_streak = 0
+    for n in crit_failed:
+        key = "podkop" if n in ("youtube", "podkop") else n
+        max_streak = max(max_streak, int(streak.get(key, 0)))
+
+    need_fixall = bool(crit_failed) and (
+        force or (did_soft and max_streak >= ESCALATE_AFTER) or (not did_soft and max_streak >= ESCALATE_AFTER)
+    )
+    if need_fixall:
+        prev_all = float(last_ts.get("fix_all", 0) or 0)
+        if not force and prev_all and (now - prev_all) < FIXALL_COOLDOWN_SEC:
+            left = int(FIXALL_COOLDOWN_SEC - (now - prev_all))
+            log(f"SKIP fix-all: cooldown {left}s")
+            actions.append(f"skip fix-all (cooldown {left}s)")
+        elif not force and int(rem.get("fixall_n", 0)) >= DAILY_FIXALL_CAP:
+            log(f"SKIP fix-all: daily cap {DAILY_FIXALL_CAP}")
+            actions.append(f"skip fix-all (daily cap)")
+        else:
+            log("REMEDIATE: 13-fix-all.sh (эскалация)")
+            fix_cmd = f"curl -fsSL {FIX_SCRIPT} 2>/dev/null | sh 2>&1 | tail -8"
+            code, out = ssh(fix_cmd)
+            last_ts["fix_all"] = now
+            rem["fixall_n"] = int(rem.get("fixall_n", 0)) + 1
+            actions.append(f"fix-all (rc={code})")
+            log(f"  {out[-500:]}")
 
     save_state(st)
     return actions
@@ -270,14 +503,34 @@ def build_summary(channel: str | None, parsed: dict, actions: list[str]) -> str:
         return "\n".join(lines)
     icons = []
     for name, info in parsed.get("checks", {}).items():
-        icon = "✅" if info.get("ok") else "❌"
+        ok = info.get("ok")
+        if ok is True:
+            icon = "✅"
+        elif ok is False:
+            icon = "❌"
+        else:
+            icon = "❔"
         icons.append(f"{icon} {name}")
     lines.append(" · ".join(icons[:8]))
     if len(icons) > 8:
         lines.append(" · ".join(icons[8:]))
-    bad = [k for k, v in parsed.get("checks", {}).items() if not v.get("ok")]
+    bad = [
+        k
+        for k, v in parsed.get("checks", {}).items()
+        if v.get("ok") is False and k in (*CRITICAL, *REMEDIABLE)
+    ]
+    warn = [
+        k
+        for k, v in parsed.get("checks", {}).items()
+        if v.get("ok") is False and k not in (*CRITICAL, *REMEDIABLE)
+    ]
+    unk = [k for k, v in parsed.get("checks", {}).items() if v.get("ok") is None]
     if bad:
         lines.append(f"⚠ проблемы: {', '.join(bad)}")
+    if warn:
+        lines.append(f"ℹ {', '.join(warn)}")
+    if unk:
+        lines.append(f"❔ не подтверждено: {', '.join(unk)}")
     if actions:
         lines.append("🔧 " + "; ".join(actions[:4]))
     return "\n".join(lines)
@@ -286,30 +539,94 @@ def build_summary(channel: str | None, parsed: dict, actions: list[str]) -> str:
 def main() -> int:
     check_only = "--check-only" in sys.argv
     no_fix = os.getenv("EMPIRE_ROUTER_NO_FIX", "") == "1" or "--no-fix" in sys.argv
+    force_yt = (
+        os.getenv("EMPIRE_ROUTER_FORCE_YOUTUBE_FIX", "") == "1"
+        or "--force-youtube" in sys.argv
+    )
 
     st = load_state()
     st["last_run"] = datetime.now(timezone.utc).isoformat()
     channel, raw = fetch_router_status()
-    parsed = parse_status(raw) if raw else {"checks": {}, "all_ok": False}
+    parsed = parse_status(raw) if raw else {
+        "checks": {},
+        "all_ok": False,
+        "confirmed_failed": [],
+        "unknown": [],
+    }
     actions: list[str] = []
 
-    if channel and not parsed.get("all_ok") and not no_fix and not check_only:
-        failed = [k for k, v in parsed.get("checks", {}).items() if not v.get("ok")]
-        actions = remediate(channel, st, failed)
-        # re-check after fix
-        time.sleep(8)
-        channel2, raw2 = fetch_router_status()
-        if channel2 and raw2:
-            channel, parsed = channel2, parse_status(raw2)
+    if channel and force_yt and not no_fix and not check_only:
+        log("FORCE YouTube fix: podkop + zapret")
+        actions = remediate(channel, st, ["youtube", "podkop", "zapret", "nfqws"], force=True)
+        time.sleep(5)
+        channel, raw = fetch_router_status()
+        parsed = parse_status(raw) if raw else parsed
+    elif channel and not no_fix and not check_only:
+        failed = list(parsed.get("confirmed_failed") or [])
+        # unknown не чиним — только перепроверим в следующем тике / kick
+        if failed:
+            actions = remediate(channel, st, failed)
+            time.sleep(8)
+            channel2, raw2 = fetch_router_status()
+            if channel2 and raw2:
+                channel, parsed = channel2, parse_status(raw2)
+
+    if channel:
+        _on_success(st, parsed.get("checks") or {})
+
+    # Если reverse SSH мёртв, а HA жив — поднять туннель с роутера
+    if channel == "ha" and not no_fix and not check_only:
+        rem = _ensure_rem(st)
+        last_ts = rem.setdefault("last_fix_ts", {})
+        prev = float(last_ts.get("fix_reverse", 0) or 0)
+        now = time.time()
+        if prev == 0 or (now - prev) >= SOFT_COOLDOWN_SEC:
+            code, _ = run_cmd(
+                [
+                    "ssh",
+                    "-o",
+                    "BatchMode=yes",
+                    "-o",
+                    "ConnectTimeout=8",
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                    "-p",
+                    "6223",
+                    "root@127.0.0.1",
+                    "echo ok",
+                ],
+                timeout=20,
+            )
+            if code != 0:
+                log("REMEDIATE: flint2-tunnel/start.sh via HA")
+                hop = (
+                    "ssh -o BatchMode=yes -o ConnectTimeout=8 root@192.168.1.1 "
+                    "'/etc/flint2-tunnel/start.sh 2>&1 | tail -3'"
+                )
+                rc, out = run_cmd(
+                    ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15", HA_SSH, hop],
+                    timeout=60,
+                )
+                last_ts["fix_reverse"] = now
+                rem["soft_n"] = int(rem.get("soft_n", 0)) + 1
+                actions.append(f"restore reverse tunnel (rc={rc})")
+                log(f"  {out[-200:]}")
+                save_state(st)
+                time.sleep(3)
 
     summary = build_summary(channel, parsed, actions)
     st["last_channel"] = channel
     st["last_summary"] = summary
-    st["last_all_ok"] = parsed.get("all_ok", False)
+    st["last_all_ok"] = bool(parsed.get("all_ok"))
     st["last_checks"] = parsed.get("checks", {})
     st["last_actions"] = actions
+    st["last_confirmed_failed"] = parsed.get("confirmed_failed") or []
+    st["last_unknown"] = parsed.get("unknown") or []
     save_state(st)
-    log(f"done channel={channel} all_ok={parsed.get('all_ok')} actions={len(actions)}")
+    log(
+        f"done channel={channel} all_ok={parsed.get('all_ok')} "
+        f"failed={parsed.get('confirmed_failed')} actions={len(actions)}"
+    )
 
     if os.getenv("EMPIRE_ROUTER_PRINT_SUMMARY") == "1":
         print(summary)

@@ -1,0 +1,25 @@
+# ЗАДАНИЕ: gdepar_books_batch8 (Gemini / Composer)
+
+Сгенерируй **ровно 8** постов-книг для Gdepar. Правила: `gemini_BOOT_revive_hosts.txt`.
+
+Формат: цитата в `<blockquote>` + 2–4 предложения комментария **Михалыча или Кириллыча** (один голос на пост, не дуэт) + источник курсивом.
+Без блока «О чём писал автор». Без эзотерики. Без выдуманных °C.
+
+TOPIC → id:
+
+1. bogdanov_we_went_often → Костомаров/Богданов: баня как частая потребность дома  
+2. bogdanov_fire_ban_summer → летний запрет топить мыльни (пожары)  
+3. bogdanov_black_bath_smoke → топка по-чёрному: дым, окна, потом пар  
+4. bogdanov_kamenka_stones → каменка: камни над устьем  
+5. bogdanov_polok_steps → полок со ступенями  
+6. hoshev_city_attitudes → Хошев: фанаты / любители / равнодушные к бане  
+7. hoshev_not_only_past → баня не только «оглядываться назад»  
+8. voevodina_listen_body → мягкий пар: слушать тело без мистики  
+
+Каждый id: `book_aug_<slug>_01` …  
+slot: 1100 или 2100  
+hashtags: ≤3 (#баня #гдепар #книга|#история|#пар)
+
+## CHECKLIST
+POST_COUNT: 8
+P0_FOUND: 0

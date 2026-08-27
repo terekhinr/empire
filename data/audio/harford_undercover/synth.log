@@ -1,0 +1,21 @@
+Model: gemini-2.5-flash-preview-tts | voice: charon
+Input: /root/projects/empire/data/audio/harford_undercover/ekonomist_pod_prikrytiem_annot_intro_ch1_tts.txt | chunks: 23 | chars: 55320
+[1/23] chunk_0001.wav (2454 chars)
+[2/23] chunk_0002.wav (2447 chars)
+[3/23] chunk_0003.wav (2498 chars)
+[4/23] chunk_0004.wav (2471 chars)
+[5/23] chunk_0005.wav (2431 chars)
+[6/23] chunk_0006.wav (2478 chars)
+[7/23] chunk_0007.wav (2489 chars)
+[8/23] chunk_0008.wav (2461 chars)
+[9/23] chunk_0009.wav (2491 chars)
+[10/23] chunk_0010.wav (2449 chars)
+[11/23] chunk_0011.wav (2277 chars)
+  backoff 45s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+[12/23] chunk_0012.wav (2482 chars)
+  backoff 58s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+  backoff 60s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+  backoff 59s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+  backoff 60s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+  backoff 60s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on
+  backoff 59s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on

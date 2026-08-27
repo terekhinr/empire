@@ -1,0 +1,14 @@
+[Unit]
+Description=Empire service healer (systemd/HTTP/TG auto-fix + alert)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/empire_service_healer.py
+User=root
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

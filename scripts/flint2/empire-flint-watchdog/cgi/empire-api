@@ -1,0 +1,238 @@
+#!/bin/sh
+# Empire Flint Ops API — CGI для uhttpd (/cgi-bin/empire-api)
+# Auth: Authorization: Bearer TOKEN  или  ?token= / X-Empire-Token
+set -eu
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+
+TOKEN_FILE=/etc/empire-flint-ui.token
+ENV_FILE=/etc/empire-flint-ui.env
+STATE=/tmp/empire-flint-watchdog.state
+LOG=/tmp/empire-flint-watchdog.log
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' '
+}
+
+read_token() {
+  [ -f "$TOKEN_FILE" ] && cat "$TOKEN_FILE" | tr -d '\r\n' || true
+}
+
+# --- parse QUERY_STRING and POST ---
+QS="${QUERY_STRING:-}"
+ACTION=""
+SVC=""
+REQ_TOKEN=""
+
+# from query
+for pair in $(echo "$QS" | tr '&' ' '); do
+  k="${pair%%=*}"
+  v="${pair#*=}"
+  case "$k" in
+    action) ACTION="$v" ;;
+    svc) SVC="$v" ;;
+    token) REQ_TOKEN="$v" ;;
+  esac
+done
+
+# headers (uhttpd sets HTTP_*)
+AUTH="${HTTP_AUTHORIZATION:-}"
+case "$AUTH" in
+  Bearer\ *) REQ_TOKEN="${AUTH#Bearer }" ;;
+esac
+[ -n "${HTTP_X_EMPIRE_TOKEN:-}" ] && REQ_TOKEN="$HTTP_X_EMPIRE_TOKEN"
+
+# POST body application/x-www-form-urlencoded
+if [ "${REQUEST_METHOD:-GET}" = "POST" ] && [ -n "${CONTENT_LENGTH:-}" ]; then
+  BODY=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null || true)
+  for pair in $(echo "$BODY" | tr '&' ' '); do
+    k="${pair%%=*}"
+    v="${pair#*=}"
+    case "$k" in
+      action) [ -z "$ACTION" ] && ACTION="$v" ;;
+      svc) SVC="$v" ;;
+      token) [ -z "$REQ_TOKEN" ] && REQ_TOKEN="$v" ;;
+    esac
+  done
+fi
+
+[ -z "$ACTION" ] && ACTION=status
+
+cors() {
+  echo "Content-Type: application/json; charset=utf-8"
+  echo "Cache-Control: no-store"
+  echo "Access-Control-Allow-Origin: *"
+  echo "Access-Control-Allow-Headers: Authorization, X-Empire-Token, Content-Type"
+  echo "Access-Control-Allow-Methods: GET, POST, OPTIONS"
+  echo
+}
+
+if [ "${REQUEST_METHOD:-GET}" = "OPTIONS" ]; then
+  cors
+  echo '{"ok":true}'
+  exit 0
+fi
+
+EXPECTED=$(read_token)
+if [ -z "$EXPECTED" ] || [ "$REQ_TOKEN" != "$EXPECTED" ]; then
+  cors
+  echo '{"ok":false,"error":"unauthorized"}'
+  exit 0
+fi
+
+ok_proc() { pgrep -f "$1" >/dev/null 2>&1; }
+
+flag_json() {
+  name="$1"
+  if eval "$2"; then
+    printf '"%s":true' "$name"
+  else
+    printf '"%s":false' "$name"
+  fi
+}
+
+do_status() {
+  podkop=false; zapret=false; youtube=false; telegram=false; torrents=false; routes=false; awg=false; usb=false; tunnel=false; ha=false
+  ok_proc 'sing-box|singbox' && podkop=true
+  ok_proc 'nfqws2|nfqws' && zapret=true
+
+  # USB: NTFS по UUID (sda6/sdb6 после реконекта). ext3-оверлей = пустой download.
+  USB_UUID="01D63D133C7B6100"
+  usb_line=$(grep ' /mnt/usb ' /proc/mounts 2>/dev/null | tail -1 || true)
+  usb_dev=$(echo "$usb_line" | awk '{print $1}')
+  usb_uuid=""
+  [ -n "$usb_dev" ] && usb_uuid=$(blkid -s UUID -o value "$usb_dev" 2>/dev/null || true)
+  [ "$usb_uuid" = "$USB_UUID" ] || usb_line=""
+  if [ -n "$usb_line" ]; then
+    echo "$usb_line" | grep -qE 'fuseblk|ntfs' || usb_line=""
+  fi
+  if [ -n "$usb_line" ]; then
+    echo "$usb_line" | grep -q ' ext3 ' && usb_line=""
+  fi
+  if [ -n "$usb_line" ] && [ -d /mnt/usb/download ]; then
+    usb=true
+  fi
+  usb_detail="not mounted"
+  if [ "$usb" = true ]; then
+    usb_cnt=$(ls -1A /mnt/usb/download 2>/dev/null | wc -l | tr -d ' ')
+    usb_detail="${usb_dev} NTFS, download: ${usb_cnt:-0} files"
+  elif [ -n "$usb_line" ]; then
+    usb_detail="wrong mount layer (not NTFS UUID)"
+  fi
+
+  (awg show awg0 >/dev/null 2>&1 || wg show awg0 >/dev/null 2>&1) && awg=true
+  pgrep -f "ssh.*-R 127.0.0.1:6223" >/dev/null 2>&1 && tunnel=true
+  code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 8 \
+    https://www.youtube.com/generate_204 2>/dev/null || echo 000)
+  case "$code" in 204|200) youtube=true ;; esac
+  tcode=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 8 \
+    https://telegram.org/ 2>/dev/null || echo 000)
+  case "$tcode" in 200|301|302) telegram=true ;; esac
+  tip=$(nslookup rutracker.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+  case "$tip" in 198.18.*) torrents=true ;; esac
+  if command -v jq >/dev/null 2>&1 && [ -f /etc/sing-box/config.json ]; then
+    jq -e '[.route.rules[]?|select(.outbound=="main-out")|(.rule_set//[])[]?]|index("main-telegram-community-ruleset")' \
+      /etc/sing-box/config.json >/dev/null 2>&1 \
+      && nft list set inet PodkopTable podkop_subnets 2>/dev/null | grep -q '149.154' \
+      && routes=true
+  fi
+  # HA
+  if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$ENV_FILE" 2>/dev/null || true
+  fi
+  HA_URL="${HA_URL:-http://192.168.1.41:8123}"
+  # с роутера всегда LAN, даже если в env Tailscale
+  case "$HA_URL" in
+    *100.80.133.85*) HA_URL="http://192.168.1.41:8123" ;;
+  esac
+  HA_TOKEN="${HA_TOKEN:-}"
+  if [ -n "$HA_TOKEN" ]; then
+    hc=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 4 --max-time 6 \
+      -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/" 2>/dev/null || echo 000)
+    [ "$hc" = "200" ] && ha=true
+  else
+    hc=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 --max-time 4 \
+      "$HA_URL/" 2>/dev/null || echo 000)
+    case "$hc" in 200|301|302|401) ha=true ;; esac
+  fi
+
+  last_run=""; last_report=""; last_problems=""; last_fixed=""
+  if [ -f "$STATE" ]; then
+    last_run=$(sed -n 's/^last_run=//p' "$STATE" | tail -1)
+    last_report=$(sed -n 's/^last_report=//p' "$STATE" | tail -1)
+    last_problems=$(sed -n 's/^last_problems=//p' "$STATE" | tail -1)
+    last_fixed=$(sed -n 's/^last_fixed=//p' "$STATE" | tail -1)
+  fi
+  log_tail=""
+  [ -f "$LOG" ] && log_tail=$(tail -12 "$LOG" | tr '\n' '|' | sed 's/|$//')
+
+  cors
+  cat <<EOF
+{"ok":true,"checks":{"podkop":$podkop,"zapret":$zapret,"youtube":$youtube,"telegram":$telegram,"torrents":$torrents,"routes":$routes,"awg":$awg,"usb":$usb,"tunnel":$tunnel,"ha":$ha},"usb_detail":"$(json_escape "$usb_detail")","watchdog":{"last_run":"$(json_escape "$last_run")","last_report":"$(json_escape "$last_report")","last_problems":"$(json_escape "$last_problems")","last_fixed":"$(json_escape "$last_fixed")"},"log_tail":"$(json_escape "$log_tail")","links":{"luci":"http://192.168.1.1/","ha":"http://192.168.1.41:8123","pwa":"http://192.168.1.1/empire/","transmission":"http://192.168.1.1:9091"}}
+EOF
+}
+
+do_fix() {
+  out=$(/usr/sbin/empire-flint-watchdog --force 2>&1 | tail -20 | tr '\n' '|' | sed 's/|$//')
+  cors
+  echo "{\"ok\":true,\"action\":\"fix\",\"out\":\"$(json_escape "$out")\"}"
+}
+
+do_restart() {
+  case "$SVC" in
+    podkop)
+      /etc/init.d/podkop restart 2>&1 | tail -5 >/tmp/empire-ui-restart.out || true
+      ;;
+    zapret)
+      /etc/init.d/zapret2 restart 2>&1 | tail -8 >/tmp/empire-ui-restart.out || \
+        /etc/init.d/zapret restart 2>&1 | tail -5 >/tmp/empire-ui-restart.out || true
+      ;;
+    awg)
+      /etc/init.d/amnezia-split restart 2>/dev/null || true
+      sh /etc/amnezia/start-split.sh 2>/dev/null || true
+      echo awg-done >/tmp/empire-ui-restart.out
+      ;;
+    tunnel)
+      /etc/flint2-tunnel/start.sh >/tmp/empire-ui-restart.out 2>&1 || true
+      ;;
+    *)
+      cors
+      echo '{"ok":false,"error":"unknown svc"}'
+      return 0
+      ;;
+  esac
+  out=$(tr '\n' '|' </tmp/empire-ui-restart.out 2>/dev/null | sed 's/|$//')
+  cors
+  echo "{\"ok\":true,\"action\":\"restart\",\"svc\":\"$SVC\",\"out\":\"$(json_escape "$out")\"}"
+}
+
+do_ha_restart() {
+  if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$ENV_FILE" 2>/dev/null || true
+  fi
+  HA_URL="${HA_URL:-http://192.168.1.41:8123}"
+  HA_TOKEN="${HA_TOKEN:-}"
+  if [ -z "$HA_TOKEN" ]; then
+    cors
+    echo '{"ok":false,"error":"no HA_TOKEN on router"}'
+    return 0
+  fi
+  code=$(curl -s -o /tmp/empire-ha-restart.out -w '%{http_code}' --connect-timeout 8 --max-time 30 \
+    -X POST -H "Authorization: Bearer $HA_TOKEN" -H "Content-Type: application/json" \
+    -d '{}' "$HA_URL/api/services/homeassistant/restart" 2>/dev/null || echo 000)
+  body=$(tr '\n' ' ' </tmp/empire-ha-restart.out 2>/dev/null | head -c 200)
+  cors
+  echo "{\"ok\":true,\"action\":\"ha_restart\",\"http\":$code,\"body\":\"$(json_escape "$body")\"}"
+}
+
+case "$ACTION" in
+  status) do_status ;;
+  fix) do_fix ;;
+  restart) do_restart ;;
+  ha_restart) do_ha_restart ;;
+  *)
+    cors
+    echo '{"ok":false,"error":"unknown action"}'
+    ;;
+esac

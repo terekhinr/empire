@@ -94,6 +94,95 @@ FAL_KEY = os.getenv("FAL_KEY")
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_AI_API_KEY") or "").strip()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///empire.db")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 0))
+PDF_AUDIO_MAX_PDF_MB = int(os.getenv("PDF_AUDIO_MAX_PDF_MB", "20"))
+PDF_AUDIO_KEEP_WORKDIR = os.getenv("PDF_AUDIO_KEEP_WORKDIR", "0") == "1"
+PDF_AUDIO_LOCAL_MAX_MB = int(os.getenv("PDF_AUDIO_LOCAL_MAX_MB", "200"))
+pdf_audio_lock = asyncio.Lock()
+vps_heal_lock = asyncio.Lock()
+
+# Безопасный whitelist рестартов из бота (автопост + ядро).
+# empire_main рестартится ТОЛЬКО явным /restart main — не через /fix и не через /restart all.
+VPS_RESTART_UNITS = {
+    "main": "empire_main.service",
+    "worker": "empire_worker.service",
+    "gdepar": "empire_gdepar.service",
+    "webapp": "empire_webapp.service",
+    "planning": "empire_planning.service",
+    "dashboard": "empire_dashboard.service",
+    "sales": "empire_sales.service",
+    "ha": "empire_ha_notify.service",
+    "homeops": "empire-home-ops.service",
+    "flint": "empire-flint2-bootstrap.service",
+    "nginx": "nginx.service",
+}
+VPS_SAFE_RESTART_UNITS = {
+    k: v for k, v in VPS_RESTART_UNITS.items() if k != "main"
+}
+VPS_STATUS_UNITS = [
+    "empire_main.service",
+    "empire_worker.service",
+    "empire_gdepar.service",
+    "empire_webapp.service",
+    "empire_planning.service",
+    "empire_dashboard.service",
+    "empire_sales.service",
+    "empire_ha_notify.service",
+    "empire-home-ops.service",
+    "empire-flint2-bootstrap.service",
+    "nginx.service",
+    "empire-service-healer.timer",
+    "empire-diagnostics-watchdog.timer",
+    "empire-router-watchdog.timer",
+    "empire-night-pipeline.timer",
+]
+
+PDF_HELP_TEXT = (
+    "<b>📖 Аудиокнига / PDF → MP3</b>\n\n"
+    "<b>1. Как прислать</b>\n"
+    "• Документом: <b>PDF, TXT, MD, DOCX</b> (скрепка → Файл).\n"
+    f"• Через Telegram: до <b>~{min(PDF_AUDIO_MAX_PDF_MB, 20)} МБ</b> (лимит Bot API).\n"
+    "• Большая книга: залей файл на VPS и запусти:\n"
+    "<code>/book /полный/путь/к/книге.pdf</code>\n"
+    f"• Локально на VPS: до <b>{PDF_AUDIO_LOCAL_MAX_MB} МБ</b>.\n\n"
+    "<b>2. Какой текст подходит</b>\n"
+    "• PDF с текстовым слоем (не чистый скан) или обычный TXT/DOCX.\n"
+    "• Текст: ru-normalizr + silero-stress (числа, аббревиатуры, ударения).\n\n"
+    "<b>3. Аудиокнига</b>\n"
+    "• Режет по главам (Глава/Chapter/#) или по объёму ~30–40 мин.\n"
+    "• Шлёт MP3-части по мере готовности — можно слушать, пока идёт дальше.\n"
+    "• Долгие книги: часы работы — не дублируй файл, смотри прогресс.\n\n"
+    "<b>4. Команды</b>\n"
+    "/pdf или /book — эта инструкция\n"
+    "/book /path/to/file — озвучить файл с диска VPS\n"
+)
+
+HELP_TEXT = (
+    "<b>Николай Степанович — команды</b>\n\n"
+    "<b>Контент</b>\n"
+    "/draft [персона] [тема] — черновик\n"
+    "/stats [дней] — статистика модерации\n"
+    "/history [персона] [дней] — темы\n"
+    "/scout [персона] — свежие заголовки\n"
+    "/spy — разведка сигналов\n"
+    "/autopublish — настройки автопоста\n"
+    "/obsidian — очередь Obsidian\n\n"
+    "<b>Аудиокнига</b>\n"
+    "/pdf — инструкция\n"
+    "/book /path/file.pdf — большая книга с диска VPS\n"
+    "Или пришли PDF/TXT/DOCX документом → MP3 частями\n\n"
+    "<b>VPS / автопост</b>\n"
+    "/vps — статус ключевых сервисов\n"
+    "/fix — удалённо починить всё (тот же самохилер, безопасно для бота)\n"
+    "/fix status — только проверка, без починки\n"
+    "/fix down — рестарт только упавших сервисов (без empire_main)\n"
+    "/restart worker|gdepar|webapp|all — точечный рестарт\n"
+    "/restart main — рестарт самого бота (краткий обрыв)\n"
+    "/diag — глубокая диагностика таймеров/бэкапов\n"
+    "/heal — синоним /fix\n\n"
+    "<i>Фоном каждые ~5 мин уже крутится empire-service-healer. "
+    "/fix — ручной запуск той же починки. Сам бот (/restart main) "
+    "не трогается командой /fix.</i>"
+)
 
 os.makedirs("media/lenin", exist_ok=True)
 os.makedirs("media/references", exist_ok=True)
@@ -940,30 +1029,44 @@ def encode_image_to_base64(filepath):
         return f"data:image/jpeg;base64,{encoded}"
 
 LENIN_POOL_DIR = "media/lenin/pool"
+LENIN_DEFAULT_IMAGE = "media/lenin/rubrics/_default_lenin.jpg"
 
 
-def _pick_random_lenin_from_pool(d_id: int) -> str | None:
-    """Берёт случайный портрет Ленина из локального пула и копирует под event_{id}.jpg."""
+def _copy_lenin_image(src: str, d_id: int) -> str | None:
+    dst = f"media/lenin/event_{d_id}.jpg"
+    try:
+        os.makedirs("media/lenin", exist_ok=True)
+        with open(src, "rb") as fi, open(dst, "wb") as fo:
+            fo.write(fi.read())
+        if os.path.getsize(dst) > 50_000:
+            logger.info(f"[lenin] image {os.path.basename(src)} -> {dst}")
+            return dst
+    except Exception as exc:
+        logger.warning(f"[lenin] copy image failed src={src}: {exc}")
+    return None
+
+
+def _lenin_pool_candidates() -> list[str]:
     if not os.path.isdir(LENIN_POOL_DIR):
-        return None
-    candidates = [
+        return []
+    return [
         os.path.join(LENIN_POOL_DIR, f)
         for f in os.listdir(LENIN_POOL_DIR)
         if f.lower().endswith((".jpg", ".jpeg", ".png"))
         and os.path.getsize(os.path.join(LENIN_POOL_DIR, f)) > 50_000
     ]
-    if not candidates:
-        return None
-    src = random.choice(candidates)
-    dst = f"media/lenin/event_{d_id}.jpg"
-    try:
-        with open(src, "rb") as fi, open(dst, "wb") as fo:
-            fo.write(fi.read())
-        if os.path.getsize(dst) > 50_000:
-            logger.info(f"[lenin] fallback to pool image: {os.path.basename(src)}")
-            return dst
-    except Exception:
-        pass
+
+
+def _pick_random_lenin_from_pool(d_id: int) -> str | None:
+    """Портрет из пула; если пул пуст — запасной _default_lenin.jpg."""
+    candidates = _lenin_pool_candidates()
+    if candidates:
+        src = random.choice(candidates)
+        copied = _copy_lenin_image(src, d_id)
+        if copied:
+            return copied
+    if os.path.isfile(LENIN_DEFAULT_IMAGE) and os.path.getsize(LENIN_DEFAULT_IMAGE) > 50_000:
+        return _copy_lenin_image(LENIN_DEFAULT_IMAGE, d_id)
     return None
 
 
@@ -1030,6 +1133,59 @@ async def fetch_wikipedia_image(query, d_id):
             logger.warning(f"[lenin] wiki image download error: {e}")
 
     return _pick_random_lenin_from_pool(d_id)
+
+
+async def fetch_topic_image(query: str, d_id: int | str, *, subdir: str = "rubrics") -> str | None:
+    """Картинка по теме (картина / фильм / памятник) — без фильтра «только статьи про Ленина»."""
+    clean = re.sub(r"\s+", " ", (query or "").strip())
+    if len(clean) < 3:
+        return None
+    headers = {"User-Agent": "EmpireBot/5.3 (https://neverretire.ru)"}
+    search_url = (
+        "https://ru.wikipedia.org/w/api.php?action=query&list=search"
+        f"&srsearch={urllib.parse.quote(clean)}&utf8=&format=json&srlimit=8"
+    )
+    img_source = None
+    matched_title = None
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=12.0) as client:
+            res = await client.get(search_url, headers=headers)
+            hits = res.json().get("query", {}).get("search", [])
+            for hit in hits:
+                title = hit.get("title") or ""
+                # пропускаем голые био-страницы Ленина — ищем работу/фильм/памятник
+                tl = title.lower()
+                if tl in {"ленин", "ленин, владимир ильич", "владимир ленин"}:
+                    continue
+                img_url_api = (
+                    f"https://ru.wikipedia.org/w/api.php?action=query&titles={urllib.parse.quote(title)}"
+                    "&prop=pageimages&format=json&piprop=original"
+                )
+                img_res = await client.get(img_url_api, headers=headers)
+                pages = img_res.json().get("query", {}).get("pages", {})
+                if not pages:
+                    continue
+                page = list(pages.values())[0]
+                if "original" not in page:
+                    continue
+                cand = page["original"]["source"]
+                if cand.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    img_source = cand
+                    matched_title = title
+                    break
+            if not img_source:
+                return None
+            dest_dir = Path("media/lenin") / subdir
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            path = dest_dir / f"topic_{d_id}.jpg"
+            file_res = await client.get(img_source, headers=headers, timeout=20.0)
+            if file_res.status_code == 200 and len(file_res.content) > 8_000:
+                path.write_bytes(file_res.content)
+                logger.info("[lenin] topic image '%s' -> %s", matched_title, path)
+                return str(path)
+    except Exception as e:
+        logger.warning("[lenin] topic image error: %s", type(e).__name__)
+    return None
 
 
 async def _lenin_wikipedia_image(
@@ -1916,10 +2072,9 @@ async def _resolve_scheduled_slot(
             slot_value, weekday=weekday, resolve_topic_fn=_resolve_slot_topic_plain
         )
     if p_key == "garden" and garden_content:
-        t, pb, img = await garden_content.resolve_garden_slot(
+        return await garden_content.resolve_garden_slot(
             slot_value, resolve_topic_fn=_resolve_slot_topic_plain
         )
-        return t, pb, img, None
     return await _resolve_slot_topic_plain(p_key, slot_value), None, None, None
 
 
@@ -3080,17 +3235,23 @@ def _record_stern_comic_if_published(draft: PostDraft) -> None:
         logger.warning("[stern_comic_video] record_published: %s", exc)
 
 
-def _curated_body_too_short(text: str | None) -> bool:
-    from rubric_posts import MIN_CURATED_BODY_CHARS
+def _curated_min_body_chars(topic_raw: str | None) -> int:
+    from rubric_posts import MIN_CALENDAR_BODY_CHARS, MIN_CURATED_BODY_CHARS
 
+    if topic_raw and lenin_content and lenin_content.is_calendar_topic(topic_raw):
+        return MIN_CALENDAR_BODY_CHARS
+    return MIN_CURATED_BODY_CHARS
+
+
+def _curated_body_too_short(text: str | None, *, topic_raw: str | None = None) -> bool:
     plain = re.sub(r"<[^>]+>", "", text or "")
-    return len(plain.strip()) < MIN_CURATED_BODY_CHARS
+    return len(plain.strip()) < _curated_min_body_chars(topic_raw)
 
 
 async def notify_admin(d_id, p_key, text, img_f, *, topic_raw: str | None = None):
     curated_photo = _curated_rubric_requires_photo(p_key, topic_raw)
     has_photo = _curated_has_photo(img_f)
-    short_body = curated_photo and _curated_body_too_short(text)
+    short_body = curated_photo and _curated_body_too_short(text, topic_raw=topic_raw)
     buttons: list = []
     if not curated_photo or has_photo:
         buttons.append(
@@ -3121,10 +3282,10 @@ async def notify_admin(d_id, p_key, text, img_f, *, topic_raw: str | None = None
         cap_limit = 1024 if force_photo_caption else 1000
         caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
         if short_body:
-            from rubric_posts import MIN_CURATED_BODY_CHARS
-
+            floor = _curated_min_body_chars(topic_raw)
+            # «<260» в HTML parse_mode читается как тег — ломает send_photo.
             warn = (
-                f"⚠️ Короткий пост (<{MIN_CURATED_BODY_CHARS} симв.) — проверьте цитату.\n\n"
+                f"⚠️ Короткий пост (меньше {floor} симв.) — проверьте цитату.\n\n"
             )
             caption = warn + caption
         await bot.send_video(
@@ -3136,10 +3297,9 @@ async def notify_admin(d_id, p_key, text, img_f, *, topic_raw: str | None = None
         cap_limit = 1024 if force_photo_caption else 1000
         caption, continuation = _admin_caption_for_photo(text, max_len=cap_limit)
         if short_body:
-            from rubric_posts import MIN_CURATED_BODY_CHARS
-
+            floor = _curated_min_body_chars(topic_raw)
             warn = (
-                f"⚠️ Короткий пост (<{MIN_CURATED_BODY_CHARS} симв.) — проверьте цитату.\n\n"
+                f"⚠️ Короткий пост (меньше {floor} симв.) — проверьте цитату.\n\n"
             )
             caption = warn + caption
         await bot.send_photo(
@@ -3157,12 +3317,17 @@ async def notify_admin(d_id, p_key, text, img_f, *, topic_raw: str | None = None
         else:
             status_text = "🖼 [БЕЗ ФОТО]\n\n" if p_key != "pension" else "📰 [СВОДКА]\n\n"
         if short_body:
-            from rubric_posts import MIN_CURATED_BODY_CHARS
-
-            status_text = (
-                "⚠️ <b>Короткий пост</b> — для рубрики нужна полная цитата и источник "
-                f"(≥{MIN_CURATED_BODY_CHARS} симв.). Дополните запись в JSON или отклоните.\n\n"
-            ) + status_text
+            floor = _curated_min_body_chars(topic_raw)
+            if topic_raw and lenin_content and lenin_content.is_calendar_topic(topic_raw):
+                status_text = (
+                    "⚠️ <b>Короткий пост</b> — в календаре не хватает факта "
+                    f"(не меньше {floor} симв.).\n\n"
+                ) + status_text
+            else:
+                status_text = (
+                    "⚠️ <b>Короткий пост</b> — для рубрики нужна полная цитата и источник "
+                    f"(не меньше {floor} симв.). Дополните запись в JSON или отклоните.\n\n"
+                ) + status_text
         await bot.send_message(ADMIN_ID, f"{status_text}{text}", reply_markup=kb, parse_mode="HTML")
 
 
@@ -3514,6 +3679,522 @@ async def cmd_diag(message: types.Message):
     if len(text) > max_len:
         text = "…\n" + text[-max_len:]
     await message.answer(text)
+
+
+def _systemctl_is_active(unit: str) -> str:
+    try:
+        import subprocess
+
+        p = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return (p.stdout or p.stderr or "unknown").strip() or "unknown"
+    except Exception as exc:
+        return f"err:{exc}"[:40]
+
+
+def _load_pdf_audio_module():
+    """Ленивая загрузка PDF→MP3 (bots/stepanich/pdf_audio_bot.py)."""
+    import importlib.util
+    import sys
+
+    path = EMPIRE_ROOT / "bots" / "stepanich" / "pdf_audio_bot.py"
+    mod_name = "empire_pdf_audio_bot"
+    existing = sys.modules.get(mod_name)
+    if existing is not None and hasattr(existing, "convert_pdf_to_mp3s"):
+        return existing
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"Не найден модуль: {path}")
+    mod = importlib.util.module_from_spec(spec)
+    # Важно: зарегистрировать до exec_module, иначе @dataclass падает
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+async def _run_service_healer(*, dry: bool = False, no_fix: bool = False) -> str:
+    env = os.environ.copy()
+    env["EMPIRE_HEAL_NO_TG"] = "1"
+    # Сбросить возможные запреты из окружения сервиса на время ручного /fix
+    env.pop("EMPIRE_HEAL_NO_FIX", None)
+    env.pop("EMPIRE_HEAL_DRY_RUN", None)
+    if dry or no_fix:
+        env["EMPIRE_HEAL_NO_FIX"] = "1"
+    if dry:
+        env["EMPIRE_HEAL_DRY_RUN"] = "1"
+    proc = await asyncio.create_subprocess_exec(
+        str(EMPIRE_ROOT / "venv/bin/python"),
+        str(EMPIRE_ROOT / "scripts/empire_service_healer.py"),
+        cwd=str(EMPIRE_ROOT),
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=240)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return "⏱ Таймаут healer 4 мин — смотри /var/log/empire/service-healer.log"
+    text = (stdout.decode("utf-8", errors="replace") if stdout else "").strip()
+    if not text:
+        latest = Path("/var/log/empire/service-healer.log")
+        if latest.is_file():
+            text = latest.read_text(encoding="utf-8", errors="replace")[-3500:]
+        else:
+            text = "Отчёт healer пуст."
+    if len(text) > 3900:
+        text = "…\n" + text[-3900:]
+    return text
+
+
+async def _restart_units(units: list[str], *, include_main: bool = False) -> list[str]:
+    """Рестарт whitelist-unit'ов. empire_main — только если include_main=True и он один в списке или в конце."""
+    lines: list[str] = []
+    main_unit = "empire_main.service"
+    ordered = [u for u in units if u != main_unit]
+    if include_main and main_unit in units:
+        ordered.append(main_unit)
+
+    for unit in ordered:
+        if unit == main_unit:
+            lines.append("♻️ empire_main — рестартую сейчас (бот кратко пропадёт)…")
+            # Ответ уже должен быть отправлен вызывающим кодом до этого шага
+            await asyncio.sleep(0.4)
+            await asyncio.create_subprocess_exec("systemctl", "restart", main_unit)
+            break
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "systemctl",
+                "restart",
+                unit,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=120)
+            state = await asyncio.to_thread(_systemctl_is_active, unit)
+            lines.append(f"{'✅' if state == 'active' else '❌'} {unit}: {state}")
+        except Exception as exc:
+            lines.append(f"❌ {unit}: {exc}")
+    return lines
+
+
+async def _collect_down_safe_units() -> list[str]:
+    down: list[str] = []
+    for unit in VPS_SAFE_RESTART_UNITS.values():
+        state = await asyncio.to_thread(_systemctl_is_active, unit)
+        if state not in ("active", "waiting"):
+            down.append(unit)
+    return down
+
+
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("Бот закрыт: доступ только администратору.")
+    await message.answer(
+        "Привет. Я Николай Степанович.\n\n"
+        + HELP_TEXT
+        + "\n\n"
+        + "───\n"
+        + PDF_HELP_TEXT,
+        parse_mode="HTML",
+    )
+
+
+@dp.message(Command("help"))
+async def cmd_help(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer(HELP_TEXT, parse_mode="HTML")
+
+
+@dp.message(Command("pdf"))
+async def cmd_pdf_help(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    await message.answer(PDF_HELP_TEXT, parse_mode="HTML")
+
+
+def _book_path_allowed(path: Path) -> bool:
+    try:
+        resolved = path.resolve()
+    except Exception:
+        return False
+    roots = [
+        EMPIRE_ROOT.resolve(),
+        (EMPIRE_ROOT / "media").resolve(),
+        (EMPIRE_ROOT / "data").resolve(),
+        Path("/tmp").resolve(),
+    ]
+    for chunk in (os.getenv("PDF_AUDIO_ALLOW_DIRS") or "").split(":"):
+        chunk = chunk.strip()
+        if chunk:
+            roots.append(Path(chunk).expanduser().resolve())
+    return any(resolved == root or root in resolved.parents for root in roots)
+
+
+async def _run_audiobook_job(
+    message: types.Message,
+    source_path: Path,
+    *,
+    status_msg: types.Message,
+    keep_workdir: bool | None = None,
+) -> None:
+    """Озвучка с прогрессом; MP3-части уходят по мере готовности."""
+    mod = _load_pdf_audio_module()
+    convert_book_to_mp3s = getattr(mod, "convert_book_to_mp3s", None) or mod.convert_pdf_to_mp3s
+    media_root = Path(mod.MEDIA_ROOT)
+    media_root.mkdir(parents=True, exist_ok=True)
+    workdir = media_root / f"{message.chat.id}_{message.message_id}_{int(time.time())}"
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    loop = asyncio.get_running_loop()
+    sent_parts = 0
+    last_status_edit = 0.0
+
+    def progress_cb(done, total, part_title, mp3_path, stage):
+        nonlocal sent_parts, last_status_edit
+
+        async def _ui():
+            nonlocal sent_parts, last_status_edit
+            now = time.time()
+            if stage == "prepare":
+                await status_msg.edit_text(
+                    f"📖 Готовлю текст аудиокниги…\n«{str(part_title)[:120]}»"
+                )
+            elif stage == "part_start" and total and (now - last_status_edit >= 8):
+                await status_msg.edit_text(
+                    f"🎙 Озвучка {done + 1}/{total}…\n{str(part_title)[:200]}"
+                )
+                last_status_edit = now
+            elif stage == "part_done" and mp3_path is not None:
+                sent_parts += 1
+                await message.answer_audio(
+                    audio=FSInputFile(mp3_path),
+                    title=Path(mp3_path).stem[:64],
+                    caption=str(part_title)[:1024],
+                )
+                if now - last_status_edit >= 3:
+                    await status_msg.edit_text(
+                        f"✅ Отправлено {sent_parts}/{total}\n"
+                        f"Последняя: {str(part_title)[:160]}"
+                    )
+                    last_status_edit = now
+            elif stage == "done":
+                await status_msg.edit_text(
+                    f"✅ Аудиокнига готова: {sent_parts} MP3.\n"
+                    f"Папка: <code>{workdir}</code>",
+                    parse_mode="HTML",
+                )
+
+        fut = asyncio.run_coroutine_threadsafe(_ui(), loop)
+        try:
+            fut.result(timeout=180)
+        except Exception:
+            logger.exception("audiobook progress UI failed stage=%s", stage)
+
+    try:
+        await status_msg.edit_text(
+            f"📥 <code>{html_std.escape(source_path.name)}</code> "
+            f"({source_path.stat().st_size / 1024 / 1024:.1f} МБ)\n"
+            "Текст → главы → TTS → MP3 частями (приходят по готовности).",
+            parse_mode="HTML",
+        )
+        title, mp3_paths, total_chars = await asyncio.to_thread(
+            convert_book_to_mp3s,
+            source_path,
+            workdir,
+            progress_cb=progress_cb,
+            resume=True,
+        )
+        if total_chars < 40 or not mp3_paths:
+            await status_msg.edit_text("❌ Мало текста или нет MP3. /pdf")
+            return
+        if sent_parts == 0:
+            for idx, mp3_path in enumerate(mp3_paths, start=1):
+                caption = title if len(mp3_paths) == 1 else f"{title}\nЧасть {idx}/{len(mp3_paths)}"
+                await message.answer_audio(
+                    audio=FSInputFile(mp3_path),
+                    title=mp3_path.stem[:64],
+                    caption=caption[:1024],
+                )
+            await status_msg.edit_text(f"✅ Готово: {len(mp3_paths)} частей, {total_chars} симв.")
+    finally:
+        keep = PDF_AUDIO_KEEP_WORKDIR if keep_workdir is None else keep_workdir
+        try:
+            tts_txt = list(workdir.glob("*.tts.txt"))
+            big = bool(tts_txt) and tts_txt[0].stat().st_size > 50_000
+        except Exception:
+            big = False
+        if not keep and not big:
+            try:
+                import shutil
+
+                shutil.rmtree(workdir, ignore_errors=True)
+            except Exception:
+                pass
+
+
+@dp.message(Command("book"))
+async def cmd_book(message: types.Message):
+    """ /book — справка; /book /path/file — большая книга с диска VPS."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = (message.text or "").split(maxsplit=1)
+    if len(args) < 2:
+        await message.answer(PDF_HELP_TEXT, parse_mode="HTML")
+        return
+    raw_path = args[1].strip().strip("\"'")
+    path = Path(raw_path).expanduser()
+    path = (EMPIRE_ROOT / path).resolve() if not path.is_absolute() else path.resolve()
+    if not _book_path_allowed(path):
+        await message.answer(
+            f"Путь вне разрешённых каталогов ({EMPIRE_ROOT}, media/, data/, /tmp)."
+        )
+        return
+    if not path.is_file():
+        await message.answer(f"Файл не найден: <code>{path}</code>", parse_mode="HTML")
+        return
+    if path.suffix.lower() not in {".pdf", ".txt", ".md", ".markdown", ".docx"}:
+        await message.answer("Нужен .pdf / .txt / .md / .docx")
+        return
+    if path.stat().st_size > PDF_AUDIO_LOCAL_MAX_MB * 1024 * 1024:
+        await message.answer(f"Файл больше {PDF_AUDIO_LOCAL_MAX_MB} МБ.")
+        return
+    if pdf_audio_lock.locked():
+        await message.answer("Уже идёт озвучка — подожди.")
+        return
+    async with pdf_audio_lock:
+        status = await message.answer("Старт аудиокниги с диска VPS…")
+        try:
+            await _run_audiobook_job(message, path, status_msg=status, keep_workdir=True)
+        except Exception as exc:
+            logger.exception("book local failed")
+            await status.edit_text(f"❌ Ошибка: {type(exc).__name__}: {exc}")
+
+
+@dp.message(Command("vps"))
+async def cmd_vps_status(message: types.Message):
+    """Быстрый статус ключевых unit'ов автопоста и сайтов."""
+    if message.from_user.id != ADMIN_ID:
+        return
+    lines = ["🖥 <b>VPS статус</b>"]
+    bad = 0
+    for unit in VPS_STATUS_UNITS:
+        state = await asyncio.to_thread(_systemctl_is_active, unit)
+        ok = state in ("active", "waiting")
+        if not ok:
+            bad += 1
+        icon = "✅" if ok else "❌"
+        short = unit.replace(".service", "").replace(".timer", "⏱")
+        lines.append(f"{icon} <code>{short}</code>: {state}")
+    lines.append("")
+    lines.append(
+        f"{'Всё ок' if bad == 0 else f'Проблем: {bad}'}. "
+        "Починить всё: /fix · упавшие: /fix down · точечно: /restart worker|…"
+    )
+    lines.append(
+        "Автоопрос: <code>empire-service-healer.timer</code> каждые ~5 мин. "
+        "Сам бот /fix не рестартит."
+    )
+    await message.answer("\n".join(lines), parse_mode="HTML")
+
+
+@dp.message(Command("fix", "heal"))
+async def cmd_fix(message: types.Message):
+    """Удалённая починка VPS без убийства самого бота.
+
+    /fix | /heal          — полный самохилер (проверка + автопочинка)
+    /fix status          — только отчёт
+    /fix down            — рестарт только упавших (без empire_main)
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = (message.text or "").split()
+    mode = args[1].lower() if len(args) > 1 else "all"
+    if vps_heal_lock.locked():
+        return await message.answer("Уже идёт починка — подожди.")
+
+    async with vps_heal_lock:
+        if mode in ("down", "fallen", "dead"):
+            wait = await message.answer("🛠 Смотрю упавшие сервисы (без рестарта бота)…")
+            try:
+                down = await _collect_down_safe_units()
+                if not down:
+                    await wait.edit_text("✅ Упавших сервисов из whitelist нет. Бот не трогал.")
+                    return
+                lines = await _restart_units(down, include_main=False)
+                # После точечных рестартов — мягкий прогон healer без риска для main
+                report = await _run_service_healer(no_fix=False)
+                text = (
+                    "♻️ Рестарт упавших:\n"
+                    + "\n".join(lines)
+                    + "\n\n── Самохилер ──\n"
+                    + report
+                )
+                await wait.edit_text(text[:4096])
+            except Exception as exc:
+                logger.exception("fix down failed")
+                await wait.edit_text(f"Ошибка /fix down: {exc}")
+            return
+
+        no_fix = mode in ("status", "check", "dry", "report")
+        wait = await message.answer(
+            "🛠 Удалённая починка VPS…\n"
+            + (
+                "Режим: только проверка, без рестартов."
+                if no_fix
+                else "Режим: самохилер (сайты/автопост/таймеры/роутер). Сам бот не рестартую."
+            )
+        )
+        try:
+            report = await _run_service_healer(no_fix=no_fix)
+            footer = (
+                "\n\nДальше: /vps · /fix down · /restart worker"
+                if no_fix
+                else "\n\nГотово. Сам бот не трогал. При необходимости: /restart main"
+            )
+            await wait.edit_text((report + footer)[:4096])
+        except Exception as exc:
+            logger.exception("fix/heal failed")
+            await wait.edit_text(f"Ошибка /fix: {exc}")
+
+
+@dp.message(Command("restart"))
+async def cmd_restart_unit(message: types.Message):
+    """Точечный рестарт unit'а: /restart worker|gdepar|all|main
+
+    /restart all — все из whitelist КРОМЕ empire_main.
+    /restart main — явный рестарт бота.
+    """
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = (message.text or "").split()
+    if len(args) < 2:
+        keys = ", ".join(sorted(VPS_RESTART_UNITS))
+        return await message.answer(
+            f"Формат: /restart &lt;имя|all&gt;\n"
+            f"Имена: {keys}\n"
+            f"<i>all = всё кроме бота; main = только бот</i>",
+            parse_mode="HTML",
+        )
+    key = args[1].lower().strip()
+    if key == "all":
+        targets = list(VPS_SAFE_RESTART_UNITS.values())
+        include_main = False
+    elif key == "main":
+        targets = ["empire_main.service"]
+        include_main = True
+    elif key in VPS_RESTART_UNITS:
+        targets = [VPS_RESTART_UNITS[key]]
+        include_main = key == "main"
+    else:
+        keys = ", ".join(sorted(VPS_RESTART_UNITS))
+        return await message.answer(f"Неизвестное имя: {key}\nДоступно: {keys}, all")
+
+    if vps_heal_lock.locked():
+        return await message.answer("Сейчас идёт /fix — подожди, потом рестарт.")
+
+    wait = await message.answer(f"♻️ Рестарт: {', '.join(targets)}…")
+    try:
+        lines = await _restart_units(targets, include_main=include_main)
+        if include_main and "empire_main.service" in targets:
+            # Сообщение уйдёт до SIGTERM; дальше процесс умрёт сам
+            await wait.edit_text("\n".join(lines) or "Рестарт бота…")
+            return
+        await wait.edit_text("\n".join(lines) or "Нечего рестартить.")
+    except Exception as exc:
+        logger.exception("restart failed")
+        await wait.edit_text(f"Ошибка рестарта: {exc}")
+
+
+@dp.message(F.document)
+async def handle_pdf_document(message: types.Message):
+    """Документ → аудиокнига (pdf/txt/md/docx)."""
+    document = message.document
+    fname = (document.file_name if document else "") or ""
+    mime = (document.mime_type if document else "") or ""
+    logger.info(
+        "book handler: chat=%s user=%s file=%s mime=%s size=%s",
+        getattr(message.chat, "id", None),
+        getattr(message.from_user, "id", None),
+        fname,
+        mime,
+        getattr(document, "file_size", None) if document else None,
+    )
+
+    if not message.from_user or message.from_user.id != ADMIN_ID:
+        await message.answer(
+            f"⛔ Нет доступа.\nВаш ID: `{message.from_user.id if message.from_user else '?'}`",
+            parse_mode="Markdown",
+        )
+        return
+    if not document:
+        return
+
+    name_l = fname.lower()
+    ok_ext = name_l.endswith((".pdf", ".txt", ".md", ".markdown", ".docx"))
+    ok_mime = mime in {
+        "application/pdf",
+        "text/plain",
+        "text/markdown",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    if not (ok_ext or ok_mime):
+        await message.answer(
+            "Нужен PDF / TXT / MD / DOCX документом.\n"
+            "Большая книга: /book /path/on/vps\n/pdf"
+        )
+        return
+
+    tg_hard_limit = 20 * 1024 * 1024
+    max_bytes = min(PDF_AUDIO_MAX_PDF_MB * 1024 * 1024, tg_hard_limit)
+    if document.file_size and document.file_size > max_bytes:
+        safe = html_std.escape(Path(fname).name or "book.pdf")
+        await message.answer(
+            f"Файл {document.file_size / 1024 / 1024:.1f} МБ — больше лимита Telegram (~20 МБ).\n"
+            "Залей на VPS и запусти:\n"
+            f"<code>/book /root/projects/empire/data/{safe}</code>\n/pdf",
+            parse_mode="HTML",
+        )
+        return
+
+    if not GEMINI_API_KEY and (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "edge").strip().lower() in (
+        "gemini",
+    ):
+        await message.answer("Нет GEMINI_API_KEY в .env — озвучка Gemini недоступна.")
+        return
+
+    if pdf_audio_lock.locked():
+        await message.answer("Уже озвучиваю другой файл — подожди.")
+        return
+
+    async with pdf_audio_lock:
+        status = await message.answer("📥 Скачиваю файл для аудиокниги…")
+        try:
+            mod = _load_pdf_audio_module()
+            media_root = Path(mod.MEDIA_ROOT)
+            media_root.mkdir(parents=True, exist_ok=True)
+            workdir_dl = media_root / f"dl_{message.chat.id}_{message.message_id}_{int(time.time())}"
+            workdir_dl.mkdir(parents=True, exist_ok=True)
+            safe_name = Path(fname).name if fname else "input.bin"
+            if "." not in safe_name:
+                if "pdf" in (mime or ""):
+                    safe_name += ".pdf"
+                elif "word" in (mime or ""):
+                    safe_name += ".docx"
+                else:
+                    safe_name += ".txt"
+            src_path = workdir_dl / safe_name
+            await bot.download(document, destination=src_path)
+            await _run_audiobook_job(message, src_path, status_msg=status)
+        except Exception as exc:
+            logger.exception("document audiobook failed")
+            await status.edit_text(f"❌ Ошибка: {type(exc).__name__}: {exc}\n/pdf")
 
 
 @dp.message(Command("autopublish"))
@@ -4434,6 +5115,25 @@ async def cb_curimg(callback: CallbackQuery):
             return await callback.answer("Черновик не найден.", show_alert=True)
         if not _curated_rubric_requires_photo(draft.persona_key, draft.topic_raw):
             return await callback.answer("Только для curated-рубрик.", show_alert=True)
+        if (
+            draft.persona_key == "lenin"
+            and lenin_content
+            and lenin_content.is_calendar_topic(draft.topic_raw or "")
+        ):
+            img = await fetch_wikipedia_image("Ленин Владимир Ильич", d_id)
+            if not img:
+                return await callback.answer("Нет запасного портрета для календаря.", show_alert=True)
+            draft.image_path = img
+            draft.regen_count = (draft.regen_count or 0) + 1
+            await session.commit()
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await notify_admin(
+                d_id, draft.persona_key, draft.text_content, img, topic_raw=draft.topic_raw
+            )
+            return
         sampled = await curated_resample(draft.persona_key, draft.topic_raw or "")
         if not sampled:
             return await callback.answer("Не удалось сменить выпуск рубрики.", show_alert=True)
@@ -4750,32 +5450,28 @@ async def check_scheduler():
     day_idx = str(now.weekday())
 
     for p_key, cfg in CONTENT_CONFIG.items():
+        if not isinstance(cfg, dict) or str(p_key).startswith("_"):
+            continue
         if time_str in cfg.get("schedule", []):
             if sched_guard.already_fired(p_key, now, time_str):
                 continue
             topics_cfg = cfg.get("topics", {})
 
-            if p_key == "stern" and time_str == "15:00":
-                day_bucket = (
-                    topics_cfg.get(day_idx)
-                    if isinstance(topics_cfg.get(day_idx), dict)
-                    else {}
-                )
-                if time_str not in day_bucket:
-                    continue
-
             if day_idx in topics_cfg and isinstance(topics_cfg.get(day_idx), dict):
                 day_bucket = topics_cfg[day_idx]
-                if time_str in day_bucket:
-                    raw_slot = day_bucket[time_str]
-                elif time_str in topics_cfg and not isinstance(topics_cfg.get(time_str), dict):
-                    raw_slot = topics_cfg[time_str]
-                else:
-                    raw_slot = "Свободная тема"
-            elif time_str in topics_cfg:
+                # Sparse matrix: no slot today → skip (do not fall back to «Свободная тема»)
+                if time_str not in day_bucket:
+                    continue
+                raw_slot = day_bucket[time_str]
+            elif time_str in topics_cfg and not isinstance(topics_cfg.get(time_str), dict):
                 raw_slot = topics_cfg.get(time_str, "Свободная тема")
             else:
-                raw_slot = "Свободная тема"
+                continue
+
+            if raw_slot is None or raw_slot == "" or raw_slot == {"type": None}:
+                continue
+            if isinstance(raw_slot, dict) and raw_slot.get("type") is None and not raw_slot.get("variants"):
+                continue
 
             topic, prebuilt, prebuilt_img, rubric_seed = await _resolve_scheduled_slot(
                 p_key, raw_slot, when=now
@@ -4830,6 +5526,7 @@ async def check_scheduler():
                     )
                 )
             )
+            img_f = None
             if prebuilt_img:
                 _pip = (
                     prebuilt_img
@@ -4855,6 +5552,25 @@ async def check_scheduler():
                     topic_hint=topic,
                     topic_raw=topic,
                 )
+            elif (
+                p_key == "garden"
+                and (rubric_seed or {}).get("_kind") == "garden_curated"
+                and not img_f
+            ):
+                # Степаныч curated без файла на диске → fal/flux.
+                gprompt = (
+                    (rubric_seed or {}).get("image_prompt_en")
+                    or img_p
+                    or topic
+                    or "Russian dacha garden"
+                )
+                img_f = await generate_image(
+                    str(gprompt),
+                    d_id,
+                    p_key,
+                    topic_hint=str(gprompt),
+                    topic_raw=topic,
+                )
             else:
                 wiki_hint = img_p
                 if rubric_seed and rubric_seed.get("_kind") == "lenin_calendar":
@@ -4874,16 +5590,28 @@ async def check_scheduler():
                     if img_p
                     else None
                 )
-            if p_key == "lenin" and not img_f:
+            # Ленин: календарь/ПСС — wiki; искусство/кино — НЕ портрет Ленина по умолчанию.
+            _lenin_art_cinema = p_key == "lenin" and (
+                "[Ленин в искусстве]" in (topic or "")
+                or "[Ленин в кино]" in (topic or "")
+            )
+            if p_key == "lenin" and not img_f and not _lenin_art_cinema:
                 rag = (rubric_seed or {}).get("rag_query") if rubric_seed else None
                 if rag:
                     img_f = await fetch_wikipedia_image(rag, d_id)
                 if not img_f:
                     img_f = await fetch_wikipedia_image("Ленин Владимир Ильич", d_id)
+            if p_key == "lenin" and not img_f and _lenin_art_cinema:
+                vis = (rubric_seed or {}).get("visual_query") if rubric_seed else None
+                if vis:
+                    dest = Path("media/lenin/rubrics") / f"topic_{d_id}.jpg"
+                    img_f = await rubric_posts.fetch_wiki_page_image(str(vis), dest)
             is_curated_prebuilt = (
                 (gdepar_content and gdepar_content.CLASSIC_RUBRIC_TAG in (topic or ""))
                 or "[Дуэт]" in (topic or "")
+                or "[Монолог]" in (topic or "")
                 or (rubric_seed or {}).get("_kind") == "stern_curated"
+                or (rubric_seed or {}).get("_kind") == "garden_curated"
                 or (lenin_content and lenin_content.requires_curated_photo(topic or ""))
                 or (garden_content and "[Лунный календарь]" in (topic or ""))
             )
@@ -4894,6 +5622,7 @@ async def check_scheduler():
                 and p_key == "lenin"
                 and lenin_content
                 and lenin_content.requires_curated_photo(topic or "")
+                and not _lenin_art_cinema
             ):
                 img_f = await fetch_wikipedia_image("Ленин Владимир Ильич", d_id)
             if prebuilt and not img_f and not skip_image and p_key in ("gdepar", "lenin") and not is_curated_prebuilt:
@@ -4934,17 +5663,37 @@ async def check_scheduler():
             persona_autopublish = bool(
                 ((cfg_ap.get("personas") or {}).get(p_key) or {}).get("enabled")
             )
+
+            async def _safe_notify_admin() -> None:
+                try:
+                    await notify_admin(d_id, p_key, text, img_f, topic_raw=topic)
+                except Exception as exc:
+                    logger.warning(
+                        "[notify] admin draft #%s %s failed: %s",
+                        d_id,
+                        p_key,
+                        type(exc).__name__,
+                    )
+
             if curated and not persona_autopublish and not (
                 isinstance(rubric_ap, dict) and rubric_ap.get("enabled")
             ):
-                await notify_admin(d_id, p_key, text, img_f, topic_raw=topic)
+                await _safe_notify_admin()
             elif cfg_ap.get("scheduled_only", True) and can_autopublish:
                 if await _try_auto_publish_scheduled(d_id, p_key, text, img_f, topic_raw=topic):
-                    await _notify_admin_auto_compact(d_id, p_key, topic, text, cfg_ap)
+                    try:
+                        await _notify_admin_auto_compact(d_id, p_key, topic, text, cfg_ap)
+                    except Exception as exc:
+                        logger.warning(
+                            "[notify] compact #%s %s failed: %s",
+                            d_id,
+                            p_key,
+                            type(exc).__name__,
+                        )
                 else:
-                    await notify_admin(d_id, p_key, text, img_f, topic_raw=topic)
+                    await _safe_notify_admin()
             else:
-                await notify_admin(d_id, p_key, text, img_f, topic_raw=topic)
+                await _safe_notify_admin()
 
 async def task_generate_rss():
     if generate_zen_rss:

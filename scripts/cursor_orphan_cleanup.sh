@@ -38,8 +38,14 @@ if ((${#FWS[@]} > 1)); then
   keep_fw="${FWS[-1]}"
   for pid in "${FWS[@]}"; do
     [[ "$pid" == "$keep_fw" ]] && continue
+    age=$(eh_age_sec "$pid")
+    # Не трогаем молодые FW — при reconnect их часто двое; убивать = SIGTERM каждые 3 мин.
+    if [ "$age" -le 300 ]; then
+      log "skip young fileWatcher pid=$pid age=${age}s"
+      continue
+    fi
     rss_kb=$(awk '/^Rss:/ {print $2}' /proc/"$pid"/smaps_rollup 2>/dev/null || echo 0)
-    log "killing extra fileWatcher pid=$pid rss_kb=$rss_kb (keep=$keep_fw)"
+    log "killing stale fileWatcher pid=$pid age=${age}s rss_kb=$rss_kb (keep=$keep_fw)"
     kill "$pid" 2>/dev/null || true
     freed=$((freed + rss_kb))
   done

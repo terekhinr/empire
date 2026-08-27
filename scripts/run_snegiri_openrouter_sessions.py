@@ -40,11 +40,12 @@ MASTER = ROOT / "docs" / "snegiri_gemini_master_sessions.md"
 
 # Работают с этого VPS (Google/OpenAI = 403 ToS). Приоритет: цена + качество RU.
 MODEL_CANDIDATES = [
-    "deepseek/deepseek-chat",              # ~$0.14/1M in — основная
-    "qwen/qwen-2.5-72b-instruct",        # сильнее на длинных отчётах
+    "qwen/qwen3-235b-a22b",              # лучшее качество RU на OR
+    "deepseek/deepseek-v3.2",            # основная
+    "deepseek/deepseek-chat",
     "mistralai/mistral-small-3.1-24b-instruct",
-    "qwen/qwen-2.5-7b-instruct",         # дешевле всех
-    "meta-llama/llama-3.1-8b-instruct",
+    "qwen/qwen-2.5-7b-instruct",
+    "meta-llama/llama-3.3-70b-instruct",
 ]
 
 SESSION_ATTACH = {

@@ -1,0 +1,11 @@
+[Unit]
+Description=Empire service healer every 5 min + boot
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+RandomizedDelaySec=45
+
+[Install]
+WantedBy=timers.target

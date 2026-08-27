@@ -1,0 +1,15 @@
+[Unit]
+Description=Empire Flint2 bootstrap HTTP (:8789) for reverse-SSH recovery
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/empire/scripts/flint2
+ExecStart=/usr/bin/python3 /root/projects/empire/scripts/flint2/serve_bootstrap.py
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Morning brief 07:05 MSK (04:05 UTC, after daily audit)
+
+[Timer]
+OnCalendar=*-*-* 04:05:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Задачник</string>
+    <string name="widget_name">Задачник · 7 дней</string>
+    <string name="widget_title">Следующие 7 дней</string>
+    <string name="widget_desc">Просроченные и задачи на неделю — как в TickTick</string>
+    <string name="widget_add">Новая задача</string>
+    <string name="widget_refresh">Обновить</string>
+    <string name="widget_empty">Нет задач на неделю</string>
+    <string name="widget_complete">Выполнить</string>
+    <string name="token_hint">Тот же токен, что в веб-версии (PLANNING_API_TOKEN).</string>
+    <string name="token_placeholder">Токен доступа</string>
+    <string name="token_save">Войти</string>
+</resources>

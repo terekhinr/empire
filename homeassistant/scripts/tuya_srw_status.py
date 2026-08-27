@@ -73,8 +73,8 @@ def _read_values_cloud(cloud: tinytuya.Cloud) -> dict:
 def _read_values_local(cfg: dict) -> dict:
     ver = cfg.get("version") or "3.3"
     dev = tinytuya.Device(DEVICE_ID, cfg["ip"], cfg["local_key"], version=ver)
-    dev.set_socketTimeout(8)
-    dev.set_socketRetryLimit(2)
+    dev.set_socketTimeout(3)
+    dev.set_socketRetryLimit(1)
     st = dev.status()
     if not st or "Error" in str(st):
         raise RuntimeError(f"local status failed: {st}")
@@ -208,11 +208,13 @@ def _discover_by_probe(keys: list[tuple[str, str]]) -> dict | None:
 def _discover_local_cfg() -> dict | None:
     keys = _srw_keys()
 
+    # Сначала быстрый probe известных IP (батарейный SRW часто не отвечает на UDP-scan).
+    probed = _discover_by_probe(keys)
+    if probed:
+        return probed
+
     ip, ver = _scan_ip()
     if not ip:
-        probed = _discover_by_probe(keys)
-        if probed:
-            return probed
         return None
 
     if LOCAL.exists():
@@ -242,7 +244,60 @@ def _discover_local_cfg() -> dict | None:
     return {"ip": ip, "version": ver or "3.3", "local_key": None}
 
 
+
+def fetch_key_and_probe() -> int:
+    """Обновить local_key из Tuya Cloud (если есть .tuya_cloud.json), затем probe."""
+    import subprocess
+    fetch = Path(__file__).with_name("tuya_srw_fetch_key.py")
+    if fetch.exists() and CREDS.exists():
+        try:
+            r = subprocess.run(["python3", str(fetch)], capture_output=True, text=True, timeout=60)
+            print((r.stdout or "")[:300])
+            if r.returncode != 0:
+                print((r.stderr or "")[:300])
+        except Exception as exc:
+            print(f"fetch_key err: {exc}")
+    return probe_and_save()
+
+def probe_and_save() -> int:
+    """Только probe IP из .srw_local / кандидатов — без UDP-scan (быстро)."""
+    keys = _srw_keys()
+    if not keys:
+        return _fail("no local_key (iot.tuya.com / .srw_local.json)")
+    found = _discover_by_probe(keys)
+    if not found:
+        return _fail("SRW спит — короткое нажатие кнопки на датчике (1 сек)")
+    values = found.pop("_values", None)
+    if not values:
+        return _fail("SRW в пейринге — короткое нажатие, не зажимать")
+    LOCAL.write_text(
+        json.dumps({k: found[k] for k in ("ip", "local_key", "version") if k in found},
+                   ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    LOG.unlink(missing_ok=True)
+    payload = {
+        "ip": found["ip"],
+        "version": found.get("version"),
+        "temp": _parse_temp(_pick(values, TEMP_KEYS)),
+        "humidity": int(_pick(values, HUM_KEYS)),
+        "battery": int(_pick(values, BAT_KEYS)),
+        "codes": list(values.keys()),
+    }
+    Path(__file__).with_name("tuya_discover_last.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(payload))
+    return 0
+
+
 def discover_and_save() -> int:
+    # Сначала обновить local_key из Tuya Cloud (если есть .tuya_cloud.json).
+    return fetch_key_and_probe()
+
+
+
+def _unused_discover_full() -> int:
     found = _discover_local_cfg()
     if not found:
         return _fail("SRW-TH01 not found in LAN scan (нажмите кнопку на датчике)")
@@ -294,6 +349,8 @@ def main() -> int:
     try:
         if metric == "discover":
             return discover_and_save()
+        if metric == "probe":
+            return probe_and_save()
         if metric == "diag":
             out = {"device": DEVICE_ID, "local_cfg": LOCAL.exists(), "cloud_cfg": CREDS.exists()}
             if CREDS.exists():

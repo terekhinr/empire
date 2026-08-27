@@ -1,6 +1,10 @@
 const API_BASE = "/tasks/api/planning";
 const TOKEN_KEY = "empire_planning_token";
-const APP_VER = "52";
+const APP_VER = "65";
+const FONT_SCALE_KEY = "empire_font_scale";
+const FONT_SCALE_MIN = 85;
+const FONT_SCALE_MAX = 140;
+const FONT_SCALE_DEFAULT = 100;
 const OFFLINE_SNAPSHOT_KEY = "empire_offline_snapshot";
 const REST_TIMER_PRESETS = [60, 90, 120, 180];
 const REPEAT_MAP = {
@@ -42,6 +46,8 @@ const state = {
   pendingTaskImage: null,
   pendingTaskImageRemove: false,
   workoutProgramSummary: null,
+  programId: localStorage.getItem("empire_workout_program") || "gym_2026",
+  workoutPrograms: [],
   insights: null,
   section: "tasks",
   taskView: "today",
@@ -56,6 +62,7 @@ const state = {
   reminded: new Set(JSON.parse(localStorage.getItem("empire_reminded") || "[]")),
   fmPipelineTab: localStorage.getItem("empire_fm_tab") || "empire",
   restTimer: { endAt: null, pausedRemainingMs: null, intervalId: null, presetSec: 120 },
+  holdTimer: { endAt: null, pausedRemainingMs: null, intervalId: null, idx: null, setNum: null, label: "" },
 };
 
 const TITLES = {
@@ -95,9 +102,9 @@ const HEALTH_VIEWS = new Set(["measurements", "workouts", "program", "health-sta
 
 const PIPELINE_TABS = [
   { view: "today", icon: "today", title: "Сегодня" },
+  { view: "week", icon: "week", title: "Неделя" },
   { view: "calendar", icon: "calendar", title: "Календарь" },
-  { view: "matrix", icon: "matrix", title: "Матрица" },
-  { view: "search", icon: "search", title: "Поиск" },
+  { view: "measurements", icon: "health", title: "Здоровье" },
   { view: "finance-model", icon: "pipeline", title: "Пайплайн" },
 ];
 
@@ -116,9 +123,11 @@ function getTabbarMode(view = state.currentView) {
 function isTabActive(tabView, currentView = state.currentView) {
   if (tabView === currentView) return true;
   if (tabView === "calendar" && currentView === "cal-day") return true;
-  if (tabView === "today" && ["week", "all-tasks", "project-tasks", "projects", "lists", "detail", "done"].includes(currentView)) {
+  if (tabView === "measurements" && HEALTH_VIEWS.has(currentView)) return true;
+  if (tabView === "today" && ["all-tasks", "project-tasks", "projects", "lists", "detail", "done", "search", "someday", "archive", "assistant"].includes(currentView)) {
     return true;
   }
+  if (tabView === "week" && currentView === "week") return true;
   if (tabView === "finance-model" && ["finance-model", "task-stats", "insights"].includes(currentView)) return true;
   return false;
 }
@@ -582,6 +591,7 @@ function renderMobileDrawer() {
   nav.innerHTML = [
     drawerNavRow("today", "Сегодня", c.todayNav || ""),
     drawerNavRow("week", "Следующие 7 дней", c.weekNav || ""),
+    drawerNavRow("search", "Поиск", ""),
     drawerNavRow("all-tasks", "Все задачи", c.all || ""),
     `<button class="drawer-row${state.inboxOnly && state.currentView === "all-tasks" ? " active" : ""}" type="button" data-view="all-tasks" data-inbox="1" data-drawer-close="1">${window.NavIcons ? NavIcons.badge("inbox") : ""}<span class="drawer-row-label">Входящие</span><span class="drawer-row-count">${inboxCount || ""}</span></button>`,
     drawerNavRow("done", "История", ""),
@@ -638,7 +648,38 @@ function syncOverflowHideDoneLabel() {
 }
 
 function quickAddHtml() {
-  return `<button type="button" class="quick-add" data-action="quick-add">+ Новая задача</button>`;
+  // FAB «+» уже есть — отдельная строка сверху только засоряет список
+  return "";
+}
+
+function defaultDueForQuickAdd() {
+  if (state.currentView === "cal-day" && state.calendarDay) return state.calendarDay;
+  if (state.currentView === "today" || state.currentView === "week") return todayStr();
+  if (state.currentView === "project-tasks" || state.currentView === "all-tasks") return todayStr();
+  return todayStr();
+}
+
+async function quickCaptureCreate(titleRaw) {
+  const title = String(titleRaw || "").trim();
+  if (!title) return;
+  const body = {
+    title,
+    due_date: defaultDueForQuickAdd(),
+    priority: 0,
+    project_id: state.currentView === "project-tasks" && state.projectFilter ? state.projectFilter : null,
+    tags: [],
+  };
+  await api("/tasks", { method: "POST", body: JSON.stringify(body) });
+  await loadAll();
+  showToast("Добавлено");
+}
+
+function focusQuickCapture() {
+  const input = document.querySelector("#main .quick-capture-input");
+  if (input) {
+    input.focus();
+    input.select?.();
+  }
 }
 
 function renderTaskList(items, { compact = true } = {}) {
@@ -806,8 +847,41 @@ function renderSidebarNav() {
   renderMobileDrawer();
 }
 
+function suppressAutofillBar(el) {
+  if (!el || el.dataset.autofillSuppressed === "1") return;
+  el.dataset.autofillSuppressed = "1";
+  // Chrome часто игнорит autocomplete=off — короткий readonly на фокусе глушит панель подсказок
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("data-lpignore", "true");
+  el.setAttribute("data-1p-ignore", "true");
+  el.setAttribute("data-form-type", "other");
+  el.addEventListener("focus", () => {
+    el.setAttribute("readonly", "readonly");
+    requestAnimationFrame(() => {
+      el.removeAttribute("readonly");
+    });
+  });
+}
+
 function token() {
   return localStorage.getItem(TOKEN_KEY) || "";
+}
+
+function getFontScale() {
+  const n = Number(localStorage.getItem(FONT_SCALE_KEY) || FONT_SCALE_DEFAULT);
+  if (!Number.isFinite(n)) return FONT_SCALE_DEFAULT;
+  return Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, Math.round(n)));
+}
+
+function applyFontScale(pct = getFontScale()) {
+  const scale = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, Math.round(Number(pct) || FONT_SCALE_DEFAULT)));
+  localStorage.setItem(FONT_SCALE_KEY, String(scale));
+  document.documentElement.style.setProperty("--font-scale", String(scale / 100));
+  const label = document.getElementById("settings-font-scale-value");
+  if (label) label.textContent = `${scale}%`;
+  const preview = document.getElementById("settings-font-preview");
+  if (preview) preview.textContent = scale === 100 ? "Так выглядит текст задач" : `Так выглядит текст · ${scale}%`;
+  return scale;
 }
 
 function showToast(msg) {
@@ -955,6 +1029,68 @@ function dateToIsoLocal(d) {
 
 function todayStr() {
   return dateToIsoLocal(new Date());
+}
+
+function defaultProgramAnchor() {
+  const today = todayStr();
+  const d = new Date(`${today}T12:00:00`);
+  let daysAhead = (0 - d.getDay() + 1) % 7;
+  if (daysAhead === 0) daysAhead = 7;
+  d.setDate(d.getDate() + daysAhead);
+  return dateToIsoLocal(d);
+}
+
+function programScheduleStorageKey(programId) {
+  return `empire_program_schedule_${programId || "gym_2026"}`;
+}
+
+function getProgramSchedule(programId) {
+  const pid = programId || state.programId || "gym_2026";
+  try {
+    const raw = localStorage.getItem(programScheduleStorageKey(pid));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.anchor && parsed.startDay) return parsed;
+    }
+  } catch (_) {}
+  return { anchor: defaultProgramAnchor(), startDay: "A" };
+}
+
+function saveProgramSchedule(programId, schedule) {
+  const pid = programId || state.programId || "gym_2026";
+  localStorage.setItem(programScheduleStorageKey(pid), JSON.stringify(schedule));
+}
+
+function programScheduleHtml() {
+  const sch = getProgramSchedule(state.programId);
+  const opts = ["A", "B", "C"]
+    .map((d) => `<option value="${d}"${sch.startDay === d ? " selected" : ""}>День ${d}</option>`)
+    .join("");
+  return `<div class="program-schedule card">
+    <div class="program-schedule-row">
+      <label class="program-schedule-field">Старт цикла
+        <input type="date" id="program-anchor" value="${escapeHtml(sch.anchor)}">
+      </label>
+      <label class="program-schedule-field">Первый день
+        <select id="program-start-day">${opts}</select>
+      </label>
+    </div>
+    <div class="program-schedule-hint">Тренировки: понедельник · среда · пятница</div>
+  </div>`;
+}
+
+function bindProgramScheduleHandlers(el) {
+  const anchorInp = el.querySelector("#program-anchor");
+  const startSel = el.querySelector("#program-start-day");
+  const onChange = () => {
+    saveProgramSchedule(state.programId, {
+      anchor: anchorInp?.value || defaultProgramAnchor(),
+      startDay: startSel?.value || "A",
+    });
+    renderWorkoutProgram().catch((err) => showToast(err.message));
+  };
+  anchorInp?.addEventListener("change", onChange);
+  startSel?.addEventListener("change", onChange);
 }
 
 function addDays(n) {
@@ -1979,13 +2115,161 @@ function syncRestTimerUI() {
   }
 }
 
+function initRestTimerControls() {
+  const autostart = document.getElementById("rest-autostart");
+  if (autostart) {
+    autostart.checked = restTimerAutostartEnabled();
+    autostart.addEventListener("change", () => {
+      localStorage.setItem("empire_rest_autostart", autostart.checked ? "1" : "0");
+    });
+  }
+  syncRestTimerUI();
+}
+
+function stopHoldTimerInterval() {
+  if (state.holdTimer.intervalId) {
+    clearInterval(state.holdTimer.intervalId);
+    state.holdTimer.intervalId = null;
+  }
+}
+
+function holdTimerRemainingMs() {
+  const ht = state.holdTimer;
+  if (ht.pausedRemainingMs != null) return ht.pausedRemainingMs;
+  if (!ht.endAt) return 0;
+  return Math.max(0, ht.endAt - Date.now());
+}
+
+function holdTimerIsRunning() {
+  return state.holdTimer.endAt != null || state.holdTimer.pausedRemainingMs != null;
+}
+
+function formatHoldTimer(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  return String(totalSec);
+}
+
+function syncHoldTimerUI() {
+  const bar = document.getElementById("hold-timer-bar");
+  const display = document.getElementById("hold-timer-display");
+  const label = document.getElementById("hold-timer-label");
+  const pauseBtn = document.getElementById("hold-pause-btn");
+  if (!bar) return;
+  const running = holdTimerIsRunning();
+  const paused = state.holdTimer.pausedRemainingMs != null;
+  bar.classList.toggle("hidden", !running);
+  bar.classList.toggle("hold-timer-bar--active", running);
+  bar.setAttribute("aria-hidden", running ? "false" : "true");
+  if (display && running) display.textContent = formatHoldTimer(holdTimerRemainingMs());
+  if (label) label.textContent = state.holdTimer.label || "Удержание";
+  if (pauseBtn) {
+    pauseBtn.textContent = paused ? "Продолжить" : "Пауза";
+    pauseBtn.dataset.action = paused ? "hold-resume" : "hold-pause";
+  }
+  const root = document.getElementById("view-program");
+  if (root && state.holdTimer.idx != null && state.holdTimer.setNum != null) {
+    const status = root.querySelector(
+      `.pg-hold-status[data-idx="${state.holdTimer.idx}"][data-set="${state.holdTimer.setNum}"]`,
+    );
+    if (status && running) status.textContent = paused ? "пауза" : `${formatHoldTimer(holdTimerRemainingMs())} сек`;
+    else if (status && !running) status.textContent = "";
+  }
+}
+
+function onHoldTimerComplete() {
+  const idx = state.holdTimer.idx;
+  const setNum = state.holdTimer.setNum;
+  stopHoldTimerInterval();
+  state.holdTimer.endAt = null;
+  state.holdTimer.pausedRemainingMs = null;
+  syncHoldTimerUI();
+  playRestTimerBeep();
+  if (navigator.vibrate) navigator.vibrate([180, 80, 180]);
+  showToast("Удержание завершено");
+  const root = document.getElementById("view-program");
+  if (root && idx != null && setNum != null) {
+    const ex = state.programSession?.exercises?.[Number(idx)];
+    const secInp = root.querySelector(`.pg-hold-sec[data-idx="${idx}"][data-set="${setNum}"]`);
+    // Авто-галочка только для чисто временных подходов (планка), не для Макгилла с повторами
+    if (ex?.is_time_hold) {
+      const cb = root.querySelector(`.pg-set-done[data-idx="${idx}"][data-set="${setNum}"]`);
+      if (cb) {
+        cb.checked = true;
+        updateProgramDots(root, idx);
+        if (restTimerAutostartEnabled()) startRestTimer(getRestTimerDefaultSec());
+      }
+      if (secInp) secInp.dataset.touched = "1";
+      scheduleProgramAutoSave();
+    }
+  }
+}
+
+function tickHoldTimer() {
+  if (state.holdTimer.pausedRemainingMs != null) return;
+  const left = holdTimerRemainingMs();
+  if (left <= 0) {
+    onHoldTimerComplete();
+    return;
+  }
+  syncHoldTimerUI();
+}
+
+function startHoldTimer(idx, setNum, seconds, label) {
+  const sec = Math.max(1, Number(seconds) || 60);
+  stopHoldTimer();
+  state.holdTimer.idx = idx;
+  state.holdTimer.setNum = setNum;
+  state.holdTimer.label = label || "Удержание";
+  state.holdTimer.pausedRemainingMs = null;
+  state.holdTimer.endAt = Date.now() + sec * 1000;
+  syncHoldTimerUI();
+  tickHoldTimer();
+  state.holdTimer.intervalId = setInterval(tickHoldTimer, 200);
+}
+
+function pauseHoldTimer() {
+  if (state.holdTimer.pausedRemainingMs != null) return;
+  const left = holdTimerRemainingMs();
+  if (!left) return;
+  stopHoldTimerInterval();
+  state.holdTimer.pausedRemainingMs = left;
+  state.holdTimer.endAt = null;
+  syncHoldTimerUI();
+}
+
+function resumeHoldTimer() {
+  if (state.holdTimer.pausedRemainingMs == null) return;
+  state.holdTimer.endAt = Date.now() + state.holdTimer.pausedRemainingMs;
+  state.holdTimer.pausedRemainingMs = null;
+  stopHoldTimerInterval();
+  syncHoldTimerUI();
+  tickHoldTimer();
+  state.holdTimer.intervalId = setInterval(tickHoldTimer, 200);
+}
+
+function stopHoldTimer() {
+  stopHoldTimerInterval();
+  state.holdTimer.endAt = null;
+  state.holdTimer.pausedRemainingMs = null;
+  state.holdTimer.idx = null;
+  state.holdTimer.setNum = null;
+  state.holdTimer.label = "";
+  syncHoldTimerUI();
+}
+
 function syncRestTimerChrome(view) {
   const bar = document.getElementById("rest-timer-bar");
   if (!bar) return;
   const show = view === "workouts" || view === "program";
   bar.classList.toggle("hidden", !show);
   bar.setAttribute("aria-hidden", show ? "false" : "true");
-  if (show) syncRestTimerUI();
+  document.body.classList.toggle("health-timers-on", show);
+  if (show) {
+    document.getElementById("fab-add")?.classList.add("hidden");
+    document.getElementById("fab-ai")?.classList.add("hidden");
+    syncRestTimerUI();
+  }
+  if (view !== "program") stopHoldTimer();
 }
 
 function initRestTimerControls() {
@@ -2006,7 +2290,7 @@ function renderWorkouts() {
   const to = addDaysToDateStr(state.workoutDiaryDate, 7);
   const nav = workoutDiaryNavHtml(state.workoutDiaryDate, "workout-diary-date");
   const programLink = `<div class="card program-promo">
-    <strong>Программа 2026</strong> — шаблон дня (A/B/C), веса и подходы из плана.
+    <strong>Программы</strong> — зал (2026) и <em>Работа вне зала</em> (резина + стадион).
     <button type="button" class="btn linkish" data-goto="program">Открыть программу →</button>
   </div>`;
   api(`/workouts?from_date=${from}&to_date=${to}&limit=200`)
@@ -2057,7 +2341,7 @@ async function loadProgramSession(on) {
   state.workoutDiaryDate = state.programDate;
   try {
     const [session, logsRes] = await Promise.all([
-      api(`/workouts/program/session?on=${encodeURIComponent(state.programDate)}`),
+      api(`/workouts/program/session?on=${encodeURIComponent(state.programDate)}&${programApiQuery()}`),
       api(`/workouts?logged_on=${encodeURIComponent(state.programDate)}`),
     ]);
     state.programSession = session;
@@ -2068,8 +2352,24 @@ async function loadProgramSession(on) {
   }
 }
 
+function currentProgramNotePrefix() {
+  const id = state.programId || "gym_2026";
+  const meta = (state.workoutPrograms || []).find((p) => p.id === id);
+  return meta?.note_prefix || (id === "outside_hall" ? "внезала подход" : "подход");
+}
+
+function programApiQuery() {
+  const sch = getProgramSchedule(state.programId);
+  const q = new URLSearchParams({
+    program: state.programId || "gym_2026",
+    anchor: sch.anchor,
+    start_day: sch.startDay,
+  });
+  return q.toString();
+}
+
 function savedProgramSet(logs, exerciseKey, setNum) {
-  const prefix = `подход ${setNum}/`;
+  const prefix = `${currentProgramNotePrefix()} ${setNum}/`;
   return logs.find((l) => l.exercise_key === exerciseKey && (l.note || "").startsWith(prefix));
 }
 
@@ -2078,13 +2378,25 @@ function programSetCount(ex) {
   return Math.max(1, ex.sets || 1);
 }
 
+function programHoldDefaultSec(ex) {
+  return ex.hold_seconds || ex.reps || ex.reps_max || ex.reps_min || 60;
+}
+
+function programHoldSec(ex) {
+  if (ex.hold_seconds) return Number(ex.hold_seconds);
+  if (ex.is_time_hold) return programHoldDefaultSec(ex);
+  return null;
+}
+
 function programExerciseRowHtml(ex, idx, logs) {
   if (ex.is_rest) {
     return `<div class="program-rest card">${escapeHtml(ex.detail || "Отдых")}</div>`;
   }
   const n = programSetCount(ex);
+  const isHold = !!ex.is_time_hold;
+  const holdSec = programHoldSec(ex);
   const w0 = ex.suggested_weight_kg ?? "";
-  const reps0 = ex.reps ?? ex.reps_max ?? ex.reps_min ?? 10;
+  const reps0 = isHold ? programHoldDefaultSec(ex) : (ex.reps ?? ex.reps_max ?? ex.reps_min ?? 10);
   const hint = [ex.prescription, ex.detail].filter(Boolean).join(" · ");
   const setRows = [];
   for (let s = 1; s <= n; s += 1) {
@@ -2093,26 +2405,59 @@ function programExerciseRowHtml(ex, idx, logs) {
     const rVal = saved ? saved.reps : reps0;
     const checked = saved ? "checked" : "";
     const touched = saved ? 'data-touched="1"' : "";
-    setRows.push(`<div class="program-set-row">
+    if (isHold) {
+      setRows.push(`<div class="program-set-row program-set-row--hold">
+      <label class="set-check"><input type="checkbox" class="pg-set-done" data-idx="${idx}" data-set="${s}" ${checked}></label>
+      <span class="set-num">${s}</span>
+      <input type="number" class="pg-hold-sec pg-r" data-idx="${idx}" data-set="${s}" min="1" max="600" value="${rVal}" placeholder="сек" inputmode="numeric" ${touched}>
+      <button type="button" class="btn small pg-hold-start" data-action="hold-start" data-idx="${idx}" data-set="${s}" title="Таймер">⏱</button>
+      <span class="pg-hold-status" data-idx="${idx}" data-set="${s}"></span>
+    </div>`);
+    } else {
+      const holdBtn = holdSec
+        ? `<button type="button" class="btn small pg-hold-start" data-action="hold-start" data-idx="${idx}" data-set="${s}" data-hold-sec="${holdSec}" title="Удержание ${holdSec} сек">⏱ ${holdSec}</button>`
+        : "";
+      setRows.push(`<div class="program-set-row${holdSec ? " program-set-row--with-hold" : ""}">
       <label class="set-check"><input type="checkbox" class="pg-set-done" data-idx="${idx}" data-set="${s}" ${checked}></label>
       <span class="set-num">${s}</span>
       <input type="number" class="pg-w" data-idx="${idx}" data-set="${s}" min="0" step="2.5" value="${wVal !== "" && wVal != null ? wVal : ""}" placeholder="кг" inputmode="decimal" ${touched}>
       <input type="number" class="pg-r" data-idx="${idx}" data-set="${s}" min="1" max="50" value="${rVal}" placeholder="повт" inputmode="numeric" ${touched}>
+      ${holdBtn}
     </div>`);
+    }
   }
-  const doneCount = setRows.length ? logs.filter((l) => l.exercise_key === ex.exercise_key && (l.note || "").startsWith("подход ")).length : 0;
+  const doneCount = setRows.length
+    ? logs.filter((l) => {
+        const note = l.note || "";
+        return l.exercise_key === ex.exercise_key && note.startsWith(`${currentProgramNotePrefix()} `);
+      }).length
+    : 0;
   const dots = `${"●".repeat(Math.min(doneCount, n))}${"○".repeat(Math.max(0, n - doneCount))}`;
-  return `<details class="program-ex card">
+  const headCols = isHold
+    ? `<div class="program-sets-head program-sets-head--hold"><span></span><span>#</span><span>сек</span><span>⏱</span><span></span></div>`
+    : holdSec
+      ? `<div class="program-sets-head program-sets-head--with-hold"><span></span><span>#</span><span>кг</span><span>повт</span><span>⏱</span></div>`
+      : `<div class="program-sets-head"><span></span><span>#</span><span>кг</span><span>повт</span></div>`;
+  const planLabel = isHold
+    ? `${escapeHtml(ex.prescription)} · ${programHoldDefaultSec(ex)} сек`
+    : holdSec
+      ? `${escapeHtml(ex.prescription)} · ⏱ ${holdSec} сек`
+      : escapeHtml(ex.prescription);
+  const quickHold = holdSec
+    ? `<button type="button" class="btn small program-hold-quick" data-action="hold-start" data-idx="${idx}" data-set="1" data-hold-sec="${holdSec}" title="Таймер ${holdSec} сек">⏱ ${holdSec} сек</button>`
+    : "";
+  return `<details class="program-ex card${isHold || holdSec ? " program-ex--hold" : ""}" ${isHold || holdSec ? "open" : ""}>
     <summary class="program-ex-summary">
       <span class="program-ex-title">${escapeHtml(ex.exercise_label)}</span>
-      <span class="program-plan">${escapeHtml(ex.prescription)}</span>
+      <span class="program-plan">${planLabel}</span>
+      ${quickHold}
       <span class="program-dots" data-idx="${idx}">${dots}</span>
     </summary>
     <div class="program-ex-hint">${escapeHtml(hint)}</div>
     <div class="program-ex-body">
-      <div class="program-sets-head"><span></span><span>#</span><span>кг</span><span>повт</span></div>
+      ${headCols}
       ${setRows.join("")}
-      ${n > 1 ? `<button type="button" class="btn linkish pg-copy-w" data-idx="${idx}">Тот же вес во всех</button>` : ""}
+      ${!isHold && n > 1 ? `<button type="button" class="btn linkish pg-copy-w" data-idx="${idx}">Тот же вес во всех</button>` : ""}
     </div>
   </details>`;
 }
@@ -2143,7 +2488,7 @@ function bindProgramExerciseHandlers(root) {
       scheduleProgramAutoSave();
     };
   });
-  root.querySelectorAll(".pg-w, .pg-r").forEach((inp) => {
+  root.querySelectorAll(".pg-w, .pg-r, .pg-hold-sec").forEach((inp) => {
     inp.addEventListener("input", () => {
       inp.dataset.touched = "1";
       scheduleProgramAutoSave();
@@ -2236,32 +2581,32 @@ async function renderInsights() {
 
 async function renderWorkoutProgram() {
   const el = document.getElementById("view-program");
-  if (!state.workoutProgramSummary) {
-    try {
-      state.workoutProgramSummary = await api("/workouts/program/summary");
-    } catch {
-      el.innerHTML = '<div class="empty">Файл программы не найден на сервере</div>';
-      return;
+  try {
+    state.workoutProgramSummary = await api(`/workouts/program/summary?${programApiQuery()}`);
+    state.workoutPrograms = state.workoutProgramSummary.programs || state.workoutPrograms || [];
+    if (state.workoutProgramSummary.program_id) {
+      state.programId = state.workoutProgramSummary.program_id;
     }
+  } catch {
+    el.innerHTML = '<div class="empty">Файл программы не найден на сервере</div>';
+    return;
   }
   await loadProgramSession(state.programDate);
   const sum = state.workoutProgramSummary;
   const s = state.programSession;
   const nav = workoutDiaryNavHtml(state.programDate, "program-date");
+  const switcher = programSwitcherHtml();
+  const schedule = programScheduleHtml();
   const head = `<div class="card program-head">
-    <div class="program-range">${sum.start} — ${sum.end} · ${sum.calendar_days} тренировок</div>
+    ${switcher}
+    ${schedule}
+    <div class="program-range">${escapeHtml(sum.title || "")} · ${sum.start || "—"} — ${sum.end || "—"} · ${sum.calendar_days || 0} тренировок</div>
     ${nav}
     <div id="program-autosave-hint" class="program-autosave-hint">Подходы сохраняются автоматически</div>
   </div>`;
   if (!s) {
-    el.innerHTML = head + '<div class="empty">На эту дату нет тренировки по календарю</div>';
-    bindDiaryNav(el, {
-      inputId: "program-date",
-      onChange: async (val) => {
-        state.programDate = val;
-        await renderWorkoutProgram();
-      },
-    });
+    el.innerHTML = head + '<div class="empty">На эту дату нет тренировки по календарю этой программы</div>';
+    bindProgramChrome(el);
     return;
   }
   const meta = s.meta && Object.keys(s.meta).length
@@ -2278,6 +2623,30 @@ async function renderWorkoutProgram() {
     <div class="section-title">Упражнения</div>
     ${exercises}
     <button type="button" class="btn block" id="btn-save-program">Сохранить сейчас</button>`;
+  bindProgramChrome(el);
+  document.getElementById("btn-save-program").onclick = () => saveProgramWorkout({ silent: false });
+  bindProgramExerciseHandlers(el);
+  el.querySelectorAll(".program-dots").forEach((d) => updateProgramDots(el, d.dataset.idx));
+}
+
+function programSwitcherHtml() {
+  const programs = state.workoutPrograms?.length
+    ? state.workoutPrograms
+    : [
+        { id: "gym_2026", title: "Программа 2026", short: "Зал" },
+        { id: "outside_hall", title: "Работа вне зала", short: "Вне зала" },
+      ];
+  const chips = programs
+    .map((p) => {
+      const active = (state.programId || "gym_2026") === p.id ? " active" : "";
+      return `<button type="button" class="chip program-switch-chip${active}" data-action="switch-program" data-program-id="${escapeHtml(p.id)}">${escapeHtml(p.short || p.title)}</button>`;
+    })
+    .join("");
+  return `<div class="program-switcher chip-row">${chips}</div>`;
+}
+
+function bindProgramChrome(el) {
+  bindProgramScheduleHandlers(el);
   bindDiaryNav(el, {
     inputId: "program-date",
     onChange: async (val) => {
@@ -2285,9 +2654,6 @@ async function renderWorkoutProgram() {
       await renderWorkoutProgram();
     },
   });
-  document.getElementById("btn-save-program").onclick = () => saveProgramWorkout({ silent: false });
-  bindProgramExerciseHandlers(el);
-  el.querySelectorAll(".program-dots").forEach((d) => updateProgramDots(el, d.dataset.idx));
 }
 
 function collectProgramEntries() {
@@ -2308,7 +2674,6 @@ function collectProgramEntries() {
       const wRaw = wInp?.value;
       const reps = Number(rInp?.value || 0);
       if (!reps || reps < 1) continue;
-      if (!reps || reps < 1) continue;
       const w = wRaw === "" || wRaw == null ? 0 : Number(wRaw);
       entries.push({
         logged_on: state.programDate,
@@ -2316,7 +2681,7 @@ function collectProgramEntries() {
         weight_kg: w,
         reps,
         sets: 1,
-        note: `подход ${set}/${n}`,
+        note: `${currentProgramNotePrefix()} ${set}/${n}`,
       });
     }
   });
@@ -2347,6 +2712,7 @@ async function saveProgramWorkout({ silent = false, auto = false } = {}) {
         logged_on: state.programDate,
         entries,
         replace_program: true,
+        program_id: state.programId || "gym_2026",
       }),
     });
     const logsRes = await api(`/workouts?logged_on=${encodeURIComponent(state.programDate)}`);
@@ -2511,6 +2877,32 @@ function renderAllTasks() {
     ].filter(Boolean).join("") || `${quickAddHtml()}<div class="empty">Нет активных задач</div>`;
 }
 
+async function showLocalNotification(title, options = {}) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return false;
+  const opts = {
+    icon: "/tasks/assets/icon-192.png",
+    badge: "/tasks/assets/icon-192.png",
+    ...options,
+  };
+  if (opts.image && typeof opts.image === "string" && opts.image.startsWith("/")) {
+    opts.image = `${location.origin}${opts.image}`;
+  }
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, opts);
+      return true;
+    }
+  } catch (_) {}
+  try {
+    // Desktop; on Android Chrome new Notification() throws Illegal constructor
+    new Notification(title, opts);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function checkHealthReminders() {
   const s = state.healthSettings;
   if (!s.remind_measure_sunday) return;
@@ -2521,11 +2913,11 @@ function checkHealthReminders() {
   const weekKey = isoWeekKey();
   if (localStorage.getItem("empire_measure_reminded_week") === weekKey) return;
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-  new Notification("Empire", {
+  localStorage.setItem("empire_measure_reminded_week", weekKey);
+  void showLocalNotification("Задачник", {
     body: "Воскресенье — время замеров тела (вес, талия, бицепсы)",
     tag: "measure-sunday",
   });
-  localStorage.setItem("empire_measure_reminded_week", weekKey);
 }
 
 function fillExerciseSelect(selected) {
@@ -3117,11 +3509,142 @@ function renderSearch(q) {
         (t.tags || []).some((x) => x.toLowerCase().includes(query))
     );
   }
-  items = items.filter((t) => t.status !== "done").sort(sortByDueTime);
+  items = items.filter((t) => t.status !== "done" && t.status !== "archived").sort(sortByDueTime);
   el.innerHTML = [
     tagFilterBarHtml(),
     items.length ? renderTaskList(items) : '<div class="empty">Ничего не найдено</div>',
   ].join("");
+}
+
+async function renderSomeday() {
+  const el = document.getElementById("view-someday");
+  if (!el) return;
+  el.innerHTML = '<div class="empty">Загрузка…</div>';
+  try {
+    const res = await api("/tasks/someday");
+    const items = res.tasks || [];
+    el.innerHTML = [
+      '<p class="hint">Задачи без срока — как «Когда-нибудь» в Singularity. Назначьте дату или закройте.</p>',
+      items.length
+        ? renderTaskList(items)
+        : '<div class="empty">Пусто — сюда попадают задачи без due date</div>',
+    ].join("");
+  } catch (err) {
+    el.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function renderArchive() {
+  const el = document.getElementById("view-archive");
+  if (!el) return;
+  el.innerHTML = '<div class="empty">Загрузка…</div>';
+  try {
+    const res = await api("/tasks/archive");
+    const items = res.tasks || [];
+    el.innerHTML = [
+      `<div class="card program-promo" style="margin-bottom:12px">
+        <div>Архив — выполненные, убранные из истории.</div>
+        <button type="button" class="btn linkish" data-action="archive-done-bulk">Перенести всю историю в архив →</button>
+      </div>`,
+      items.length ? renderTaskList(items) : '<div class="empty">Архив пуст</div>',
+    ].join("");
+    el.querySelector('[data-action="archive-done-bulk"]')?.addEventListener("click", async () => {
+      if (!confirm("Перенести все выполненные задачи в архив?")) return;
+      const r = await api("/tasks/archive-done", { method: "POST", body: "{}" });
+      showToast(`В архив: ${r.archived || 0}`);
+      await loadAll();
+      renderArchive();
+    });
+  } catch (err) {
+    el.innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function assistantBubble(role, text, extraHtml = "") {
+  return `<div class="asst-msg asst-msg--${role}">
+    <div class="asst-bubble">${formatPlainText(text)}${extraHtml}</div>
+  </div>`;
+}
+
+function assistantTaskChips(tasks) {
+  if (!tasks?.length) return "";
+  return `<div class="asst-chips">${tasks
+    .slice(0, 12)
+    .map(
+      (t) =>
+        `<button type="button" class="asst-chip" data-action="open-task" data-id="${t.id}">#${t.id} ${escapeHtml(t.title)}${t.due_date ? ` · ${escapeHtml(t.due_date)}` : ""}</button>`
+    )
+    .join("")}</div>`;
+}
+
+async function renderAssistant() {
+  const el = document.getElementById("view-assistant");
+  if (!el) return;
+  if (!state.assistantHistory) state.assistantHistory = [];
+  const hist = state.assistantHistory
+    .map((m) => assistantBubble(m.role, m.content, m.extra || ""))
+    .join("");
+  el.innerHTML = `
+    <div class="asst-wrap">
+      <p class="hint">Быстрый поиск и создание: «найди гирю», «создай завтра позвонить врачу», «когда-нибудь идея книги».</p>
+      <div class="asst-feed" id="asst-feed">${hist || assistantBubble("assistant", "Чем помочь? Могу найти задачи или создать новые.")}</div>
+      <form class="asst-compose" id="asst-form" autocomplete="off" data-lpignore="true">
+        <input id="asst-input" type="text" name="zdk-asst" placeholder="Найти или создать задачу…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="2000" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text">
+        <button class="btn primary" type="submit">Отправить</button>
+      </form>
+      <div class="asst-quick">
+        <button type="button" class="chip" data-asst-q="найди просроченные">Просроченные</button>
+        <button type="button" class="chip" data-asst-q="создай сегодня тренировка день A">Тренировка сегодня</button>
+        <button type="button" class="chip" data-asst-q="перенеси выполненные в архив">В архив</button>
+      </div>
+    </div>`;
+  const feed = el.querySelector("#asst-feed");
+  const form = el.querySelector("#asst-form");
+  const input = el.querySelector("#asst-input");
+  const send = async (text) => {
+    const msg = (text || "").trim();
+    if (!msg) return;
+    state.assistantHistory.push({ role: "user", content: msg });
+    feed.insertAdjacentHTML("beforeend", assistantBubble("user", msg));
+    input.value = "";
+    feed.insertAdjacentHTML("beforeend", assistantBubble("assistant", "Думаю…"));
+    feed.scrollTop = feed.scrollHeight;
+    try {
+      const res = await api("/assistant", {
+        method: "POST",
+        body: JSON.stringify({
+          message: msg,
+          history: state.assistantHistory.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      feed.lastElementChild?.remove();
+      let extra = "";
+      if (res.matches?.length) extra += assistantTaskChips(res.matches);
+      if (res.created?.length) extra += `<div class="hint">Создано: ${res.created.length}</div>` + assistantTaskChips(res.created);
+      if (res.completed?.length) extra += `<div class="hint">Закрыто: ${res.completed.length}</div>`;
+      if (res.archived) extra += `<div class="hint">В архив: ${res.archived}</div>`;
+      const reply = res.reply || "Готово.";
+      state.assistantHistory.push({ role: "assistant", content: reply, extra });
+      feed.insertAdjacentHTML("beforeend", assistantBubble("assistant", reply, extra));
+      if (res.created?.length || res.completed?.length || res.archived) await loadAll();
+    } catch (err) {
+      feed.lastElementChild?.remove();
+      const errText = err.message || "Ошибка";
+      state.assistantHistory.push({ role: "assistant", content: errText });
+      feed.insertAdjacentHTML("beforeend", assistantBubble("assistant", errText));
+    }
+    feed.scrollTop = feed.scrollHeight;
+    hydrateNavIcons(el);
+  };
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    send(input.value);
+  });
+  el.querySelectorAll("[data-asst-q]").forEach((btn) => {
+    btn.addEventListener("click", () => send(btn.dataset.asstQ));
+  });
+  suppressAutofillBar(input);
+  input?.focus();
 }
 
 function projectProgress(projectId) {
@@ -3353,10 +3876,29 @@ function settingsPanelHtml(section) {
   if (section === "appearance") {
     const doneOpen = localStorage.getItem("empire_group_done_open") !== "0";
     const projectsOpen = localStorage.getItem("empire_projects_open") !== "0";
+    const fontPct = getFontScale();
     return `
       <h2>Внешний вид</h2>
-      <p class="settings-desc">Поведение списков и бокового меню.</p>
+      <p class="settings-desc">Размер текста и поведение списков.</p>
       <div class="settings-card">
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:14px">
+          <div>
+            <label>Размер текста</label>
+            <div class="hint">Как в Telegram — двигай ползунок</div>
+          </div>
+          <div class="font-scale-block">
+            <div class="font-scale-row">
+              <span class="font-scale-a-sm" aria-hidden="true">A</span>
+              <input id="settings-font-scale" class="font-scale-slider" type="range"
+                min="${FONT_SCALE_MIN}" max="${FONT_SCALE_MAX}" step="5" value="${fontPct}"
+                aria-label="Размер текста" />
+              <span class="font-scale-a-lg" aria-hidden="true">A</span>
+            </div>
+            <div id="settings-font-scale-value" class="font-scale-value">${fontPct}%</div>
+            <div id="settings-font-preview" class="font-scale-preview">Так выглядит текст задач</div>
+            <button type="button" class="btn small" data-action="settings-font-reset">По умолчанию (100%)</button>
+          </div>
+        </div>
         <div class="settings-row">
           <div><label>Секция «Выполнено» открыта</label><div class="hint">На экране «Сегодня»</div></div>
           ${btn3dToggleHtml("settings-toggle-done-open", doneOpen)}
@@ -3400,11 +3942,13 @@ function settingsPanelHtml(section) {
   }
   return `
     <h2>О приложении</h2>
-    <p class="settings-desc">Empire Tasks — задачи, календарь и здоровье на neverretire.ru.</p>
+    <p class="settings-desc">Задачник — задачи, календарь, здоровье и ИИ-ассистент на neverretire.ru.</p>
     <div class="settings-card">
       <div class="settings-row"><label>Версия</label><span>${escapeHtml(APP_VER)}</span></div>
       <div class="settings-row"><label>Адрес</label><a href="/tasks/" style="color:var(--accent)">neverretire.ru/tasks</a></div>
+      <div class="settings-row"><label>Android APK</label><span class="hint">android/zadachnik/zadachnik-debug.apk на VPS</span></div>
       <div class="settings-row"><label>Аккаунт</label><span class="hint">Один токен доступа — без отдельного профиля</span></div>
+      <p class="hint">Виджет: рабочий стол → Виджеты → «Задачник · 7 дней». Тап по заголовку меняет фильтр. Лонгтап иконки — новая задача / ИИ / когда-нибудь.</p>
     </div>`;
 }
 
@@ -3491,6 +4035,15 @@ function bindSettings(root) {
     btn.textContent = on ? "Вкл" : "Выкл";
     localStorage.setItem("empire_group_done_open", on ? "1" : "0");
     renderToday();
+  });
+  const fontSlider = root.querySelector("#settings-font-scale");
+  fontSlider?.addEventListener("input", (e) => {
+    applyFontScale(e.target.value);
+  });
+  root.querySelector('[data-action="settings-font-reset"]')?.addEventListener("click", () => {
+    applyFontScale(FONT_SCALE_DEFAULT);
+    if (fontSlider) fontSlider.value = String(FONT_SCALE_DEFAULT);
+    showToast("Размер текста сброшен");
   });
   root.querySelector('[data-action="settings-toggle-projects-open"]')?.addEventListener("click", (e) => {
     const btn = e.currentTarget;
@@ -3752,7 +4305,9 @@ async function openSheet(task = null) {
   if (details && !usesDesktopTaskSplit()) {
     details.open = state.creatingTask;
   }
-  document.getElementById("tf-title").focus();
+  const titleEl = document.getElementById("tf-title");
+  suppressAutofillBar(titleEl);
+  titleEl?.focus();
   syncSplitTaskLayout();
 }
 
@@ -3796,6 +4351,7 @@ function showView(name) {
     document.getElementById("search-bar").classList.add("hidden");
     document.getElementById("btn-add-header").classList.add("hidden");
     document.getElementById("fab-add").classList.add("hidden");
+    document.getElementById("fab-ai")?.classList.add("hidden");
     document.getElementById("metrics")?.classList.add("hidden");
     updateChromeForView("settings");
     renderSettings();
@@ -3829,6 +4385,9 @@ function showView(name) {
     projects: "view-projects",
     lists: "view-lists",
     done: "view-done",
+    someday: "view-someday",
+    archive: "view-archive",
+    assistant: "view-assistant",
     "task-stats": "view-task-stats",
     insights: "view-insights",
     "finance-model": "view-finance-model",
@@ -3868,17 +4427,28 @@ function showView(name) {
   const showFab =
     !isStats &&
     !isPipelineHub &&
-    (isHealth ? ["measurements", "workouts"].includes(name) : !["settings", "task-stats", "insights", "program", "health-stats"].includes(name));
+    name !== "assistant" &&
+    (isHealth ? ["measurements"].includes(name) : !["settings", "task-stats", "insights", "program", "health-stats", "workouts"].includes(name));
+  // На тренировках/программе FAB мешает таймерам отдыха и удержания
+  const showAiFab =
+    !isHealth &&
+    !isStats &&
+    !isPipelineHub &&
+    !["settings", "assistant", "program", "workouts"].includes(name);
   document.getElementById("fab-add").classList.toggle("hidden", !showFab);
+  document.getElementById("fab-ai")?.classList.toggle("hidden", !showAiFab);
   document.getElementById("fab-add").setAttribute(
     "aria-label",
-    name === "measurements" ? "Новый замер" : name === "workouts" ? "Новая тренировка" : name === "program" ? "Дневник" : "Новая задача"
+    name === "measurements" ? "Новый замер" : "Новая задача"
   );
   if (name === "all-tasks") renderAllTasks();
   if (name === "week") renderWeek();
   if (name === "calendar") renderCalendar();
   if (name === "cal-day") renderCalendarDay();
   if (name === "matrix") renderMatrix();
+  if (name === "someday") renderSomeday();
+  if (name === "archive") renderArchive();
+  if (name === "assistant") renderAssistant();
   if (name === "measurements") renderMeasurements();
   if (name === "workouts") renderWorkouts();
   if (name === "program") renderWorkoutProgram();
@@ -4031,8 +4601,7 @@ async function checkDailyBriefing() {
     const items = daily.focus_items || [];
     if (!items.length) return;
     localStorage.setItem(key, "1");
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    new Notification("Empire · фокус дня", {
+    await showLocalNotification("Задачник · фокус дня", {
       body: items.slice(0, 3).join("\n"),
       tag: `daily-${daily.day}`,
     });
@@ -4046,14 +4615,14 @@ async function checkReminders() {
     const data = await api("/reminders/due");
     for (const t of data.reminders || []) {
       if (state.reminded.has(t.id)) continue;
-      if (Notification.permission === "granted") {
-        const opts = { body: t.title, tag: `task-${t.id}` };
-        if (t.image_url) opts.image = t.image_url;
-        new Notification("Empire Tasks", opts);
-        await api(`/tasks/${t.id}/reminder/ack`, { method: "POST" });
-        state.reminded.add(t.id);
-        localStorage.setItem("empire_reminded", JSON.stringify([...state.reminded]));
-      }
+      if (Notification.permission !== "granted") continue;
+      const opts = { body: t.title, tag: `task-${t.id}`, data: { url: "/tasks/", task_id: t.id } };
+      if (t.image_url) opts.image = t.image_url;
+      const shown = await showLocalNotification("Задачник", opts);
+      if (!shown) continue;
+      await api(`/tasks/${t.id}/reminder/ack`, { method: "POST" });
+      state.reminded.add(t.id);
+      localStorage.setItem("empire_reminded", JSON.stringify([...state.reminded]));
     }
   } catch (_) {}
 }
@@ -4078,6 +4647,10 @@ function bindEvents() {
       if (navBtn.dataset.inbox === "1") {
         state.inboxOnly = true;
         showView("all-tasks");
+      } else if (navBtn.dataset.view === "search") {
+        document.getElementById("search-bar")?.classList.remove("hidden");
+        showView("search");
+        setTimeout(() => document.getElementById("search-input")?.focus(), 50);
       } else {
         showView(navBtn.dataset.view);
       }
@@ -4141,6 +4714,23 @@ function bindEvents() {
     showView(view);
   });
 
+  document.getElementById("main")?.addEventListener("submit", async (e) => {
+    const form = e.target.closest("form[data-quick-capture]");
+    if (!form) return;
+    e.preventDefault();
+    const input = form.querySelector(".quick-capture-input");
+    const title = input?.value || "";
+    try {
+      await quickCaptureCreate(title);
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+    } catch (err) {
+      showToast(err.message || "Не удалось создать");
+    }
+  });
+
   ["tf-due-date", "tf-due-time", "tf-repeat", "tf-project", "tf-priority", "tf-remind"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", () => syncSheetMetaDisplay());
   });
@@ -4174,6 +4764,7 @@ function bindEvents() {
 
   document.getElementById("btn-refresh")?.addEventListener("click", () => loadAll().catch((e) => showToast(e.message)));
   document.getElementById("fab-add").addEventListener("click", () => onPrimaryAdd());
+  document.getElementById("fab-ai")?.addEventListener("click", () => showView("assistant"));
   document.getElementById("btn-add-header").addEventListener("click", () => onPrimaryAdd());
   document.getElementById("task-form").addEventListener("submit", (e) => saveTaskForm(e).catch((err) => showToast(err.message)));
   document.getElementById("tf-image-file")?.addEventListener("change", (e) => {
@@ -4280,8 +4871,17 @@ function bindEvents() {
       }
       if (action === "open-task") {
         if (!actionEl.closest("#main")) return;
-        const t = state.tasks.find((x) => x.id === +actionEl.dataset.id) || state.doneTasks.find((x) => x.id === +actionEl.dataset.id);
+        const id = +actionEl.dataset.id;
+        let t =
+          state.tasks.find((x) => x.id === id) ||
+          state.doneTasks.find((x) => x.id === id);
+        if (!t) {
+          try {
+            t = await api(`/tasks/${id}`);
+          } catch (_) {}
+        }
         if (t) await openSheet(t);
+        else showToast("Задача не найдена");
         return;
       }
       if (action === "toggle-item") {
@@ -4324,6 +4924,9 @@ function bindEvents() {
         openSheet(null);
         if (state.currentView === "cal-day" && state.calendarDay) {
           document.getElementById("tf-due-date").value = state.calendarDay;
+          syncSheetMetaDisplay();
+        } else if (state.currentView === "today" || state.currentView === "week") {
+          document.getElementById("tf-due-date").value = todayStr();
           syncSheetMetaDisplay();
         }
         return;
@@ -4454,6 +5057,16 @@ function bindEvents() {
         document.getElementById("tf-tag-add")?.focus();
         return;
       }
+      if (action === "switch-program") {
+        e.preventDefault();
+        const next = actionEl.dataset.programId || "gym_2026";
+        if (next === state.programId) return;
+        state.programId = next;
+        localStorage.setItem("empire_workout_program", next);
+        state.workoutProgramSummary = null;
+        renderWorkoutProgram().catch((err) => showToast(err.message));
+        return;
+      }
       if (action === "rest-start") {
         e.preventDefault();
         startRestTimer(Number(actionEl.dataset.sec) || getRestTimerDefaultSec());
@@ -4472,6 +5085,36 @@ function bindEvents() {
       if (action === "rest-stop") {
         e.preventDefault();
         stopRestTimer();
+        return;
+      }
+      if (action === "hold-start") {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = actionEl.dataset.idx;
+        const setNum = actionEl.dataset.set;
+        const root = document.getElementById("view-program");
+        const secInp = root?.querySelector(`.pg-hold-sec[data-idx="${idx}"][data-set="${setNum}"]`);
+        const ex = state.programSession?.exercises?.[Number(idx)];
+        const sec = Number(actionEl.dataset.holdSec)
+          || Number(secInp?.value)
+          || programHoldSec(ex)
+          || programHoldDefaultSec(ex || {});
+        startHoldTimer(idx, setNum, sec, ex?.exercise_label || "Удержание");
+        return;
+      }
+      if (action === "hold-pause") {
+        e.preventDefault();
+        pauseHoldTimer();
+        return;
+      }
+      if (action === "hold-resume") {
+        e.preventDefault();
+        resumeHoldTimer();
+        return;
+      }
+      if (action === "hold-stop") {
+        e.preventDefault();
+        stopHoldTimer();
         return;
       }
       if (action === "rest-add-30") {
@@ -4566,6 +5209,7 @@ async function purgeOldAppCache() {
 }
 
 async function init() {
+  applyFontScale();
   await purgeOldAppCache();
   closeAllSheets();
   loadColumnWidths();
@@ -4579,6 +5223,10 @@ async function init() {
   renderMobileTabbar();
   syncOverflowHideDoneLabel();
   hydrateNavIcons();
+  suppressAutofillBar(document.getElementById("tf-title"));
+  suppressAutofillBar(document.getElementById("search-input"));
+  suppressAutofillBar(document.getElementById("tf-tag-add"));
+  suppressAutofillBar(document.getElementById("tf-note"));
   if (window.matchMedia("(min-width: 900px)").matches) {
     document.getElementById("sheet-fields-details")?.setAttribute("open", "");
   }
@@ -4630,8 +5278,8 @@ async function init() {
   }
   setInterval(() => checkReminders(), 60000);
   setInterval(() => checkHealthReminders(), 60000);
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/tasks/assets/sw.js?v=24", { scope: "/tasks/" }).catch(() => {});
+  if ("serviceWorker" in navigator && !/ZadachnikApp\//.test(navigator.userAgent || "")) {
+    navigator.serviceWorker.register("/tasks/assets/sw.js?v=26", { scope: "/tasks/" }).catch(() => {});
   }
 }
 

@@ -38,7 +38,7 @@ PRIORITY_MAP = {"⏫": 3, "🔼": 2, "🔽": 1}
 KIND_GOAL = "goal"
 KIND_PROJECT = "project"
 KIND_TASK = "task"
-STATUSES = ("todo", "doing", "done", "cancelled")
+STATUSES = ("todo", "doing", "done", "cancelled", "archived")
 CHECKLIST_STATUSES = ("active", "done", "archived")
 ITEM_STATUSES = ("todo", "done", "skipped")
 SOURCE_USER = "user"
@@ -325,11 +325,22 @@ def update_task_status(task_id: int, status: str) -> None:
         raise ValueError(status)
     init_db()
     conn = get_connection()
-    completed = _now() if status == "done" else None
-    conn.execute(
-        "UPDATE tasks SET status=?, completed_at=?, updated_at=? WHERE id=?",
-        (status, completed, _now(), task_id),
-    )
+    if status == "done":
+        conn.execute(
+            "UPDATE tasks SET status=?, completed_at=?, updated_at=? WHERE id=?",
+            (status, _now(), _now(), task_id),
+        )
+    elif status in ("todo", "doing"):
+        conn.execute(
+            "UPDATE tasks SET status=?, completed_at=NULL, updated_at=? WHERE id=?",
+            (status, _now(), task_id),
+        )
+    else:
+        # archived / cancelled — keep completed_at if any
+        conn.execute(
+            "UPDATE tasks SET status=?, updated_at=? WHERE id=?",
+            (status, _now(), task_id),
+        )
     conn.commit()
     conn.close()
 

@@ -1,0 +1,53 @@
+#!/bin/sh /etc/rc.common
+# При boot/hotplug: /mnt/usb = NTFS по UUID.
+# Нельзя жёстко вешать sda6: после I/O-ошибки диск часто возвращается как sdb6.
+START=19
+
+USB_UUID="01D63D133C7B6100"
+MNT="/mnt/usb"
+
+usb_dev() {
+  blkid -U "$USB_UUID" 2>/dev/null || blkid -t "UUID=$USB_UUID" -o device 2>/dev/null | head -1
+}
+
+ensure_uci_fstab() {
+  if uci -q show fstab 2>/dev/null | grep -q "$USB_UUID"; then
+    return 0
+  fi
+  uci add fstab mount >/dev/null 2>&1 || return 0
+  uci set fstab.@mount[-1].target="$MNT"
+  uci set fstab.@mount[-1].uuid="$USB_UUID"
+  uci set fstab.@mount[-1].fstype='ntfs-3g'
+  uci set fstab.@mount[-1].options='rw,nofail'
+  uci set fstab.@mount[-1].enabled='1'
+  uci commit fstab 2>/dev/null || true
+}
+
+start() {
+  mkdir -p "$MNT"
+  ensure_uci_fstab
+
+  # ext3 «swap»-слайс иногда ложится поверх NTFS — Samba тогда пустая
+  while grep ' /mnt/usb ' /proc/mounts 2>/dev/null | grep -q ' ext3 '; do
+    umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || break
+    sleep 1
+  done
+
+  DEV="$(usb_dev)"
+  [ -n "$DEV" ] && [ -b "$DEV" ] || return 1
+
+  CUR="$(awk '$2=="/mnt/usb"{print $1}' /proc/mounts | tail -1)"
+  if [ "$CUR" != "$DEV" ]; then
+    if [ -n "$CUR" ]; then
+      umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || true
+    fi
+    # ntfs-3g не понимает UUID=... как путь — только реальный /dev/sdX
+    mount -t ntfs-3g -o rw,allow_other "$DEV" "$MNT" 2>/dev/null || \
+      mount -t ntfs3 -o rw "$DEV" "$MNT" 2>/dev/null || \
+      return 1
+  fi
+
+  if grep ' /mnt/usb ' /proc/mounts 2>/dev/null | grep -qE 'fuseblk|ntfs'; then
+    [ -d "$MNT/download" ] || mkdir -p "$MNT/download"
+  fi
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Empire audit export to Yandex Disk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/empire/rclone.env
+Environment=EMPIRE_ROOT=/root/projects/empire
+ExecStart=/root/projects/empire/scripts/export_audit_to_yandex.sh
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

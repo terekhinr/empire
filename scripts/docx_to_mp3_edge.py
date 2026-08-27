@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import re
 import subprocess
 import sys
@@ -33,13 +34,22 @@ BAD_TRANSCRIPT_PATTERNS = (
 )
 
 
-def load_text(path: Path) -> str:
+def load_text(path: Path, *, already_prepared: bool = False) -> str:
     if path.suffix.lower() == ".docx":
         doc = Document(str(path))
         paras = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
         raw = "\n\n".join(paras)
     else:
         raw = path.read_text(encoding="utf-8").strip()
+    # Текст из pdf_audio_bot уже прогнан через prepare_for_tts (+ ударения).
+    # Повторный прогон ломает U+0301 / silero «+».
+    if already_prepared or (os.getenv("PDF_AUDIO_TEXT_PREPARED") or "").strip() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        return raw
     return prepare_for_tts(raw)
 
 
@@ -262,6 +272,11 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--skip-preflight", action="store_true")
     parser.add_argument("--preflight-only", action="store_true")
+    parser.add_argument(
+        "--prepared",
+        action="store_true",
+        help="Input already ran through prepare_for_tts; do not re-normalize",
+    )
     args = parser.parse_args()
 
     if not args.input.is_file():
@@ -269,7 +284,7 @@ def main() -> int:
         return 1
 
     output = args.output or args.input.with_suffix(".mp3")
-    text = load_text(args.input)
+    text = load_text(args.input, already_prepared=args.prepared)
     chunks = split_text(text)
     if not chunks:
         print("Empty text", file=sys.stderr)

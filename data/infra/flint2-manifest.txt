@@ -1,8 +1,8 @@
-total 556
-drwxr-xr-x 2 root root   4096 Jul 15 09:54 .
-drwxr-xr-x 9 root root  12288 Jul 15 10:21 ..
+total 588
+drwxr-xr-x 3 root root   4096 Aug 26 17:06 .
+drwxr-xr-x 9 root root  12288 Jul 25 11:43 ..
 -rw-r--r-- 1 root root    757 Jul 15 07:06 00-bootstrap-parallel.sh
--rwxr-xr-x 1 root root   1729 Jul 15 07:06 00-bootstrap.sh
+-rwxr-xr-x 1 root root   1783 Aug 26 17:06 00-bootstrap.sh
 -rw-r--r-- 1 root root    709 Jul 15 07:06 00-open-wan-admin.sh
 -rwxr-xr-x 1 root root   1109 Jul 13 21:01 01-base-lan.sh
 -rwxr-xr-x 1 root root    806 Jul 13 21:01 02-install-podkop.sh
@@ -16,12 +16,15 @@ drwxr-xr-x 9 root root  12288 Jul 15 10:21 ..
 -rw-r--r-- 1 root root   5264 Jul 15 08:11 09-amnezia-awg-split.sh
 -rwxr-xr-x 1 root root   2908 Jul 15 07:06 10-restore-keenetic-snapshot.sh
 -rw-r--r-- 1 root root   1006 Jul 15 07:06 11-youtube-verify.sh
--rw-r--r-- 1 root root   4584 Jul 15 09:09 12-usb-samba-transmission.sh
--rw-r--r-- 1 root root   7447 Jul 15 07:38 13-fix-all.sh
+-rw-r--r-- 1 root root   4939 Aug 26 17:06 12-usb-samba-transmission.sh
+-rw-r--r-- 1 root root   7636 Aug 26 17:07 13-fix-all.sh
 -rw-r--r-- 1 root root   2351 Jul 15 08:55 14-podkop-ai-telegram.sh
--rw-r--r-- 1 root root   1188 Jul 15 08:55 15-samba-home.sh
--rw-r--r-- 1 root root    666 Jul 15 09:54 16-fix-gemini.sh
--rw-r--r-- 1 root root    312 Jul 15 10:00 ai-domains.txt
+-rw-r--r-- 1 root root   2032 Aug 26 16:57 15-samba-home.sh
+-rw-r--r-- 1 root root   1773 Aug 26 17:06 16-fix-gemini.sh
+-rw-r--r-- 1 root root   3023 Aug 26 17:06 17-restore-transmission.sh
+-rwxr-xr-x 1 root root   1764 Aug 26 17:55 18-torrent-sites.sh
+-rwxr-xr-x 1 root root    779 Aug 26 16:16 99-gdepar-dns-origin.sh
+-rw-r--r-- 1 root root    338 Jul 15 10:35 ai-domains.txt
 -rw-r--r-- 1 root root    833 Jul 15 06:36 amnezia-awg0.conf
 -rw-r--r-- 1 root root    498 Jul 15 06:36 amnezia-client.env
 -rw-r--r-- 1 root root    487 Jul 13 23:34 amnezia-client.env.template
@@ -29,8 +32,12 @@ drwxr-xr-x 9 root root  12288 Jul 15 10:21 ..
 -rw-r--r-- 1 root root   5007 Jul 15 05:33 dhcp-static-leases.sh
 -rw-r--r-- 1 root root   3068 Jul 13 21:17 discover-all-glinet.py
 -rw-r--r-- 1 root root   3595 Jul 13 21:04 discover-via-keenetic.py
+drwxr-xr-x 4 root root   4096 Aug 26 17:16 empire-flint-watchdog
+-rw-r--r-- 1 root root    161 Aug 26 16:16 empire_lan_fakeip_fix.sh
 -rw-r--r-- 1 root root   1823 Jul 15 07:06 export-amnezia-keenetic.py
 -rw-r--r-- 1 root root   3361 Jul 15 07:06 export-keenetic.py
+-rw-r--r-- 1 root root    978 Aug 26 16:16 fix_tproxy_redirect.sh
+-rw-r--r-- 1 root root   1864 Aug 26 16:16 fix_youtube_zapret.sh
 -rw-r--r-- 1 root root   4155 Jul 15 07:06 flint2-watcher.py
 -rw-r--r-- 1 root root    217 Jul 15 07:06 flint-dbclient.expect
 -rw-r--r-- 1 root root   6173 Jul 15 07:06 flint-glinet-autosetup.py
@@ -52,7 +59,7 @@ drwxr-xr-x 9 root root  12288 Jul 15 10:21 ..
 -rw-r--r-- 1 root root   2189 Jul 15 07:06 keenetic-flint-ssh-test.py
 -rw-r--r-- 1 root root   3550 Jul 15 07:06 keenetic-flint-wan-bootstrap.py
 -rw-r--r-- 1 root root   2888 Jul 13 21:06 keenetic-host-detail.py
--rw-r--r-- 1 root root   2938 Jul 15 07:06 keenetic-move-ip.py
+-rw-r--r-- 1 root root   2938 Jul 26 22:23 keenetic-move-ip.py
 -rw-r--r-- 1 root root   1872 Jul 13 21:24 keenetic-nc-flint-http.py
 -rw-r--r-- 1 root root   2508 Jul 13 21:07 keenetic-ping-flint-lan.py
 -rw-r--r-- 1 root root   2912 Jul 13 21:17 keenetic-remove-flint-route.py
@@ -68,7 +75,8 @@ drwxr-xr-x 9 root root  12288 Jul 15 10:21 ..
 -rw-r--r-- 1 root root   1797 Jul 13 21:09 probe-flint-via-ha.py
 -rw-r--r-- 1 root root    492 Jul 13 21:05 probe-ports.py
 -rw-r--r-- 1 root root    823 Jul 13 21:01 README.txt
--rw-r--r-- 1 root root   2608 Jul 13 21:01 serve_bootstrap.py
+-rw-r--r-- 1 root root   3292 Jul 15 12:38 serve_bootstrap.py
+-rw-r--r-- 1 root root    635 Aug 26 17:55 torrent-domains.txt
 -rwxr-xr-x 1 root root    872 Jul 15 07:06 transmission-schedule.sh
 -rw-r--r-- 1 root root    193 Jul 13 21:01 vless-link.txt
 -rw-r--r-- 1 root root    968 Jul 13 21:04 vps-watch-and-heal.sh

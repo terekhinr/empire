@@ -1,4 +1,4 @@
-const CACHE = "empire-tasks-v23";
+const CACHE = "empire-tasks-v26";
 const API_CACHE_PATHS = [
   "/tasks/api/planning/tasks",
   "/tasks/api/planning/summary",
@@ -90,7 +90,7 @@ self.addEventListener("push", (e) => {
   } catch (_) {
     data = { body: e.data ? e.data.text() : "" };
   }
-  const title = data.title || "Empire Tasks";
+  const title = data.title || "Задачник";
   const options = {
     body: data.body || "",
     icon: "/tasks/assets/icon-192.png",

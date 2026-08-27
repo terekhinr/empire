@@ -144,14 +144,6 @@ def pipeline_running() -> bool:
     return code == 0 and bool(out.strip())
 
 
-def tox1_uploading() -> bool:
-    for pat in ("vps_large_files_to_cloud.sh tox1-yandex", "rclone copyto.*TOX1/parts/"):
-        code, out = run(["pgrep", "-af", pat], timeout=10)
-        if code == 0 and out.strip():
-            return True
-    return False
-
-
 def stuck_yandex_rclone_h() -> float | None:
     code, out = run(["pgrep", "-af", "rclone copy.*/empire"], timeout=10)
     if code != 0 or not out.strip():
@@ -166,33 +158,7 @@ def stuck_yandex_rclone_h() -> float | None:
         return None
 
 
-def tox1_cloud_parts() -> int:
-    # rclone путь = short hostname (moderate-amethys), не FQDN
-    host = os.uname().nodename.split(".")[0]
-    remote = f"yandex:VPS-backup/{host}/TOX1/parts/"
-    code, out = run(["rclone", "lsf", remote], timeout=90)
-    if code != 0:
-        return -1
-    return sum(1 for ln in out.splitlines() if ".img.part" in ln)
-
-
-def remediate_tox1_supervisor(st: dict) -> bool:
-    if tox1_uploading():
-        return False
-    attempts = st.setdefault("remediation", {}).get("tox1_sup", 0)
-    if attempts >= 3:
-        return False
-    log("REMEDIATE: empire_tox1_supervisor.sh")
-    code, _ = run(["bash", str(ROOT / "scripts/empire_tox1_supervisor.sh")], timeout=60)
-    st.setdefault("remediation", {})["tox1_sup"] = attempts + 1
-    save_state(st)
-    return code == 0
-
-
 def remediate_unblock(st: dict) -> bool:
-    if tox1_uploading():
-        log("SKIP unblock: TOX1 выгрузка идёт")
-        return False
     attempts = st.setdefault("remediation", {}).get("unblock", 0)
     if attempts >= 2:
         return False
@@ -208,6 +174,68 @@ def remediate_unblock(st: dict) -> bool:
     st.setdefault("remediation", {})["unblock"] = attempts + 1
     save_state(st)
     return code == 0
+
+
+def local_sqlite_backup_line() -> str:
+    d = Path(os.getenv("EMPIRE_BACKUP_DIR", "/var/backups/empire"))
+    if not d.is_dir():
+        return "❌ локальных sqlite-бэкапов нет"
+    dbs = sorted(d.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not dbs:
+        return "❌ локальных .db бэкапов: 0"
+    age_h = (time.time() - dbs[0].stat().st_mtime) / 3600
+    icon = "✅" if age_h < 36 else "⚠"
+    return f"{icon} sqlite: {dbs[0].name} ({age_h:.1f}ч назад, всего {len(dbs)})"
+
+
+def ha_backup_line_from_audit(audit: dict) -> str:
+    """Берём строку HA из последнего daily-audit (уже проверяет SSH + ha backups)."""
+    p = LOG_DIR / "daily-audit-latest.log"
+    if not p.is_file():
+        return "❓ HA: нет лога аудита"
+    try:
+        text = p.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return "❓ HA: лог не читается"
+    for ln in text.splitlines():
+        if "HA бэкапов:" in ln or "HA недоступен" in ln:
+            clean = ln.split("] ", 1)[-1] if "] " in ln else ln
+            if clean.startswith("OK:"):
+                return f"✅ {clean[3:].strip()}"
+            if clean.startswith("ISSUE:"):
+                return f"❌ {clean[6:].strip()}"
+            return clean.strip()
+    # fallback: issues from parsed audit
+    for i in audit.get("top_issues") or []:
+        if "HA" in i:
+            return f"❌ {i[:120]}"
+    return "❓ HA: в аудите нет строки бэкапов"
+
+
+def vps_settings_backup_line(yandex_day: str | None) -> str:
+    """Код + infra (systemd/router docs) на Я.Диске."""
+    if not yandex_day:
+        return "❌ Я.Диск: нет дневных папок"
+    try:
+        ydt = datetime.strptime(yandex_day, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        age_d = (datetime.now(timezone.utc) - ydt).days
+    except ValueError:
+        age_d = 999
+    host = os.uname().nodename.split(".")[0]
+    remote = f"yandex:VPS-backup/{host}/{yandex_day}/"
+    code, out = run(["rclone", "lsf", remote], timeout=90)
+    if code != 0:
+        icon = "⚠" if age_d <= 2 else "❌"
+        return f"{icon} Я.Диск {yandex_day} (список не читается, {age_d}д)"
+    names = {ln.strip().rstrip("/") for ln in out.splitlines() if ln.strip()}
+    has_empire = "empire" in names
+    has_infra = "infra" in names
+    parts = []
+    parts.append("код✅" if has_empire else "код❌")
+    parts.append("infra✅" if has_infra else "infra❌")
+    ok = age_d <= 2 and has_empire
+    icon = "✅" if ok else ("⚠" if age_d <= 3 else "❌")
+    return f"{icon} Я.Диск {yandex_day}: {', '.join(parts)} ({age_d}д)"
 
 
 def remediate_audit(st: dict) -> bool:
@@ -276,7 +304,6 @@ def build_report(
     audit: dict,
     night: dict,
     yandex_day: str | None,
-    tox1_parts: int,
     router: dict,
     actions: list[str],
     problems: list[str],
@@ -298,9 +325,17 @@ def build_report(
             f"({age_h:.1f}ч назад)"
         )
         for i in audit.get("top_issues") or []:
+            if "TOX1" in i or "tox1" in i:
+                continue
             lines.append(f"  • {i[:100]}")
     else:
         lines.append(f"❌ {audit.get('reason', '?')}")
+
+    lines.append("")
+    lines.append("── Бэкапы ──")
+    lines.append(ha_backup_line_from_audit(audit))
+    lines.append(local_sqlite_backup_line())
+    lines.append(vps_settings_backup_line(yandex_day))
 
     lines.append("")
     lines.append("── Ночной пайплайн ──")
@@ -309,25 +344,6 @@ def build_report(
         lines.append(f"✅ завершён ({age_h:.1f}ч назад)")
     else:
         lines.append(f"⚠ {night.get('reason', '?')}")
-
-    lines.append("")
-    lines.append(f"── Я.Диск код-бэкап ──")
-    lines.append(yandex_day or "❌ не удалось прочитать")
-
-    lines.append("")
-    lines.append("── TOX1 eMMC ──")
-    if tox1_parts < 0:
-        lines.append("❌ не читается")
-    elif tox1_parts >= 10:
-        lines.append(f"✅ {tox1_parts} частей на облаке")
-    elif tox1_parts > 0:
-        lines.append(f"⏳ {tox1_parts}/15 частей")
-    elif tox1_uploading():
-        lines.append("⏳ выгрузка идёт (part000+)")
-    elif not Path("/root/tox1-backup/tox1-emmc-android-20260606.img").is_file():
-        lines.append("✅ образ снят с VPS")
-    else:
-        lines.append("⚠ 30 ГБ образ ещё на VPS — ждёт выгрузки")
 
     lines.append("")
     lines.append("── Роутер Flint ──")
@@ -394,22 +410,11 @@ def main() -> int:
     if not night.get("ok") and night_age_h > 30:
         problems.append("ночной пайплайн не завершён >30ч")
     elif pipeline_running() and not night.get("ok"):
-        if tox1_uploading():
-            pass  # норма: пайплайн на TOX1
-        else:
-            stuck_h = stuck_yandex_rclone_h()
-            if stuck_h is not None and stuck_h > 2:
-                problems.append(f"yandex rclone завис ~{stuck_h:.1f}ч")
-                if remediate_unblock(st):
-                    actions.append("перезапуск пайплайна (unblock)")
-
-    tox1_n = tox1_cloud_parts()
-    if Path("/root/tox1-backup/tox1-emmc-android-20260606.img").is_file() and not tox1_uploading():
-        if tox1_n == 0:
-            problems.append("TOX1 образ 30 ГБ на VPS, выгрузка не идёт")
-        sup = ROOT / "scripts/empire_tox1_supervisor.sh"
-        if sup.is_file() and remediate_tox1_supervisor(st):
-            actions.append("запущен empire_tox1_supervisor.sh")
+        stuck_h = stuck_yandex_rclone_h()
+        if stuck_h is not None and stuck_h > 2:
+            problems.append(f"yandex rclone завис ~{stuck_h:.1f}ч")
+            if remediate_unblock(st):
+                actions.append("перезапуск пайплайна (unblock)")
 
     yday = yandex_latest_day()
     if yday:
@@ -424,6 +429,17 @@ def main() -> int:
     else:
         if not pipeline_running():
             problems.append("не читается список бэкапов на Я.Диске")
+
+    # HA из аудита — эскалируем в problems если ISSUE
+    ha_ln = ha_backup_line_from_audit(audit)
+    if ha_ln.startswith("❌"):
+        problems.append(ha_ln[2:].strip() if ha_ln.startswith("❌ ") else ha_ln)
+
+    sqlite_ln = local_sqlite_backup_line()
+    if sqlite_ln.startswith("❌"):
+        problems.append("локальные sqlite-бэкапы отсутствуют или битые")
+    elif sqlite_ln.startswith("⚠"):
+        problems.append("локальный sqlite-бэкап старше 36ч")
 
     if orphan_rclone_large():
         problems.append("empire-large rclone всё ещё работает (может блокировать пайплайн)")
@@ -441,7 +457,6 @@ def main() -> int:
         audit=audit,
         night=night,
         yandex_day=yday,
-        tox1_parts=tox1_n,
         router=router,
         actions=actions,
         problems=problems,

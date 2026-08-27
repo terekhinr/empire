@@ -45,16 +45,16 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///empire.db")
 
 load_dotenv(ROOT / ".env")
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-GEN_MODEL_DEFAULT = "deepseek/deepseek-chat"
-JUDGE_MODEL_DEFAULT = "openai/gpt-4o"
-# Если premium-модель недоступна (403/404 на OpenRouter), пробуем по цепочке:
-JUDGE_FALLBACK_CHAIN = (
-    "openai/gpt-4o",
-    "anthropic/claude-3.5-haiku",
-    "deepseek/deepseek-chat",
+from tools.llm_client import (  # noqa: E402
+    JUDGE_FALLBACK_CHAIN,
+    chat,
+    chat_with_fallback,
+    openrouter_chat,
 )
+
+EMBED_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+GEN_MODEL_DEFAULT = "deepseek/deepseek-v3.2"
+JUDGE_MODEL_DEFAULT = "openai/gpt-4o"
 
 # ── 5 сложных тестовых вопросов ──
 
@@ -275,60 +275,6 @@ def _format_api_error(data: dict | str | None) -> str:
     return str(data or "unknown error")
 
 
-async def openrouter_chat(
-    model: str,
-    user_prompt: str,
-    *,
-    temperature: float = 0.0,
-    max_tokens: int = 4096,
-    timeout: float = 120.0,
-) -> tuple[int, str, dict]:
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        return 0, "", {"error": "OPENROUTER_API_KEY не задан"}
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/empire-rag-eval",
-        "X-Title": "Empire RAG Evaluator",
-    }
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": user_prompt}],
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            OPENROUTER_URL,
-            headers=headers,
-            json=payload,
-            timeout=timeout,
-        )
-
-    body = (resp.text or "").strip()
-    if not body:
-        return resp.status_code, "", {"error": "пустой ответ OpenRouter"}
-
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError as e:
-        return resp.status_code, body, {"error": f"не JSON: {e}"}
-
-    if resp.status_code != 200:
-        err = data.get("error") if isinstance(data, dict) else body
-        return resp.status_code, body, {"error": err}
-
-    try:
-        content = data["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        return resp.status_code, body, {"error": "нет choices[0].message.content"}
-
-    return resp.status_code, content, data
-
-
 def _build_generation_prompt(persona: str, question: str, rag: RagContext) -> str:
     role = PERSONAS[persona]["role"]
     topic = _extract_query(question)
@@ -353,7 +299,7 @@ def _build_generation_prompt(persona: str, question: str, rag: RagContext) -> st
 async def generate_answer(persona: str, question: str, rag: RagContext, model: str) -> tuple[str, str | None]:
     prompt = _build_generation_prompt(persona, question, rag)
     temp = 0.55 if persona == "gdepar" else 0.2
-    status, content, data = await openrouter_chat(model, prompt, temperature=temp)
+    status, content, data = await chat(model, prompt, temperature=temp)
 
     if status != 200 or not content.strip():
         err = data.get("error") if isinstance(data, dict) else f"HTTP {status}"
@@ -436,7 +382,7 @@ async def judge_answer(
     last_err = ""
 
     for judge_model in models:
-        status, content, data = await openrouter_chat(
+        status, content, data = await chat(
             judge_model, prompt, temperature=0.0, max_tokens=1024
         )
         if status != 200 or not content.strip():

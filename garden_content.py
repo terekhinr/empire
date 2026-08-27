@@ -357,18 +357,24 @@ def build_lunar_calendar_post(when: datetime | None = None) -> tuple[str, str]:
     return topic, "\n".join(lines)
 
 
-async def resolve_garden_slot(slot_value, *, resolve_topic_fn) -> tuple[str, str | None, str | None]:
-    """(topic, prebuilt_text, image_path)."""
+async def resolve_garden_slot(
+    slot_value, *, resolve_topic_fn
+) -> tuple[str, str | None, str | None, dict | None]:
+    """(topic, prebuilt_text, image_path, rubric_seed)."""
     special = is_special_slot(slot_value)
     if special in ("bot_promo", "garden_promo", "[SPECIAL:bot_promo]"):
         topic, text = build_bot_promo_post()
-        return topic, text, None
+        return topic, text, None, None
     if special in ("kizima_lunar", "lunar_calendar", "[SPECIAL:kizima_lunar]"):
         topic, text = build_lunar_calendar_post()
-        return topic, text, None
+        return topic, text, None, {"_kind": "garden_lunar"}
+    if special in ("garden_curated", "stepanych", "[SPECIAL:garden_curated]"):
+        import garden_curated as gc
+
+        return gc.build_garden_curated_post()
 
     topic = await resolve_topic_fn("garden", slot_value)
     if "[лунный календарь]" in (topic or "").lower():
         t2, text = build_lunar_calendar_post()
-        return t2, text, None
-    return topic, None, None
+        return t2, text, None, {"_kind": "garden_lunar"}
+    return topic, None, None, None

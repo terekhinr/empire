@@ -18,12 +18,17 @@ for f in keenetic-export.json keenetic-snapshot.json dhcp-static-leases.sh; do
   [[ -f "$src" ]] && cp -a "$src" "${OUT}/${f}" && log "copied ${f}"
 done
 
-# Живой Flint через Home Assistant
-if ssh -o BatchMode=yes -o ConnectTimeout=8 "$HA_TS" "ssh -o BatchMode=yes -o ConnectTimeout=5 root@${FLINT} 'echo OK'" 2>/dev/null | grep -q OK; then
+# Живой Flint через Home Assistant (жёсткий timeout — не блокировать night-pipeline)
+SSH_BASE=(ssh -o BatchMode=yes -o ConnectTimeout=6 -o ServerAliveInterval=3 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=accept-new)
+ha_flint() {
+  timeout 45 "${SSH_BASE[@]}" "$HA_TS" "ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new root@${FLINT} $1"
+}
+
+if ha_flint "'echo OK'" 2>/dev/null | grep -q OK; then
   log "Flint reachable via HA — exporting UCI"
-  ssh -o BatchMode=yes "$HA_TS" "ssh -o BatchMode=yes root@${FLINT} 'uci export'" > "${OUT}/flint-uci-${STAMP}.conf" 2>/dev/null || true
-  ssh -o BatchMode=yes "$HA_TS" "ssh -o BatchMode=yes root@${FLINT} 'tar czf - /etc/config 2>/dev/null'" > "${OUT}/flint-etc-config-${STAMP}.tar.gz" 2>/dev/null || true
-  ssh -o BatchMode=yes "$HA_TS" "ssh -o BatchMode=yes root@${FLINT} '
+  ha_flint "'uci export'" > "${OUT}/flint-uci-${STAMP}.conf" 2>/dev/null || true
+  ha_flint "'tar czf - /etc/config 2>/dev/null'" > "${OUT}/flint-etc-config-${STAMP}.tar.gz" 2>/dev/null || true
+  ha_flint "'
     echo HOSTNAME=\$(uci get system.@system[0].hostname 2>/dev/null)
     /etc/init.d/dnsmasq status 2>&1 | head -1
     /etc/init.d/podkop status 2>&1 | head -1

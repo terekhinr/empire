@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USB диск Flint</title>
+  <style>
+    body { font: 18px/1.45 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    code { background: #eee; padding: .1rem .35rem; }
+    .box { background: #f4f4f4; padding: 1rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>USB-диск роутера</h1>
+  <p>В «Сеть» Flint не появляется — так и должно быть. Диск подключается по адресу, не через обзор.</p>
+  <div class="box">
+    <p><b>Total Commander:</b> клик по строке пути сверху (где сейчас <code>f:\YandexDisk\...</code>), вставь:</p>
+    <p><code>\\192.168.1.1\download</code></p>
+    <p>Enter. Если спросит логин: пользователь <code>home</code>, пароль <code>home</code>.</p>
+  </div>
+  <p>Или скачай и запусти <a href="/usb-disk.bat">usb-disk.bat</a> — подключит диск Z:.</p>
+  <p>Amnezia / Tailscale на ПК выключи. Админка роутера: <a href="/">http://192.168.1.1/</a></p>
+</body>
+</html>

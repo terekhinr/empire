@@ -1,0 +1,17 @@
+[Unit]
+Description=Empire Home Ops proxy (Flint PWA via reverse SSH)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/projects/empire
+EnvironmentFile=-/root/projects/empire/.env
+Environment=EMPIRE_FLINT_UI_TOKEN=/etc/empire/flint-ui.token
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/home_ops_proxy.py
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

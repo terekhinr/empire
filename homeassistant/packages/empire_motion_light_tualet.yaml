@@ -1,4 +1,6 @@
-# Туалет: SONOFF SNZB-06P (mmWave присутствие) → light.empire_tualet_svet
+# Туалет: SONOFF SNZB-06P → light.empire_tualet_svet
+# Тайм-аут: OccupancySensing attr 0x0020 (32) = ultrasonic_o_to_u_delay.
+# Debounce 1 с на вкл — отсекает короткие ложные импульсы.
 
 automation:
   - id: empire_tualet_sensor_init
@@ -7,6 +9,13 @@ automation:
       - platform: homeassistant
         event: start
     action:
+      - action: select.select_option
+        target:
+          entity_id: select.tualet_tualet_prisutstvie_chuvstvitelnost_obnaruzheniia
+        data:
+          option: "Low"
+        continue_on_error: true
+      # Чувствительность: attr 0x0022 = 34 → Low=1
       - action: zha.set_zigbee_cluster_attribute
         data:
           ieee: "8c:73:da:ff:fe:f2:bd:92"
@@ -14,15 +23,18 @@ automation:
           cluster_id: 1030
           cluster_type: in
           attribute: 34
-          value: 3
+          value: 1
+        continue_on_error: true
+      # Тайм-аут после ухода: attr 0x0020 = 32 → 15 с
       - action: zha.set_zigbee_cluster_attribute
         data:
           ieee: "8c:73:da:ff:fe:f2:bd:92"
           endpoint_id: 1
           cluster_id: 1030
           cluster_type: in
-          attribute: 33
-          value: 10
+          attribute: 32
+          value: 15
+        continue_on_error: true
 
   - id: empire_tualet_motion_light_on
     alias: "Туалет — присутствие, свет вкл"
@@ -31,10 +43,10 @@ automation:
       - trigger: state
         entity_id: binary_sensor.sonoff_snzb_06p_3
         to: "on"
+        for:
+          seconds: 1
     actions:
-      - action: light.turn_on
-        target:
-          entity_id: light.empire_tualet_svet
+      - action: script.svet_tualet_vkl
 
   - id: empire_tualet_motion_light_off
     alias: "Туалет — нет присутствия, свет выкл"
@@ -44,8 +56,6 @@ automation:
         entity_id: binary_sensor.sonoff_snzb_06p_3
         to: "off"
         for:
-          seconds: 10
+          seconds: 15
     actions:
-      - action: light.turn_off
-        target:
-          entity_id: light.empire_tualet_svet
+      - action: script.svet_tualet_vyk
