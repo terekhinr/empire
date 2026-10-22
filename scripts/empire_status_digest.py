@@ -26,6 +26,77 @@ def _fallback_report() -> str:
     return "⚠️ digest: watchdog не вернул отчёт — см. /var/log/empire/diagnostics-watchdog.log"
 
 
+def _healer_block() -> str:
+    heal_state = Path(os.getenv("EMPIRE_HEAL_STATE", "/var/log/empire/service-healer-state.json"))
+    if not heal_state.is_file():
+        return "── Хилер ──\n❓ нет state"
+    try:
+        st = json.loads(heal_state.read_text(encoding="utf-8"))
+    except Exception:
+        return "── Хилер ──\n❓ state битый"
+    ok = st.get("last_ok")
+    icon = "✅" if ok else "❌"
+    run = (st.get("last_run") or "?")[:19]
+    actions = st.get("last_actions") or []
+    problems = st.get("last_problems") or []
+    lines = [f"── Хилер · {run} UTC ──", f"{icon} last_ok={ok}"]
+    if actions:
+        lines.append("починил: " + "; ".join(str(a)[:80] for a in actions[:5]))
+    if problems:
+        lines.append("проблемы: " + "; ".join(str(p)[:80] for p in problems[:5]))
+    return "\n".join(lines)
+
+
+def _ha_home_block() -> str:
+    """Offline critical HA entities из empire_ha_watcher state (без отдельного спама)."""
+    path = Path(os.getenv("EMPIRE_HA_WATCH_STATE", "/var/log/empire/ha-watcher-state.json"))
+    lines = ["── Дом / HA ──"]
+    if not path.is_file():
+        lines.append("❓ нет ha-watcher state")
+        return "\n".join(lines)
+    try:
+        st = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        lines.append("❓ state битый")
+        return "\n".join(lines)
+    offline = st.get("ha_offline") or []
+    if not offline:
+        lines.append("✅ critical entities online (или ещё не проверяли)")
+    else:
+        lines.append(f"❌ offline ({len(offline)}):")
+        for row in offline[:8]:
+            lines.append(f"· {row}")
+    return "\n".join(lines)
+
+
+def _flint_vpn_block() -> str:
+    """Сводка Flint/VPN из empire_router_watchdog state."""
+    path = Path(os.getenv("EMPIRE_ROUTER_STATE", "/var/log/empire/router-state.json"))
+    lines = ["── Flint / VPN ──"]
+    if not path.is_file():
+        lines.append("❓ нет router-state")
+        return "\n".join(lines)
+    try:
+        st = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        lines.append("❓ state битый")
+        return "\n".join(lines)
+    ok = st.get("last_all_ok")
+    icon = "✅" if ok else "❌"
+    run = (st.get("last_run") or "?")[:19]
+    ch = st.get("last_channel") or "?"
+    lines.append(f"{icon} all_ok={ok} · {ch} · {run} UTC")
+    failed = st.get("last_confirmed_failed") or []
+    if failed:
+        lines.append("проблемы: " + ", ".join(str(x) for x in failed[:8]))
+    summary = (st.get("last_summary") or "").strip()
+    if summary:
+        # короткая вторая строка иконок
+        for ln in summary.splitlines()[1:3]:
+            lines.append(ln[:200])
+    return "\n".join(lines)
+
+
 def main() -> int:
     slot = notify._digest_slot()
     if not slot:
@@ -65,15 +136,12 @@ def main() -> int:
     if not report:
         report = _fallback_report()
 
-    try:
-        from empire_gdepar_parse_summary import build_gdepar_parse_summary
-
-        gdepar = build_gdepar_parse_summary()
-    except Exception as exc:
-        gdepar = f"── Где Пар · парсинг ──\n⚠ {exc}"
-
+    # Отчёт по баням — только в empire-weekly-report (раз в неделю).
+    healer = _healer_block()
+    home = _ha_home_block()
+    flint = _flint_vpn_block()
     label = "🌅 Утро" if "morning" in slot else "🌆 Вечер"
-    text = f"{label} · Empire VPS\n\n{report}\n\n{gdepar}"
+    text = f"{label} · Empire\n\n{report}\n\n{healer}\n\n{home}\n\n{flint}"
     if len(text) > 4000:
         text = text[:3980] + "\n… (обрезано)"
 

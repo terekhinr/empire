@@ -56,20 +56,39 @@ DAILY_SOFT_CAP = int(os.getenv("EMPIRE_ROUTER_DAILY_SOFT_CAP", "24"))
 DAILY_FIXALL_CAP = int(os.getenv("EMPIRE_ROUTER_DAILY_FIXALL_CAP", "6"))
 
 # all_ok: без этого дом/AI/обход реально сломаны. USB — отдельно (часто снят).
-CRITICAL = ("podkop", "youtube", "transmission", "dns", "awg0")
+# EMPIRE_SKIP_AMNEZIA_PEER=1 — RKN блок IP: awg0 не критичен до нового VPS.
+_SKIP_AWG = os.getenv("EMPIRE_SKIP_AMNEZIA_PEER", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+CRITICAL = tuple(
+    x
+    for x in ("podkop", "youtube", "telegram", "ai", "dns", "awg0", "selfheal")
+    if not (_SKIP_AWG and x == "awg0")
+)
 # Чиним при подтверждённом fail
-REMEDIABLE = (
-    "podkop",
-    "youtube",
-    "zapret",
-    "nfqws",
-    "awg0",
-    "transmission",
-    "samba",
-    "usb",
-    "dns",
-    "telegram",
-    "torrents",
+REMEDIABLE = tuple(
+    x
+    for x in (
+        "podkop",
+        "youtube",
+        "zapret",
+        "nfqws",
+        "awg0",
+        "transmission",
+        "samba",
+        "usb",
+        "dns",
+        "telegram",
+        "torrents",
+        "ai",
+        "selfheal",
+        "cron",
+        "urltest",
+    )
+    if not (_SKIP_AWG and x == "awg0")
 )
 
 AWG_MAX_AGE_SEC = int(os.getenv("EMPIRE_AWG_MAX_AGE", "180"))
@@ -140,10 +159,15 @@ fi
 echo "=== dns ==="
 /etc/init.d/dnsmasq status 2>&1 | head -1 || /etc/init.d/dnsmasq-full status 2>&1 | head -1
 echo "=== telegram ==="
-tg=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 https://telegram.org/ 2>/dev/null || echo 000)
+tg=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 https://web.telegram.org/ 2>/dev/null || echo 000)
+tip=$(nslookup telegram.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+case "$tip" in
+  198.18.*) fake=OK ;;
+  *) fake=FAIL ;;
+esac
 case "$tg" in
-  200|301|302) echo "telegram: OK http=$tg" ;;
-  *) echo "telegram: FAIL http=$tg" ;;
+  200|301|302) echo "telegram: OK http=$tg fakeip=$tip" ;;
+  *) echo "telegram: FAIL http=$tg fakeip=$tip fake=$fake" ;;
 esac
 echo "=== torrents ==="
 tip=$(nslookup rutracker.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
@@ -161,6 +185,34 @@ for i in 1 2 3; do
   [ "$i" -lt 3 ] && sleep 2
 done
 [ "$yt_ok" -eq 0 ] && echo "${r:-youtube: FAIL}"
+yip=$(nslookup youtube.com 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+case "$yip" in
+  198.18.*) echo "youtube_dns: OK fakeip=$yip" ;;
+  *) echo "youtube_dns: FAIL ip=${yip:-none}" ;;
+esac
+echo "=== ai ==="
+aip=$(nslookup chatgpt.com 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+case "$aip" in
+  198.18.*) echo "ai: OK fakeip=$aip" ;;
+  *) echo "ai: FAIL ip=${aip:-none}" ;;
+esac
+echo "=== urltest ==="
+n=$(uci -q get podkop.main.urltest_proxy_links 2>/dev/null | wc -w)
+echo "urltest: links=$n"
+echo "=== selfheal ==="
+if [ -x /usr/sbin/empire-singbox-lkg ] && /usr/sbin/empire-singbox-lkg smoke >/dev/null 2>&1; then
+  echo "selfheal: OK"
+else
+  echo "selfheal: FAIL"
+fi
+echo "=== cron ==="
+cl=$(wc -l </etc/crontabs/root 2>/dev/null || echo 0)
+dup=$(grep -c empire-lan-watch /etc/crontabs/root 2>/dev/null || echo 0)
+if [ "$dup" -le 1 ] && [ "$cl" -lt 40 ]; then
+  echo "cron: OK lines=$cl lanwatch=$dup"
+else
+  echo "cron: FAIL lines=$cl lanwatch=$dup"
+fi
 """
 
 
@@ -199,7 +251,7 @@ def run_cmd(cmd: list[str], *, timeout: int = 45) -> tuple[int, str]:
 
 def _ssh_ok(out: str) -> bool:
     """OpenWrt ash часто возвращает rc≠0 из-за последней команды в пайпе — смотрим маркеры."""
-    return "=== hostname ===" in out and "=== youtube ===" in out
+    return "=== hostname ===" in out and "=== selfheal ===" in out
 
 
 def ssh_flint_via_reverse(remote_cmd: str) -> tuple[bool, str]:
@@ -300,11 +352,38 @@ def parse_status(raw: str) -> dict:
                 set_check("youtube", "204" in line or "200" in line, line)
             elif "youtube: fail" in low:
                 set_check("youtube", False, line)
+            elif line.startswith("youtube_dns:"):
+                set_check("youtube_dns", "ok" in low, line)
+        elif section == "ai":
+            if line.startswith("ai:"):
+                set_check("ai", "ok" in low, line)
+        elif section == "urltest":
+            if line.startswith("urltest:"):
+                # links=3 → OK if >= 2
+                n = 0
+                if "links=" in low:
+                    try:
+                        n = int(low.split("links=")[1].split()[0])
+                    except Exception:
+                        n = 0
+                set_check("urltest", n >= 2, line)
+        elif section == "selfheal":
+            if line.startswith("selfheal:"):
+                set_check("selfheal", "ok" in low, line)
+        elif section == "cron":
+            if line.startswith("cron:"):
+                set_check("cron", "ok" in low, line)
 
     if checks.get("sing-box", {}).get("ok") and checks.get("podkop", {}).get("ok") is not True:
         checks["podkop"] = {"ok": True, "detail": "sing-box process alive"}
     if checks.get("podkop", {}).get("ok") and checks.get("youtube", {}).get("ok"):
         checks.setdefault("sing-box", {"ok": True, "detail": "podkop+youtube ok"})
+    # DNS FakeIP youtube — мягкий сигнал, не валит CRITICAL отдельно
+    if checks.get("youtube_dns", {}).get("ok") is False and checks.get("youtube", {}).get("ok") is True:
+        checks["youtube"] = {
+            "ok": True,
+            "detail": (checks["youtube"].get("detail") or "") + " (dns not fakeip)",
+        }
 
     for key in (
         "podkop",
@@ -318,6 +397,10 @@ def parse_status(raw: str) -> dict:
         "awg0",
         "telegram",
         "torrents",
+        "ai",
+        "urltest",
+        "selfheal",
+        "cron",
     ):
         checks.setdefault(key, {"ok": None, "detail": "не проверено"})
 
@@ -383,9 +466,25 @@ def remediate(channel: str, st: dict, failed: list[str], *, force: bool = False)
         hop = f"ssh -o BatchMode=yes root@{FLINT} '{inner}'"
         return run_cmd(["ssh", "-o", "BatchMode=yes", HA_SSH, hop], timeout=150)
 
+    # Предпочитаем LKG/golden и flock — не голый podkop restart (race → duplicate ruleset)
+    lkg = (
+        "flock -n /var/lock/empire-heal.lock /usr/sbin/empire-singbox-lkg ensure 2>&1 | tail -5; "
+        "echo lkg-ok"
+    )
     fix_map = {
-        "podkop": "/etc/init.d/podkop restart 2>&1 | tail -3",
-        "youtube": "/etc/init.d/podkop restart 2>&1 | tail -3",
+        "podkop": lkg,
+        "youtube": lkg,
+        "selfheal": lkg,
+        "telegram": lkg,
+        "ai": (
+            "[ -x /usr/sbin/empire-awg-failover ] && /usr/sbin/empire-awg-failover ensure; "
+            + lkg
+        ),
+        "urltest": lkg,
+        "cron": (
+            "[ -x /usr/sbin/empire-cron-normalize ] && /usr/sbin/empire-cron-normalize; "
+            "echo cron-ok"
+        ),
         "zapret": (
             "/etc/init.d/zapret2 restart 2>/dev/null || /etc/init.d/zapret restart 2>/dev/null; "
             "echo zapret-ok"
@@ -405,12 +504,9 @@ def remediate(channel: str, st: dict, failed: list[str], *, force: bool = False)
         ),
         "samba": "/etc/init.d/samba4 restart 2>&1 | tail -2",
         "awg0": (
+            "[ -x /usr/sbin/empire-awg-failover ] && /usr/sbin/empire-awg-failover ensure; "
             "ifdown awg0 2>/dev/null; sleep 1; ifup awg0 2>/dev/null; "
-            "/etc/init.d/amnezia-split restart 2>/dev/null; "
-            "sh /etc/amnezia/start-split.sh 2>/dev/null; "
-            "awg show awg0 >/dev/null 2>&1 || ("
-            "awg-quick down awg0 2>/dev/null; awg-quick up awg0 2>/dev/null"
-            "); sleep 3; echo awg-ok"
+            "sleep 3; echo awg-ok"
         ),
         "usb": (
             "/etc/init.d/empire-usb-mount start 2>/dev/null; "
@@ -421,13 +517,10 @@ def remediate(channel: str, st: dict, failed: list[str], *, force: bool = False)
             "/etc/init.d/dnsmasq restart 2>/dev/null || "
             "/etc/init.d/dnsmasq-full restart 2>/dev/null; echo dns-ok"
         ),
-        "telegram": (
-            "[ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null; "
-            "/etc/init.d/podkop restart 2>&1 | tail -3"
-        ),
         "torrents": (
-            "[ -x /usr/sbin/empire-flint-watchdog ] && /usr/sbin/empire-flint-watchdog --force >/tmp/empire-wd-force.out 2>&1; "
-            "echo torrents-kick"
+            "[ -x /usr/sbin/empire-flint-watchdog ] && "
+            "flock -n /var/lock/empire-heal.lock /usr/sbin/empire-flint-watchdog --force "
+            ">/tmp/empire-wd-force.out 2>&1; echo torrents-kick"
         ),
     }
 
@@ -464,7 +557,7 @@ def remediate(channel: str, st: dict, failed: list[str], *, force: bool = False)
         log(f"  {out[-300:]}")
 
     # Эскалация: критичный подтверждённый сбой и soft уже не помогает / force
-    crit_failed = [n for n in ("podkop", "youtube", "transmission", "dns", "awg0") if n in failed]
+    crit_failed = [n for n in CRITICAL if n in failed]
     # youtube в failed → считаем podkop-стрик
     max_streak = 0
     for n in crit_failed:
@@ -614,6 +707,7 @@ def main() -> int:
                 save_state(st)
                 time.sleep(3)
 
+    prev_ok = st.get("last_all_ok")
     summary = build_summary(channel, parsed, actions)
     st["last_channel"] = channel
     st["last_summary"] = summary
@@ -628,10 +722,54 @@ def main() -> int:
         f"failed={parsed.get('confirmed_failed')} actions={len(actions)}"
     )
 
+    # Telegram: только если после починки всё ещё плохо (или роутер недоступен)
+    _maybe_telegram_alert(channel, parsed, actions, summary, prev_ok=prev_ok)
+
     if os.getenv("EMPIRE_ROUTER_PRINT_SUMMARY") == "1":
         print(summary)
     return 0
 
+
+def _maybe_telegram_alert(
+    channel: str | None,
+    parsed: dict,
+    actions: list[str],
+    summary: str,
+    *,
+    prev_ok: bool | None = None,
+) -> None:
+    if os.getenv("EMPIRE_ROUTER_NO_TELEGRAM", "").strip() in ("1", "true", "yes"):
+        return
+    try:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import empire_notify as notify  # noqa: WPS433
+    except Exception as exc:
+        log(f"telegram import fail: {exc}")
+        return
+
+    cooldown = int(os.getenv("EMPIRE_ROUTER_TG_COOLDOWN", "1800"))
+    failed = list(parsed.get("confirmed_failed") or [])
+    crit_bad = [k for k in CRITICAL if k in failed]
+    unreachable = channel is None
+    all_ok = bool(parsed.get("all_ok")) and not unreachable
+    still_bad = bool(crit_bad) or unreachable or not all_ok
+
+    if not still_bad:
+        # восстановление — только если раньше было плохо
+        if prev_ok is False:
+            notify.send(
+                f"✅ Flint снова OK\n{summary}",
+            )
+            log("telegram recovery sent")
+        return
+
+    text = "🚨 Flint / VPN\n" + summary
+    if actions:
+        text += "\n🔧 уже пробовал: " + "; ".join(actions[:5])
+    if len(text) > 3500:
+        text = text[:3480] + "\n…"
+    sent = notify.send_if_changed("flint_router_alert", text, min_interval_sec=cooldown)
+    log(f"telegram alert sent={sent} crit={crit_bad}")
 
 if __name__ == "__main__":
     raise SystemExit(main())

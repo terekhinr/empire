@@ -43,7 +43,9 @@ alert() {
     log "ALERT suppressed (cooldown): $msg"
     return 0
   fi
-  if python3 "$ROOT/scripts/empire_notify.py" "Flint selfheal: $msg" 2>/dev/null; then
+  PY="$ROOT/venv/bin/python"
+  [ -x "$PY" ] || PY=python3
+  if "$PY" "$ROOT/scripts/empire_notify.py" "Flint selfheal: $msg" 2>/dev/null; then
     echo "last_alert_ts=$now" >"$STATE"
     log "ALERT sent: $msg"
   else
