@@ -626,6 +626,10 @@ fix_ai_awg() {
   can_fix ai_awg || return 1
   log "FIX ai_awg: Cursor/OpenAI FakeIP + bind awg0"
   ok_awg || fix_awg || true
+  # stale Amnezia → Vienna backup (если есть conf)
+  if [ -x /usr/sbin/empire-awg-failover ]; then
+    /usr/sbin/empire-awg-failover ensure >/dev/null 2>&1 || true
+  fi
   # 1) LKG/golden — без podkop regenerate (race → duplicate rule-set tags)
   if [ -x /usr/sbin/empire-singbox-lkg ]; then
     /usr/sbin/empire-singbox-lkg restore >/tmp/empire-ai-fix.out 2>&1 || true

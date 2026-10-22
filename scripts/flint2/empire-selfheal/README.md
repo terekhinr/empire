@@ -14,8 +14,12 @@
 |--------|------|
 | `/usr/sbin/empire-singbox-lkg` | smoke / save / restore / ensure |
 | `/usr/sbin/empire-cron-normalize` | свести crontab |
+| `/usr/sbin/empire-awg-failover` | Amnezia Aeza ↔ Vienna при stale handshake |
 | `/etc/podkop/empire-lan-watch.sh` | каждую минуту: USB + LKG если FakeIP мёртв |
 | `/usr/sbin/empire-flint-watchdog` | раз в 5 мин полный heal |
+
+**VLESS HA:** sing-box urltest (VDSina + OSL + Aeza), 1m.  
+**Amnezia HA:** `empire-awg-failover` + conf `/etc/amnezia/awg0-vienna.conf`.
 
 ## VPS
 

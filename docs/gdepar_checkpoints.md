@@ -1,3 +1,14 @@
+
+## CP-20261022b — HA full audit + cleanup
+
+**Аудит:** HA API OK; ванная/туалет/кухня/домофон OK; Алиса Yaha loaded.
+**Починено:** удалены 15 orphan automation/script (старый failsafe/watchdog spam, старый domofon_telegram); HA core restart.
+**Железо (не софт):**
+- Прихожая `light.zbeacon_ts0001_2` / template свет — Zigbee offline (питание/пара).
+- Балкон SRW-TH01 — LocalTuya sleep/offline (кнопка на датчике).
+**Не трогали:** Flint/VPN маршруты.
+
+
 ## CP-20261022 — Flint selfheal (LKG + flock + cron dedupe)
 
 **Баг:** дубли crontab (×15) → параллельный `podkop start` → `duplicate rule-set tag: ai_awg-google_ai` → sing-box down → ТГ/ИИ мертвы; YouTube частично через zapret.
