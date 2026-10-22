@@ -1,0 +1,12 @@
+[Unit]
+Description=Empire Flint remote self-heal every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=empire-flint-remote-heal.service
+
+[Install]
+WantedBy=timers.target

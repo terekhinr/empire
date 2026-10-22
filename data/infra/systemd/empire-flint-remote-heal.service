@@ -1,0 +1,8 @@
+[Unit]
+Description=Empire Flint remote self-heal via reverse SSH
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/empire-flint-remote-heal.sh
+Nice=10

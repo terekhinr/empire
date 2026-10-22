@@ -163,3 +163,13 @@ def send_twice_daily(key: str, text: str, *, force: bool = False) -> bool:
                 slots.pop(old, None)
         save_state(st)
     return ok
+
+
+if __name__ == "__main__":
+    import sys
+
+    msg = " ".join(sys.argv[1:]).strip()
+    if not msg:
+        print("usage: empire_notify.py <text>", file=sys.stderr)
+        raise SystemExit(2)
+    raise SystemExit(0 if send(msg) else 1)

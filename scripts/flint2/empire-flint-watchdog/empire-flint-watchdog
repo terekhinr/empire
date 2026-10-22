@@ -2,7 +2,10 @@
 # empire-flint-watchdog — самодиагностика и автопочинка НА роутере Flint (OpenWrt).
 # Не нужен VPS, Cursor, ИИ. Только cron/procd на самом роутере.
 #
-# Установка: sh install.sh  (с VPS) или скопировать файлы в /usr/sbin + /etc/init.d
+# Режимы: /etc/empire/bypass-mode = vps | novps
+#   vps   — YouTube через podkop/VLESS; zapret — страховка и failover
+#   novps — YouTube через zapret (DPI), без Empire VPS
+# Установка: install.sh (с VPS) или install-local.sh (на Flint / USB)
 # Запуск:    empire-flint-watchdog
 # Только проверка: empire-flint-watchdog --check
 # Принудительно: empire-flint-watchdog --force
@@ -12,9 +15,13 @@
 set -eu
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin:/opt/sbin:$PATH"
 
+# shellcheck disable=SC1091
+[ -f /etc/empire/mode-lib.sh ] && . /etc/empire/mode-lib.sh
+
 LOG="${EMPIRE_FLINT_LOG:-/tmp/empire-flint-watchdog.log}"
 STATE="${EMPIRE_FLINT_STATE:-/tmp/empire-flint-watchdog.state}"
 COOLDOWN_SEC="${EMPIRE_FLINT_COOLDOWN:-900}"  # 15 мин между рестартами одного сервиса
+TG_COOLDOWN_SEC="${EMPIRE_FLINT_TG_COOLDOWN:-1800}"  # 30 мин — один и тот же отчёт в TG
 MAX_LOG_LINES=400
 
 CHECK_ONLY=0
@@ -33,21 +40,64 @@ done
 log() {
   line="$(date -Is 2>/dev/null || date) $*"
   echo "$line" >>"$LOG"
-  # truncate
   if [ -f "$LOG" ]; then
     lines=$(wc -l <"$LOG" 2>/dev/null || echo 0)
     if [ "$lines" -gt "$MAX_LOG_LINES" ]; then
       tail -n 200 "$LOG" >"${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
     fi
   fi
-  echo "$line"
+  # В cron — только файл; в --check или EMPIRE_FLINT_VERBOSE=1 — в stdout.
+  # Важно: при set -e нельзя оставлять ложный exit у последнего [ ] — иначе cron умирает после START.
+  if [ "${EMPIRE_FLINT_VERBOSE:-0}" = "1" ] || [ "$CHECK_ONLY" = "1" ]; then
+    echo "$line"
+  fi
 }
 
 now_epoch() { date +%s; }
 
 json_escape() {
-  # Минимальный escape для JSON string (для вызова HA API)
-  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' '
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\n/\\n/g'
+}
+
+tg_can_send() {
+  key="$1"
+  [ "$CHECK_ONLY" = "1" ] && return 1
+  last=$(state_get "tg_${key}_ts")
+  [ -z "$last" ] && return 0
+  now=$(now_epoch)
+  [ $((now - last)) -ge "$TG_COOLDOWN_SEC" ] && return 0
+  return 1
+}
+
+tg_mark_sent() {
+  state_set "tg_$1_ts" "$(now_epoch)"
+}
+
+tg_notify_repair() {
+  # TG отключён: хилер чинит молча. Сводка — утро/вечер status-digest на VPS.
+  return 0
+}
+
+lan_apply_patch() {
+  [ -x /usr/sbin/empire-singbox-mark ] && /usr/sbin/empire-singbox-mark 2>/dev/null || true
+  [ -x /usr/sbin/empire-singbox-patch ] && /usr/sbin/empire-singbox-patch 2>/dev/null || true
+  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+}
+
+lan_proxy_synced() {
+  CFG=/etc/sing-box/config.json
+  [ -f "$CFG" ] || return 1
+  mode=$(jq -r '.inbounds[]|select(.tag=="tproxy-in")|.type' "$CFG" 2>/dev/null || echo "")
+  case "$mode" in
+    tproxy)
+      nft list chain inet PodkopTable proxy 2>/dev/null | grep -q 'tproxy ip to 127.0.0.1:1602' || return 1
+      ;;
+    redirect)
+      nft list chain inet PodkopTable proxy 2>/dev/null | grep -qE 'redirect to :1602' || return 1
+      ;;
+    *) return 1 ;;
+  esac
+  return 0
 }
 
 ha_telegram_send() {
@@ -99,12 +149,17 @@ can_fix() {
   # can_fix name → 0 если можно чинить
   name="$1"
   [ "$FORCE" = "1" ] && return 0
+  cool="$COOLDOWN_SEC"
+  # USB/Samba отваливаются часто (sda→sdb) — короткий cooldown
+  case "$name" in
+    usb|samba|wsdd|download_share|ai_awg|doh_block) cool=120 ;;
+  esac
   last=$(state_get "fix_${name}_ts")
   [ -z "$last" ] && return 0
   now=$(now_epoch)
   ago=$((now - last))
-  [ "$ago" -ge "$COOLDOWN_SEC" ] && return 0
-  log "SKIP fix $name (cooldown ${ago}s < ${COOLDOWN_SEC}s)"
+  [ "$ago" -ge "$cool" ] && return 0
+  log "SKIP fix $name (cooldown ${ago}s < ${cool}s)"
   return 1
 }
 
@@ -119,10 +174,21 @@ ok_singbox() {
 }
 
 ok_podkop_svc() {
-  # status часто врёт — смотрим процесс
+  # в режиме без VPS podkop не обязателен
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    return 0
+  fi
   ok_singbox && return 0
   /etc/init.d/podkop status 2>/dev/null | grep -qi running && return 0
   return 1
+}
+
+ok_offload() {
+  if type empire_ok_offload_off >/dev/null 2>&1; then
+    empire_ok_offload_off
+    return $?
+  fi
+  return 0
 }
 
 ok_zapret() {
@@ -136,7 +202,56 @@ ok_zapret() {
   return 1
 }
 
+ok_gemini() {
+  # Gemini в списке ai_awg → Amnezia. Отдельный curl часто даёт 403/000 при живом туннеле.
+  if ok_ai_awg 2>/dev/null; then
+    return 0
+  fi
+  if ip link show awg0 >/dev/null 2>&1; then
+    code=$(curl --interface awg0 -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 15 \
+      https://gemini.google.com/ 2>/dev/null || echo 000)
+  else
+    code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 15 \
+      https://gemini.google.com/ 2>/dev/null || echo 000)
+  fi
+  case "$code" in
+    200|301|302|403|421) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# podkop секция ai_awg → awg0 + FakeIP для Cursor/OpenAI (иначе уходят на ISP)
+ok_ai_awg() {
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    return 0
+  fi
+  iface=$(uci -q get podkop.ai_awg.interface 2>/dev/null || true)
+  ctype=$(uci -q get podkop.ai_awg.connection_type 2>/dev/null || true)
+  [ "$iface" = "awg0" ] || return 1
+  [ "$ctype" = "vpn" ] || return 1
+  domains=$(uci -q get podkop.ai_awg.user_domains_text 2>/dev/null || true)
+  echo " $domains " | grep -q ' cursor.com ' || echo " $domains " | grep -q ' api2.cursor.sh ' || return 1
+  CFG=/etc/sing-box/config.json
+  [ -f "$CFG" ] || return 1
+  # критично: bind на awg0
+  grep -q '"bind_interface": "awg0"' "$CFG" 2>/dev/null || return 1
+  # критично: user-domains должны быть в маршруте И в FakeIP DNS
+  # иначе nslookup даёт 104.18.x → Cursor идёт мимо Amnezia
+  grep -q 'ai_awg-user-domains-ruleset' "$CFG" 2>/dev/null || return 1
+  # FakeIP для cursor (198.18.x) — главный сигнал «трафик пойдёт в tproxy→awg»
+  cip=$(nslookup api2.cursor.sh 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
+  case "$cip" in
+    198.18.*) ;;
+    *) return 1 ;;
+  esac
+  ok_awg || return 1
+  return 0
+}
+
 ok_awg() {
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    awg show awg0 >/dev/null 2>&1 || return 0
+  fi
   # Раньше: только «интерфейс есть» → пропускали мёртвый handshake.
   # Теперь: свежий handshake (<=180s при keepalive 25) + probe через awg0.
   out=$(awg show awg0 2>/dev/null || wg show awg0 2>/dev/null) || return 1
@@ -174,6 +289,13 @@ ok_dns() {
   nslookup youtube.com 127.0.0.1 >/dev/null 2>&1 || nslookup youtube.com >/dev/null 2>&1
 }
 
+# DoH с LAN ломает «один IP» для Cursor веб/Windows
+ok_doh_block() {
+  nft list table inet empire_doh >/dev/null 2>&1 || return 1
+  nft list chain inet empire_doh forward_doh 2>/dev/null | grep -q 'dport' || return 1
+  return 0
+}
+
 ok_youtube() {
   # generate_204 + главная — ловим и «сайт мёртв», и DPI
   code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 8 --max-time 12 \
@@ -202,21 +324,33 @@ ok_youtube() {
 }
 
 ok_routes() {
-  # Telegram + LAN FakeIP routes must not be wiped by podkop/slim scripts
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    return 0
+  fi
+  if type empire_in_failover >/dev/null 2>&1 && empire_in_failover; then
+    return 0
+  fi
   CFG=/etc/sing-box/config.json
   [ -f "$CFG" ] || return 1
+  ip rule list 2>/dev/null | grep -q 'fwmark 0x100000.*lookup podkop' || return 1
+  ip route list table podkop 2>/dev/null | grep -q 'local default dev lo' || return 1
+  lan_proxy_synced || return 1
   command -v jq >/dev/null 2>&1 || return 0
   jq -e '
     [.route.rules[]? | select(.outbound=="main-out") | (.rule_set // [])[]?]
     | index("main-telegram-community-ruleset")
   ' "$CFG" >/dev/null 2>&1 || return 1
-  jq -e '
-    [.route.rules[]? | select(.outbound=="main-out") | (.rule_set // [])[]?]
-    | index("main-local-subnets-ruleset")
-  ' "$CFG" >/dev/null 2>&1 || return 1
-  jq -e '.inbounds[]|select(.tag=="tproxy-in")|.type=="redirect"' "$CFG" >/dev/null 2>&1 || return 1
-  nft list set inet PodkopTable podkop_subnets 2>/dev/null | grep -q '149.154' || return 1
-  nft list chain inet PodkopTable proxy 2>/dev/null | grep -q 'redirect to :1602' || return 1
+  jq -e '.route.default_mark == 2097152' "$CFG" >/dev/null 2>&1 || return 1
+  nft list chain inet PodkopTable proxy 2>/dev/null | grep -qE '1602' || return 1
+  return 0
+}
+
+ok_vless_tunnel() {
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    return 0
+  fi
+  netstat -lnt 2>/dev/null | grep -q '127.0.0.1:18443' || return 1
+  pgrep -f 'ssh.*18443' >/dev/null 2>&1 || return 1
   return 0
 }
 
@@ -251,11 +385,10 @@ restore_golden() {
   GOLD=/etc/podkop/sing-box.golden.json
   [ -f "$GOLD" ] || return 1
   cp -a "$GOLD" "$CFG"
-  killall sing-box 2>/dev/null || true
-  sleep 1
-  mkdir -p /tmp/sing-box
-  /usr/bin/sing-box run -c "$CFG" -D /usr/share/sing-box >/tmp/sing-box-empire.log 2>&1 &
-  sleep 2
+  jq '.route.default_mark = 2097152' "$CFG" > /tmp/sb-golden-mark.json 2>/dev/null \
+    && mv /tmp/sb-golden-mark.json "$CFG"
+  /etc/init.d/sing-box restart 2>/dev/null || true
+  sleep 3
   [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
   return 0
 }
@@ -272,12 +405,19 @@ ok_usb() {
   uuid=$(blkid -s UUID -o value "$dev" 2>/dev/null || true)
   [ "$uuid" = "$USB_UUID" ] || return 1
   [ -d /mnt/usb/download ] || return 1
+  # I/O живой (иначе Windows «диск отвалился»)
+  touch /mnt/usb/download/.empire_usb_ok 2>/dev/null || return 1
   return 0
 }
 
 ok_download_share() {
   ok_usb || return 1
-  # share path должен быть на NTFS, не пустая заглушка на ext3
+  share_path=$(uci -q get samba4.download.path 2>/dev/null || true)
+  [ "$share_path" = "/mnt/usb/download" ] || return 1
+  share_name=$(uci -q get samba4.download.name 2>/dev/null || true)
+  [ "$share_name" = "download" ] || return 1
+  share_wg=$(uci -q get samba4.@samba[0].workgroup 2>/dev/null || true)
+  [ "$share_wg" = "HOME" ] || return 1
   return 0
 }
 
@@ -287,6 +427,13 @@ ok_transmission() {
 
 # Трекеры должны быть FakeIP 198.18.x (VLESS). Реальный IP / NXDOMAIN = снова «не открываются».
 ok_torrents() {
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    nslookup rutracker.org 127.0.0.1 >/dev/null 2>&1 && return 0
+    return 0
+  fi
+  if type empire_in_failover >/dev/null 2>&1 && empire_in_failover; then
+    return 0
+  fi
   ip=$(nslookup rutracker.org 127.0.0.1 2>/dev/null | awk '/^Address:/{print $2}' | grep -v ':' | tail -1)
   case "$ip" in
     198.18.*) return 0 ;;
@@ -295,10 +442,27 @@ ok_torrents() {
 }
 
 ok_samba() {
-  pgrep -f 'smbd|samba' >/dev/null 2>&1
+  pgrep -f 'smbd|samba' >/dev/null 2>&1 || return 1
+  ok_download_share || return 1
+  # порт 445 слушает
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn 2>/dev/null | grep -qE ':445\s' || return 1
+  elif command -v netstat >/dev/null 2>&1; then
+    netstat -ltn 2>/dev/null | grep -qE ':445\s' || return 1
+  fi
+  return 0
+}
+
+ok_wsdd() {
+  # без wsdd2 Windows не видит FLINT в «Сеть»; шара по IP всё равно должна работать
+  [ -x /etc/init.d/wsdd2 ] || return 0
+  pgrep -f 'wsdd' >/dev/null 2>&1
 }
 
 ok_reverse_tunnel() {
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    return 0
+  fi
   pgrep -f "ssh.*-R 127.0.0.1:6223" >/dev/null 2>&1
 }
 
@@ -306,15 +470,48 @@ ok_reverse_tunnel() {
 
 fix_podkop() {
   can_fix podkop || return 1
-  log "FIX podkop/sing-box restart"
+  log "FIX podkop"
   /etc/init.d/podkop enable 2>/dev/null || true
-  /etc/init.d/podkop restart 2>/dev/null || /etc/init.d/podkop start 2>/dev/null || true
-  # restore FakeIP LAN redirect (podkop regenerates tproxy/fwmark)
-  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
-  sleep 4
+  lan_apply_patch
+  if ! pgrep -f '/usr/bin/sing-box run' >/dev/null 2>&1; then
+    /etc/init.d/podkop start 2>/dev/null || true
+    sleep 8
+    lan_apply_patch
+  fi
+  if ! ok_podkop_svc || ! lan_proxy_synced; then
+    if can_fix podkop_restart; then
+      log "FIX podkop restart (sync proxy)"
+      /etc/init.d/podkop restart 2>/dev/null || true
+      sleep 20
+      lan_apply_patch
+      mark_fix podkop_restart
+    fi
+  fi
   mark_fix podkop
-  ok_podkop_svc && log "FIX podkop OK" && return 0
+  ok_podkop_svc && lan_proxy_synced && log "FIX podkop OK" && return 0
   log "FIX podkop STILL BAD"
+  return 1
+}
+
+fix_vless_tunnel() {
+  can_fix vless_tunnel || return 1
+  log "FIX vless SSH tunnel"
+  [ -x /etc/empire/enforce-vless-ssh.sh ] && /etc/empire/enforce-vless-ssh.sh >/dev/null 2>&1 || true
+  sleep 2
+  mark_fix vless_tunnel
+  ok_vless_tunnel && log "FIX vless tunnel OK" && return 0
+  log "FIX vless tunnel STILL BAD"
+  return 1
+}
+
+fix_offload() {
+  can_fix offload || return 1
+  log "FIX flow offloading OFF (nfqws иначе не видит пакеты)"
+  if type empire_fix_offload >/dev/null 2>&1; then
+    empire_fix_offload
+  fi
+  mark_fix offload
+  ok_offload && log "FIX offload OK" && return 0
   return 1
 }
 
@@ -336,9 +533,16 @@ fix_zapret() {
 }
 
 fix_youtube() {
-  # YouTube = podkop + zapret
-  fix_podkop || true
-  fix_zapret || true
+  # YouTube: без VPS — zapret; с VPS — podkop + zapret
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    fix_zapret || true
+    if type empire_fix_offload >/dev/null 2>&1; then
+      empire_fix_offload
+    fi
+  else
+    fix_podkop || true
+    fix_zapret || true
+  fi
   sleep 3
   if ok_youtube; then
     log "FIX youtube OK"
@@ -353,22 +557,28 @@ fix_youtube() {
 
 fix_routes() {
   can_fix routes || return 1
-  log "FIX routes (lan-fix + golden)"
-  [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
+  log "FIX routes"
+  lan_apply_patch
   sleep 2
   if ok_routes; then
     mark_fix routes
     log "FIX routes OK"
     return 0
   fi
-  log "FIX routes: restore golden config"
-  restore_golden || true
-  sleep 2
-  mark_fix routes
+  fix_podkop || true
+  sleep 3
+  lan_apply_patch
   if ok_routes; then
-    log "FIX routes OK after golden"
+    mark_fix routes
+    log "FIX routes OK after podkop"
     return 0
   fi
+  log "FIX routes: restore golden"
+  restore_golden || true
+  lan_apply_patch
+  sleep 2
+  mark_fix routes
+  ok_routes && log "FIX routes OK after golden" && return 0
   log "FIX routes STILL BAD"
   return 1
 }
@@ -412,11 +622,60 @@ fix_awg() {
   return 1
 }
 
+fix_ai_awg() {
+  can_fix ai_awg || return 1
+  log "FIX ai_awg: Cursor/OpenAI FakeIP + bind awg0"
+  ok_awg || fix_awg || true
+  # 1) LKG/golden — без podkop regenerate (race → duplicate rule-set tags)
+  if [ -x /usr/sbin/empire-singbox-lkg ]; then
+    /usr/sbin/empire-singbox-lkg restore >/tmp/empire-ai-fix.out 2>&1 || true
+    sleep 3
+    if ok_ai_awg; then
+      mark_fix ai_awg
+      log "FIX ai_awg OK (lkg)"
+      return 0
+    fi
+  fi
+  restore_golden || true
+  sleep 3
+  if ok_ai_awg; then
+    mark_fix ai_awg
+    log "FIX ai_awg OK (golden)"
+    return 0
+  fi
+  # 2) локальная 36 — только если LKG не помог (может дернуть podkop)
+  if [ -x /etc/amnezia/36-ai-via-amnezia.sh ]; then
+    sh /etc/amnezia/36-ai-via-amnezia.sh >/tmp/empire-ai-fix.out 2>&1 || true
+    sleep 4
+    if ok_ai_awg; then
+      mark_fix ai_awg
+      log "FIX ai_awg OK (local 36)"
+      return 0
+    fi
+  fi
+  mark_fix ai_awg
+  ok_ai_awg && log "FIX ai_awg OK" && return 0
+  log "FIX ai_awg STILL BAD"
+  return 1
+}
+
 fix_usb() {
   can_fix usb || return 1
   log "FIX usb: NTFS by UUID (not hardcoded sda6)"
-  /etc/init.d/empire-usb-mount start 2>/dev/null || true
-  sleep 1
+  if [ -x /etc/init.d/empire-usb-mount ]; then
+    /etc/init.d/empire-usb-mount start 2>/dev/null || true
+  else
+    # fallback без init: прямой mount
+    mkdir -p /mnt/usb
+    DEV=$(blkid -U "$USB_UUID" 2>/dev/null || true)
+    if [ -n "$DEV" ] && [ -b "$DEV" ]; then
+      umount /mnt/usb 2>/dev/null || umount -l /mnt/usb 2>/dev/null || true
+      mount -t ntfs-3g -o rw,allow_other "$DEV" /mnt/usb 2>/dev/null || \
+        mount -t ntfs3 -o rw "$DEV" /mnt/usb 2>/dev/null || true
+      mkdir -p /mnt/usb/download 2>/dev/null || true
+    fi
+  fi
+  sleep 2
   mark_fix usb
   if ok_usb; then
     log "FIX usb OK (NTFS download)"
@@ -460,8 +719,7 @@ fix_torrents() {
   done
   uci set podkop.main.user_domains_text="$CUR"
   uci commit podkop
-  rm -f /tmp/sing-box/cache.db
-  /etc/init.d/podkop restart 2>/dev/null || true
+  /etc/init.d/podkop reload 2>/dev/null || true
   sleep 4
   [ -x /etc/podkop/empire-lan-fix.sh ] && /etc/podkop/empire-lan-fix.sh >/dev/null 2>&1 || true
   mark_fix torrents
@@ -473,11 +731,82 @@ fix_torrents() {
 
 fix_samba() {
   can_fix samba || return 1
-  log "FIX samba"
+  log "FIX samba: UCI share download + HOME + user home"
+  # сначала диск — иначе шара на пустом /mnt/usb
+  ok_usb || fix_usb || true
+
+  DL="/mnt/usb/download"
+  mkdir -p "$DL" 2>/dev/null || true
+
+  uci -q set samba4=samba 2>/dev/null || true
+  if ! uci -q get samba4.@samba[0] >/dev/null 2>&1; then
+    uci add samba4 samba >/dev/null 2>&1 || true
+  fi
+  uci set samba4.@samba[0].name='FLINT' 2>/dev/null || true
+  uci set samba4.@samba[0].workgroup='HOME' 2>/dev/null || true
+  uci set samba4.@samba[0].charset='UTF-8' 2>/dev/null || true
+  uci set samba4.@samba[0].description='Flint download' 2>/dev/null || true
+  uci set samba4.@samba[0].disable_async_io='1' 2>/dev/null || true
+
+  uci -q delete samba4.download 2>/dev/null || true
+  uci set samba4.download=sambashare
+  uci set samba4.download.name='download'
+  uci set samba4.download.path="$DL"
+  uci set samba4.download.read_only='no'
+  uci set samba4.download.guest_ok='yes'
+  uci set samba4.download.create_mask='0664'
+  uci set samba4.download.dir_mask='0775'
+  uci commit samba4 2>/dev/null || true
+
+  # Never: Windows шлёт имя локального юзера → Bad User→guest → SMB отваливается.
+  # Доступ только home/home; на ПК — usb-disk.bat один раз (cmdkey + schtasks).
+  if [ -f /etc/samba/smb.conf.template ]; then
+    sed -i 's/map to guest = Bad User/map to guest = Never/' /etc/samba/smb.conf.template 2>/dev/null || true
+  fi
+  if ! grep -q '^home:' /etc/passwd 2>/dev/null; then
+    echo 'home:x:1000:65534:samba:/var:/bin/false' >> /etc/passwd
+  fi
+  if command -v smbpasswd >/dev/null 2>&1; then
+    printf '%s\n%s\n' home home | smbpasswd -L -s -a home >/dev/null 2>&1 || \
+      printf '%s\n%s\n' home home | smbpasswd -s -a home >/dev/null 2>&1 || true
+  fi
+  # Windows часто держит битый кэш пароля → «устройство не работает».
+  # На роутере мы только гарантируем home/home; клиент чистит Credential Manager.
+
+  /etc/init.d/samba4 enable 2>/dev/null || true
   /etc/init.d/samba4 restart 2>/dev/null || /etc/init.d/samba restart 2>/dev/null || true
+  # wsdd — обнаружение в Windows «Сеть»
+  /etc/init.d/wsdd2 enable 2>/dev/null || true
+  /etc/init.d/wsdd2 restart 2>/dev/null || true
+
   mark_fix samba
+  sleep 2
+  if ok_samba; then
+    log "FIX samba OK (\\\\192.168.1.1\\download)"
+    return 0
+  fi
+  log "FIX samba STILL BAD"
+  return 1
+}
+
+fix_wsdd() {
+  can_fix wsdd || return 1
+  log "FIX wsdd2"
+  /etc/init.d/wsdd2 enable 2>/dev/null || true
+  /etc/init.d/wsdd2 restart 2>/dev/null || true
+  mark_fix wsdd
   sleep 1
-  ok_samba && return 0
+  ok_wsdd && return 0
+  return 1
+}
+
+fix_download_share() {
+  # алиас: полная починка USB+Samba
+  can_fix download_share || return 1
+  fix_usb || true
+  fix_samba || true
+  mark_fix download_share
+  ok_download_share && ok_samba && return 0
   return 1
 }
 
@@ -499,6 +828,27 @@ fix_dns() {
   mark_fix dns
   sleep 2
   ok_dns && return 0
+  return 1
+}
+
+fix_doh_block() {
+  can_fix doh_block || return 1
+  log "FIX DoH block (Windows Secure DNS иначе ломает Cursor→Amnezia)"
+  if [ -f /etc/podkop/block-doh.nft ]; then
+    nft delete table inet empire_doh 2>/dev/null || true
+    nft -f /etc/podkop/block-doh.nft 2>/dev/null || true
+  fi
+  if [ -f /etc/dnsmasq.d/99-block-doh.conf ] || [ -f /tmp/dnsmasq.d/99-block-doh.conf ]; then
+    /etc/init.d/dnsmasq restart 2>/dev/null || true
+  fi
+  # firewall.user должен подгружать nft при рестарте fw
+  if [ -f /etc/firewall.user ] && ! grep -q 'block-doh.nft' /etc/firewall.user 2>/dev/null; then
+    echo 'nft -f /etc/podkop/block-doh.nft' >> /etc/firewall.user
+  fi
+  mark_fix doh_block
+  sleep 1
+  ok_doh_block && log "FIX doh_block OK" && return 0
+  log "FIX doh_block STILL BAD"
   return 1
 }
 
@@ -528,50 +878,59 @@ main() {
         fix_podkop && fixed="${fixed}podkop " || true
         ;;
       zapret) fix_zapret && fixed="${fixed}zapret " || true ;;
+      offload) fix_offload && fixed="${fixed}offload " || true ;;
       routes) fix_routes && fixed="${fixed}routes " || true ;;
+      vless_tunnel) fix_vless_tunnel && fixed="${fixed}vless_tunnel " || true ;;
       telegram) fix_telegram && fixed="${fixed}telegram " || true ;;
       youtube) fix_youtube && fixed="${fixed}youtube " || true ;;
+      gemini) fix_ai_awg && fixed="${fixed}gemini " || true ;;
       awg) fix_awg && fixed="${fixed}awg " || true ;;
+      ai_awg) fix_ai_awg && fixed="${fixed}ai_awg " || true ;;
       dns) fix_dns && fixed="${fixed}dns " || true ;;
-      usb)
-        if can_fix tg_usb_fail; then
-          ha_telegram_send "USB-диск роутера: НЕДОСТУПЕН (попытка автопочинки fix_usb)" || true
-          mark_fix tg_usb_fail
-        fi
-        if fix_usb; then
-          fixed="${fixed}usb "
-          if can_fix tg_usb_ok; then
-            ha_telegram_send "USB-диск роутера: восстановлен (fix_usb OK)" || true
-            mark_fix tg_usb_ok
-          fi
-        else
-          if can_fix tg_usb_still_bad; then
-            ha_telegram_send "USB-диск роутера: STILL BAD после автопочинки fix_usb" || true
-            mark_fix tg_usb_still_bad
-          fi
-        fi
-        ;;
+      doh_block) fix_doh_block && fixed="${fixed}doh_block " || true ;;
+      usb) fix_usb && fixed="${fixed}usb " || true ;;
       transmission) fix_transmission && fixed="${fixed}transmission " || true ;;
       torrents) fix_torrents && fixed="${fixed}torrents " || true ;;
       samba) fix_samba && fixed="${fixed}samba " || true ;;
+      wsdd) fix_wsdd && fixed="${fixed}wsdd " || true ;;
+      download_share) fix_download_share && fixed="${fixed}download_share " || true ;;
       reverse_tunnel) fix_reverse && fixed="${fixed}reverse " || true ;;
     esac
     return 1
   }
 
   # порядок: база → маршруты → сервисы
-  check_one podkop_svc || true
-  check_one routes || true
-  check_one zapret || true
-  check_one dns || true
-  check_one youtube || true
-  check_one telegram || true
-  check_one torrents || true
-  check_one awg || true
+  check_one offload || true
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    check_one zapret || true
+    check_one dns || true
+    check_one youtube || true
+    check_one telegram || true
+  else
+    check_one vless_tunnel || true
+    check_one podkop_svc || true
+    check_one routes || true
+    check_one zapret || true
+    check_one dns || true
+    check_one doh_block || true
+    check_one youtube || true
+    check_one gemini || true
+    check_one telegram || true
+    check_one torrents || true
+    check_one awg || true
+    check_one ai_awg || true
+    check_one reverse_tunnel || true
+  fi
   check_one usb || true
+  check_one download_share || true
   check_one transmission || true
   check_one samba || true
-  check_one reverse_tunnel || true
+  check_one wsdd || true
+
+  # VLESS мёртв → YouTube через zapret (только режим vps)
+  if [ "$CHECK_ONLY" = "0" ] && [ -x /usr/sbin/empire-vless-failover ]; then
+    /usr/sbin/empire-vless-failover >/dev/null 2>&1 || true
+  fi
 
   # итоговая перепроверка если чинили
   if [ -n "$fixed" ] && [ "$CHECK_ONLY" = "0" ]; then
@@ -594,17 +953,40 @@ main() {
       log "RECHECK routes STILL FAIL"
       problems="${problems}routes_recheck "
     fi
+    if ok_gemini; then
+      log "RECHECK gemini OK"
+    else
+      log "RECHECK gemini STILL FAIL"
+      problems="${problems}gemini_recheck "
+    fi
     if ok_awg; then
       log "RECHECK awg OK"
     else
       log "RECHECK awg STILL FAIL"
       problems="${problems}awg_recheck "
     fi
+    if ok_usb; then
+      log "RECHECK usb OK"
+    else
+      log "RECHECK usb STILL FAIL"
+      problems="${problems}usb_recheck "
+    fi
+    if ok_samba; then
+      log "RECHECK samba OK"
+    else
+      log "RECHECK samba STILL FAIL"
+      problems="${problems}samba_recheck "
+    fi
   fi
 
   # снимок рабочего конфига — чтобы было из чего восстановить
-  if [ -z "$problems" ] || { ok_routes && ok_youtube && ok_telegram; }; then
-    save_golden
+  skip_golden=0
+  type empire_is_novps >/dev/null 2>&1 && empire_is_novps && skip_golden=1
+  type empire_in_failover >/dev/null 2>&1 && empire_in_failover && skip_golden=1
+  if [ "$skip_golden" = "0" ]; then
+    if [ -z "$problems" ] || { ok_routes && ok_youtube && ok_telegram; }; then
+      save_golden
+    fi
   fi
 
   state_set last_run "$(date -Is 2>/dev/null || date)"
@@ -612,22 +994,40 @@ main() {
   state_set last_problems "$problems"
   state_set last_fixed "$fixed"
 
+  still=""
+  ok_offload || still="${still}offload "
+  if type empire_is_novps >/dev/null 2>&1 && empire_is_novps; then
+    ok_zapret || still="${still}zapret "
+    ok_youtube || still="${still}youtube "
+    ok_dns || still="${still}dns "
+  else
+    ok_vless_tunnel || still="${still}vless_tunnel "
+    ok_podkop_svc || still="${still}podkop "
+    ok_routes || still="${still}routes "
+    ok_zapret || still="${still}zapret "
+    ok_youtube || still="${still}youtube "
+    ok_gemini || still="${still}gemini "
+    ok_telegram || still="${still}telegram "
+    ok_torrents || still="${still}torrents "
+    ok_awg || still="${still}awg "
+    ok_ai_awg || still="${still}ai_awg "
+    ok_dns || still="${still}dns "
+    ok_doh_block || still="${still}doh_block "
+    ok_reverse_tunnel || still="${still}reverse "
+  fi
+  # диск и шара — всегда в итоговой оценке (раньше USB FAIL давал exit 0)
+  ok_usb || still="${still}usb "
+  ok_samba || still="${still}samba "
+
+  if [ -n "$fixed" ] && [ "$CHECK_ONLY" = "0" ]; then
+    tg_notify_repair "$problems" "$fixed" "$still"
+  fi
+
   if [ -z "$problems" ]; then
     log "=== DONE all OK ==="
     exit 0
   fi
-  log "=== DONE problems=[$problems] fixed=[$fixed] ==="
-  # exit 1 если остались проблемы после фикса
-  still=""
-  ok_podkop_svc || still="${still}podkop "
-  ok_zapret || still="${still}zapret "
-  ok_routes || still="${still}routes "
-  ok_youtube || still="${still}youtube "
-  ok_telegram || still="${still}telegram "
-  ok_torrents || still="${still}torrents "
-  ok_awg || still="${still}awg "
-  ok_dns || still="${still}dns "
-  ok_reverse_tunnel || still="${still}reverse "
+  log "=== DONE problems=[$problems] fixed=[$fixed] still=[$still] ==="
   [ -z "$still" ] && exit 0
   exit 1
 }
