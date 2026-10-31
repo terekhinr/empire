@@ -85,3 +85,5 @@ telegram_emoji_pack/_preview/
 # конфиги с ключами (VPN/xray/amnezia) — только на VPS
 scripts/keenetic-xkeen/vps-xray*.json
 scripts/flint2/amnezia-awg0.conf
+docs/VPN_DIALOGUES*
+.audit-yandex-staging/
