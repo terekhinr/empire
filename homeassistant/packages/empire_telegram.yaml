@@ -15,6 +15,18 @@ rest_command:
     timeout: 15
     payload: '{"message": "{{ message }}"}'
 
+  # Явный флаг кнопок — не зависеть только от текста сообщения.
+  empire_telegram_domofon:
+    url: !secret ha_notify_url
+    method: POST
+    headers:
+      Authorization: !secret ha_notify_token
+      Content-Type: application/json
+    content_type: "application/json"
+    timeout: 15
+    payload: >-
+      {"message": "{{ message }}", "domofon_buttons": true}
+
 script:
   empire_test_telegram:
     alias: "Empire — тест Telegram"

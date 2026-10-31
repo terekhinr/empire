@@ -63,11 +63,32 @@ def test_metrika_stub_without_id(client):
     assert "pensionMetrikaReach" in r.text
 
 
+def test_gift_consent_checkbox_is_inside_form():
+    html = (Path(__file__).resolve().parents[1] / "templates" / "gift.html").read_text(
+        encoding="utf-8"
+    )
+    form_start = html.find('id="gift-form"')
+    form_end = html.find("</form>", form_start)
+    chunk = html[form_start:form_end]
+    assert 'name="consent"' in chunk
+
+
+def test_buy_page_collects_presale_email(client):
+    book = Path(__file__).resolve().parents[1] / "data" / "book" / "napensiyu_nikogda.json"
+    if not book.is_file():
+        pytest.skip("book json missing")
+    r = client.get("/buy")
+    assert r.status_code == 200
+    assert "buy-waitlist-form" in r.text
+    assert "149" in r.text
+
+
 def test_gift_page_and_api(client):
     r = client.get("/gift")
     assert r.status_code == 200
     assert "gift-form" in r.text
     assert "5 принципов" in r.text
+    assert 'name="consent"' in r.text[r.text.find('id="gift-form"') : r.text.find("</form>")]
 
     r_bad = client.post(
         "/api/pension/gift",

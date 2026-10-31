@@ -1,9 +1,10 @@
 # Empire — общий пайплайн и чеклисты
 
-**Обновлено:** 2026-06-29 (R5 автопост)  
+**Обновлено:** 2026-09-06 (R6 dual-flagship)  
 **Зачем один файл:** видеть **что сделано / что осталось** по двум продуктовым линиям — **Pension** (neverretire.ru, YouTube) и **gdepar** (карта бань, «Пар?»), плюс **omni-publish** (5 TG) и инфраструктура.
 
-**Ревизия R5:** `docs/audit/14_PIPELINE_R5_AUTOPOST.md` — метрики, сроки, перераспределение времени.
+**Ревизия R5:** `docs/audit/14_PIPELINE_R5_AUTOPOST.md`  
+**Ревизия R6 (факты + деньги + 90 дней):** `docs/audit/15_FINANCIAL_MODEL_R6_2026-09-05.md` · `docs/audit/17_MILESTONES_R6_90D.md` · `docs/audit/18_GDEPAR_CONTENT_MONEY_R6.md` · промпт Gemini `docs/audit/16_GEMINI_PROMPT_DUAL_FLAGSHIP_R6.md`
 
 Статусы: `⬜` не начато · `🔄` в работе · `✅` готово · `⏸` ждёт вас (внешний сервис / ключ)
 
@@ -78,7 +79,8 @@ content/*/queue + рубрики JSON
 | A2.2 | **Яндекс.Метрика** — отдельный счётчик | ⏸ | `docs/pension_analytics_accounts_guide.md` |
 | A2.3 | Цели Метрики (email, book, youtube UTM) | ⏸ | `docs/pension_book_publish_tz.md` §6 |
 | A2.4 | PDF книги + `/buy` | 🔄 | `docs/pension_book_publish_tz.md` |
-| A2.5 | Email pre-launch база | ⬜ | цель ≥50 к августу 2026 |
+| A2.5 | Email pre-launch база | ⬜ | **R6:** ≥40 к 31.10, ≥50 к 30.11 (август сорван, waitlist=0) |
+| A2.6 | TG→сайт дедуп + RSS timer | ✅ | `pension_site_sync` · `empire-pension-site-sync.timer` |
 
 ### A3. YouTube «Иосиф Борода» / @neverretire
 
@@ -89,9 +91,9 @@ content/*/queue + рубрики JSON
 | A3.3 | Выпуск №1 снят (сценарий yt-001) | ⬜ | 1–2 |
 | A3.4 | 12 роликов без пропуска >2 нед | ⬜ | Q1 2026 |
 | A3.5 | Дзен из сценариев (раз в 2 нед) | ⬜ | с нед. 3 |
-| A3.6 | Launch книги **299 ₽** | ⬜ | **15 сентября 2026** |
-| A3.7 | Pre-sale **149 ₽** | ⬜ | август 2026, цель 15–25 |
-| A3.8 | YT №1–2 смонтированы к 1 сен | ⬜ | съёмка в августе |
+| A3.6 | Launch книги **299 ₽** | ⬜ | **R6 soft delay → 01.11.2026** (не 15.09) |
+| A3.7 | Pre-sale **149 ₽** | ⬜ | **R6:** октябрь soft sale, цель 5–10 |
+| A3.8 | YT №1–2 | ⬜ | **R6:** публикация до **15.10.2026** (август/1 сен сорваны) |
 
 ### A4. Пайплайн контента Pension (одна строка)
 
@@ -170,13 +172,14 @@ journalctl -u empire_gdepar | grep 'timing route='   # если тормозит
 
 ---
 
-## Сводка «что сделать в первую очередь» (июль 26)
+## Сводка «что сделать в первую очередь» (сентябрь 26, R6)
 
-1. **Метрика** — оба счётчика (без этого KPI слепые).
-2. **Pension:** финал книги → yt-001 съёмка → `/buy` pre-sale к 1 августа.
-3. **gdepar:** Metrika + «Пар?» → через 2–4 нед LLM_PCT.
-4. **Omni-publish:** ритуал + queue (автопост ✅, не расширять слоты).
-5. **KPI недели** — первая строка с `tg_posts_published`, `gift_emails`.
+1. **Метрика** — оба счётчика (без этого KPI слепые) — всё ещё блокер.
+2. **Pension:** не форсировать launch 15.09 → PDF+оплата+email+YT к **01.11**; Obsidian queue (18 файлов) → TG ≥2/нед.
+3. **gdepar:** Metrika + UTM-гиды 1×/нед + phone enrich MSK; карта 2045 уже ок.
+4. **Omni-publish:** pension persona **оставить disabled**; классика/curated — да.
+5. **Деньги:** вести ledger; bridge 35k не жечь на Директ без Metrika.
+6. Календарь 90 дней: `docs/audit/17_MILESTONES_R6_90D.md`.
 
 ---
 

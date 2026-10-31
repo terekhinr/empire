@@ -27,6 +27,12 @@ WEIGHT_RE = re.compile(r"\[(\d+)%\]")
 DAILY_FOCUS_REF_PREFIX = "empire-daily-focus-"
 
 
+def milestones_in_bot_enabled() -> bool:
+    """Напоминания про вехи/пайплайн в утреннем TG. По умолчанию выкл."""
+    raw = os.getenv("EMPIRE_INSIGHTS_MILESTONES", "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def _tasks_due_between(start: str, end: str, *, limit: int = 8) -> list[dict[str, Any]]:
     init_db()
     conn = get_connection()
@@ -79,8 +85,12 @@ def _llm_daily_focus(snapshot: dict[str, Any]) -> list[str] | None:
         {
             "today_tasks": snapshot.get("today_tasks", [])[:5],
             "overdue_count": snapshot.get("tasks", {}).get("overdue_count"),
-            "next_milestone": snapshot.get("next_milestone"),
-            "pipeline_pct": snapshot.get("pipeline", {}).get("percent_weighted"),
+            "next_milestone": snapshot.get("next_milestone")
+            if milestones_in_bot_enabled()
+            else None,
+            "pipeline_pct": snapshot.get("pipeline", {}).get("percent_weighted")
+            if milestones_in_bot_enabled()
+            else None,
             "workouts_7d": snapshot.get("health", {}).get("workouts_last_7d"),
         }
     )
@@ -130,9 +140,10 @@ def _build_focus_items(snapshot: dict[str, Any], *, use_llm: bool) -> list[str]:
             return llm_items
 
     items: list[str] = []
-    milestone = snapshot.get("next_milestone")
-    if milestone:
-        items.append(f"Веха {milestone.get('due_date')}: {milestone.get('title', '')[:70]}")
+    if milestones_in_bot_enabled():
+        milestone = snapshot.get("next_milestone")
+        if milestone:
+            items.append(f"Веха {milestone.get('due_date')}: {milestone.get('title', '')[:70]}")
 
     for t in snapshot.get("today_tasks") or []:
         if len(items) >= 3:
@@ -148,9 +159,14 @@ def _build_focus_items(snapshot: dict[str, Any], *, use_llm: bool) -> list[str]:
     if w7 == 0 and len(items) < 5:
         items.append("Силовая по программе — сохранить хотя бы 1 упражнение")
 
-    pipe = snapshot.get("pipeline") or {}
-    if pipe.get("percent_weighted") is not None and int(pipe["percent_weighted"]) < 20 and len(items) < 5:
-        items.append("Пайплайн Empire: 1 пункт из чеклиста фазы 0")
+    if milestones_in_bot_enabled():
+        pipe = snapshot.get("pipeline") or {}
+        if (
+            pipe.get("percent_weighted") is not None
+            and int(pipe["percent_weighted"]) < 20
+            and len(items) < 5
+        ):
+            items.append("Пайплайн Empire: 1 пункт из чеклиста фазы 0")
 
     for c in snapshot.get("conclusions") or []:
         if len(items) >= 5:
@@ -158,8 +174,9 @@ def _build_focus_items(snapshot: dict[str, Any], *, use_llm: bool) -> list[str]:
         if c not in items:
             items.append(c[:90])
 
-    return items[:5] or ["Откройте чеклист Pipeline 2026 — отметьте 1 пункт"]
-
+    if not items:
+        return ["Откройте Empire Tasks — отметьте 1 актуальную задачу"]
+    return items[:5]
 
 def _archive_old_daily_focus(keep_ref: str) -> None:
     init_db()
@@ -202,8 +219,12 @@ def format_daily_telegram(data: dict[str, Any]) -> str:
     lines.append("")
     lines.append(
         f"Просрочено: {tasks.get('overdue_count', 0)} · "
-        f"Сегодня: {len(data.get('today_tasks') or [])} · "
-        f"Пайплайн: {pipe.get('percent_weighted', '—')}%"
+        f"Сегодня: {len(data.get('today_tasks') or [])}"
+        + (
+            f" · Пайплайн: {pipe.get('percent_weighted', '—')}%"
+            if milestones_in_bot_enabled()
+            else ""
+        )
     )
     lines.append('<a href="https://neverretire.ru/tasks/">Открыть Empire Tasks</a>')
     return "\n".join(lines)
@@ -251,7 +272,8 @@ def build_daily_briefing(*, use_llm: bool = True) -> dict[str, Any]:
 
     week_end_date = (date.today() + timedelta(days=7)).isoformat()
     week_tasks = _tasks_due_between(today, week_end_date, limit=20)
-    milestone = _next_milestone()
+    # Вехи в боте выкл. по умолчанию (EMPIRE_INSIGHTS_MILESTONES=0)
+    milestone = _next_milestone() if milestones_in_bot_enabled() else None
 
     snapshot: dict[str, Any] = {
         **base,
@@ -364,11 +386,11 @@ def _rule_conclusions(snapshot: dict[str, Any]) -> list[str]:
         out.append(f"Просрочено {overdue} задач — начните с самой приоритетной.")
 
     w_pct = pipe.get("percent_weighted")
-    if w_pct is not None and w_pct < 15:
+    if milestones_in_bot_enabled() and w_pct is not None and w_pct < 15:
         out.append(
             f"Пайплайн Empire {w_pct}% по весам — фокус на ближайшую веху (см. чеклист Pipeline 2026)."
         )
-    elif w_pct is not None and w_pct >= 40:
+    elif milestones_in_bot_enabled() and w_pct is not None and w_pct >= 40:
         out.append(f"Пайплайн Empire {w_pct}% — хороший темп, держите ритм фазы.")
 
     wc = int(health.get("workouts_last_31d") or 0)
@@ -393,7 +415,7 @@ def _rule_conclusions(snapshot: dict[str, Any]) -> list[str]:
         out.append("Мало событий в analytics за неделю — проверьте автопост и Metrika.")
 
     if not out:
-        out.append("Критичных отклонений нет. Следующий шаг — ближайшая веха в календаре.")
+        out.append("Критичных отклонений нет. Выберите 1 задачу на сегодня.")
     return out
 
 

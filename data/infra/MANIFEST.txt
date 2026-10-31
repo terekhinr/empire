@@ -1,5 +1,5 @@
-infra bundle 2026-08-27T040122
-host=moderate-amethys
+infra bundle 2026-10-30T220508
+host=rough-beige
 empire_root=/root/projects/empire
 docs=docs/infra/
 restore_vps=scripts/infra/vps_restore_from_yandex.sh

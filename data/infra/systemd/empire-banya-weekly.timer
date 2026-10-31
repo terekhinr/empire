@@ -1,0 +1,10 @@
+[Unit]
+Description=Empire Gdepar banya weekly scrape (Sunday 04:30 UTC ≈ 07:30 MSK)
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target

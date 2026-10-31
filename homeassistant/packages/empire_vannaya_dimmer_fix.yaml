@@ -30,7 +30,26 @@ template:
                 {% else %}
                   100
                 {% endif %}
+          - delay:
+              milliseconds: 350
+          - action: light.turn_on
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052
+            data:
+              brightness_pct: >
+                {% if brightness_pct is defined %}
+                  {{ brightness_pct | int }}
+                {% elif brightness is defined %}
+                  {{ [((brightness | int) * 100 // 255), 1] | max }}
+                {% else %}
+                  100
+                {% endif %}
         turn_off:
+          - action: light.turn_off
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052
+          - delay:
+              milliseconds: 250
           - action: light.turn_off
             target:
               entity_id: light.tz3000_mgusv51k_ts0052

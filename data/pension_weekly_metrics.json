@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "week": "2026-08-24",
+    "site_sessions": 0,
+    "book_toc": 0,
+    "buy_clicks": 0,
+    "orders": 0,
+    "revenue_rub": 0,
+    "waitlist_count": 0,
+    "top_utm": "",
+    "notes": "Воронка /gift починена (consent внутри формы). /buy — pre-sale 149₽ + waitlist, ЮKassa выкл. Метрика ID пустой. 8 июньских email из analytics не восстановить."
+  }
+]

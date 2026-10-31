@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Empire Ops Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{
+  --bg:#16120e;--ink:#f4ead8;--dim:#c9b69a;--muted:#8b7a5f;
+  --card:#241c16;--card2:#2c231c;--line:#5a4330;--accent:#c39059;--accent2:#e0b07a;
+  --good:#6a9a55;--bad:#c45a47;--warn:#c9a04a;--test:#5b8ab8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+a{color:var(--accent2);text-decoration:none}
+header{position:sticky;top:0;z-index:20;background:rgba(22,18,14,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{margin:0;font:600 18px/1 Georgia,serif}
+.badge{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.badge.test{color:#d4e8ff;border-color:#3d5d7a;background:#1c2a38}
+.badge.live{color:#d8f0c8;border-color:#3d5c32;background:#1c2a18}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+nav.tabs button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;
+  padding:7px 12px;cursor:pointer;font-weight:600}
+nav.tabs button.on{background:var(--accent);color:#1b1510;border-color:var(--accent)}
+.btn-primary{background:var(--accent);color:#1b1510;border-color:var(--accent)}
+.btn-good{background:var(--good);border-color:var(--good);color:#14210f}
+.btn-ghost{background:transparent}
+.btn-bad{background:var(--bad);border-color:var(--bad);color:#fff}
+main{padding:16px;max-width:1280px;margin:0 auto}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+select,input,textarea{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;font:inherit}
+textarea{width:100%;min-height:120px;font-family:ui-monospace,Consolas,monospace}
+label.quiet{color:var(--muted);font-size:12px;display:block}
+.grid-week{display:grid;grid-template-columns:72px repeat(7,1fr);gap:6px;overflow:auto}
+.cell,.head,.time{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px;min-height:64px}
+.head{text-align:center;font-weight:700;min-height:auto;background:var(--card2)}
+.time{min-height:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.card-post{background:var(--card2);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:12px}
+.card-post .st{font-size:10px;color:var(--muted);text-transform:uppercase}
+.st-scheduled{color:var(--accent2)}
+.st-test_sent{color:var(--test)}
+.st-published{color:var(--good)}
+.st-failed,.st-skipped{color:var(--bad)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted);background:var(--card2)}
+.drop.over{border-color:var(--accent);color:var(--accent2)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(90,67,48,.45);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.toast{position:fixed;bottom:16px;right:16px;background:var(--card2);border:1px solid var(--line);
+  padding:10px 14px;border-radius:8px;display:none;max-width:360px;z-index:50}
+.counts{display:flex;gap:8px;flex-wrap:wrap}
+.counts span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--dim)}
+.slot-list{display:flex;flex-wrap:wrap;gap:8px}
+.slot-chip{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px}
+.slot-chip.off{opacity:.45;text-decoration:line-through}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.draft-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--card2)}
+.check{display:flex;gap:8px;align-items:center;margin:6px 0}
+@media (max-width:800px){
+  .grid-week{grid-template-columns:56px repeat(7,minmax(110px,1fr));min-width:900px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ops Studio</h1>
+  <span id="modeBadge" class="badge test">тест</span>
+  <span id="nowLabel" class="badge"></span>
+  <nav class="tabs">
+    <button type="button" class="on" data-tab="cal">Календарь</button>
+    <button type="button" data-tab="bank">База</button>
+    <button type="button" data-tab="ai">ИИ</button>
+    <button type="button" data-tab="up">Залить</button>
+    <button type="button" data-tab="mx">Матрица</button>
+    <button type="button" data-tab="slots">Слоты</button>
+    <button type="button" data-tab="rubrics">Рубрики</button>
+    <button type="button" data-tab="bot">Бот</button>
+    <button type="button" data-tab="queue">Журнал</button>
+    <a class="btn btn-ghost" href="/admin/studio/logout">Выйти</a>
+  </nav>
+</header>
+<main>
+  <div class="row">
+    <label class="quiet">Проект
+      <select id="project"></select>
+    </label>
+    <button type="button" class="btn" id="prevWeek">← неделя</button>
+    <strong id="weekLabel"></strong>
+    <button type="button" class="btn" id="nextWeek">неделя →</button>
+    <button type="button" class="btn btn-good" id="tickBtn">Обработать наступившие</button>
+    <button type="button" class="btn" id="modeBtn">Режим: тест</button>
+    <div class="counts" id="counts"></div>
+  </div>
+
+  <section id="tab-cal">
+    <p class="hint">Сетка как в Buffer. Пустые слоты при tick заполняются из <b>Базы</b> (ротация SocialBee). ИИ в эфир не пишет.</p>
+    <div class="grid-week" id="cal"></div>
+  </section>
+
+  <section id="tab-bank" hidden>
+    <div class="panel">
+      <p class="hint">Банк постов. Запас: <strong id="bankDays">—</strong> дн. · в базе: <strong id="bankCount">0</strong>.
+        Категория = id рубрики (<code>stepanych</code> / <code>lunar</code> для Сада).
+        <button type="button" class="btn" id="fillBankBtn">Заполнить слоты из базы</button>
+      </p>
+      <div class="row">
+        <input id="bankTitle" placeholder="Заголовок" style="flex:1;min-width:160px">
+        <input id="bankCat" placeholder="рубрика" value="stepanych" style="width:120px">
+        <input id="bankCooldown" type="number" value="21" style="width:80px" title="cooldown дней">
+        <input id="bankImage" placeholder="image_path (опц.)" style="flex:1;min-width:160px">
+      </div>
+      <textarea id="bankBody" placeholder="Текст поста…"></textarea>
+      <button type="button" class="btn btn-primary" id="bankAddBtn">В базу</button>
+      <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+      <p class="hint">Пачка Gemini: блоки <code>--- YAML ---</code> + тело → в базу (антидубли 30д / 90%).</p>
+      <textarea id="geminiPack" placeholder="---&#10;id: g1&#10;rubric: stepanych&#10;headline: Заголовок&#10;image_prompt_en: garden photo&#10;---&#10;Текст поста…" style="min-height:160px"></textarea>
+      <div class="row">
+        <input type="file" id="geminiFile" accept=".txt,.md,.markdown">
+        <button type="button" class="btn btn-primary" id="geminiImportBtn">Импорт пачки в базу</button>
+      </div>
+      <div style="overflow:auto;margin-top:14px">
+        <table>
+          <thead><tr><th>Рубрика</th><th>Заголовок</th><th>Исп.</th><th></th></tr></thead>
+          <tbody id="bankBodyTbl"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-ai" hidden>
+    <div class="panel">
+      <p class="hint">ИИ только наполняет базу. Черновики → правка → Accept. В канал без вашего Accept не уходит.</p>
+      <div class="row">
+        <input id="aiRubric" placeholder="рубрика (например: классика полка)" style="flex:1;min-width:200px">
+        <input id="aiCount" type="number" value="5" min="1" max="15" style="width:70px">
+        <button type="button" class="btn btn-primary" id="aiGenBtn">Сгенерировать</button>
+      </div>
+      <textarea id="aiExtra" placeholder="Доп. указания (тон, запреты)…" style="min-height:70px"></textarea>
+      <div id="aiDrafts"></div>
+    </div>
+  </section>
+
+  <section id="tab-up" hidden>
+    <div class="panel">
+      <p class="hint">Один файл — один пост: <code>.md</code> / <code>.txt</code>. Сразу в слоты (не в базу).</p>
+      <div class="drop" id="drop">Перетащите файлы сюда или выберите
+        <div style="margin-top:10px"><input type="file" id="files" multiple accept=".md,.txt,.markdown"></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button type="button" class="btn btn-primary" id="uploadBtn">Поставить в слоты</button>
+      </div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+      <label class="quiet">Или вставьте текст
+        <input id="pasteTitle" placeholder="Заголовок" style="width:100%;margin:6px 0">
+        <textarea id="pasteBody" placeholder="Текст поста…"></textarea>
+      </label>
+      <button type="button" class="btn btn-primary" id="pasteBtn">В очередь</button>
+    </div>
+  </section>
+
+  <section id="tab-mx" hidden>
+    <div class="panel">
+      <p class="hint">CSV: <code>день,слот,канал,заголовок,текст</code></p>
+      <textarea id="matrixText" placeholder="день,слот,заголовок,текст
+Пн,11:00,Лёгкий пар,Текст поста"></textarea>
+      <div class="row">
+        <input type="file" id="matrixFile" accept=".csv,.md,.txt,.tsv">
+        <button type="button" class="btn btn-primary" id="matrixBtn">Разобрать и поставить</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-slots" hidden>
+    <div class="panel">
+      <p class="hint">Матрица расписания. Подпись / rubric_id = рубрика банка (для Сада: stepanych, lunar).</p>
+      <div class="row">
+        <select id="slotDay"></select>
+        <input id="slotTime" type="time" value="11:00">
+        <input id="slotLabel" placeholder="рубрика / подпись">
+        <button type="button" class="btn btn-primary" id="addSlot">Добавить слот</button>
+      </div>
+      <div class="slot-list" id="slotList"></div>
+    </div>
+  </section>
+
+  <section id="tab-rubrics" hidden>
+    <div class="panel">
+      <p class="hint">Политика картинок на уровне рубрики. Пилот Сад: <b>generate</b> (Gemini) → при сбое <b>stub</b> + алерт.</p>
+      <div id="rubricsList"></div>
+    </div>
+  </section>
+
+  <section id="tab-bot" hidden>
+    <div class="panel">
+      <p class="hint">Автопост-бот публикует в каналы и шлёт вам ops: ✓ / Skip / Fail + digest. Token из <code>TELEGRAM_TOKEN</code>, chat по умолчанию из <code>ADMIN_ID</code>.</p>
+      <div id="botEnv" class="hint"></div>
+      <label class="quiet">Admin chat id
+        <input id="botChat" style="width:100%;margin:6px 0" placeholder="пусто = ADMIN_ID из env">
+      </label>
+      <label class="quiet">Digest
+        <select id="botDigest" style="width:100%;margin:6px 0">
+          <option value="daily">ежедневно</option>
+          <option value="weekly">еженедельно</option>
+          <option value="off">выкл</option>
+        </select>
+      </label>
+      <div class="check"><input type="checkbox" id="nPub" checked> published</div>
+      <div class="check"><input type="checkbox" id="nSkip" checked> skipped</div>
+      <div class="check"><input type="checkbox" id="nFail" checked> failed</div>
+      <div class="check"><input type="checkbox" id="nImg" checked> требовать картинку (TG; иначе fallback/skip)</div>
+      <label class="quiet">Мин. длина текста
+        <input id="botMin" type="number" value="80" style="width:100px;margin:6px 0">
+      </label>
+      <div class="row">
+        <button type="button" class="btn btn-primary" id="botSave">Сохранить</button>
+        <button type="button" class="btn" id="botPing">Test ping</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-queue" hidden>
+    <div class="panel">
+      <p class="hint">Журнал очереди и outbox (отправки / skip / fail).</p>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>Когда</th><th>Куда</th><th>Заголовок</th><th>Статус</th><th></th></tr></thead>
+          <tbody id="queueBody"></tbody>
+        </table>
+      </div>
+      <h3 style="margin:18px 0 8px;font:600 15px Georgia,serif">Последние отправки</h3>
+      <div id="outbox"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const PROJECTS = {{ projects | tojson }};
+const WEEKDAYS = {{ weekdays | tojson }};
+let state = null;
+let weekStart = null;
+let currentTab = "cal";
+
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  const el = $("toast"); el.textContent = msg; el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 4500);
+}
+function pid(){ return $("project").value; }
+async function api(url, opts){
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : (r.statusText || "error"));
+  return data;
+}
+function fillProjects(){
+  const sel = $("project");
+  sel.innerHTML = `<option value="">Все проекты</option>` + PROJECTS.map(p =>
+    `<option value="${p.id}">${p.label}</option>`).join("");
+  $("slotDay").innerHTML = WEEKDAYS.map((w,i) => `<option value="${i}">${w}</option>`).join("");
+}
+function statusRu(s){
+  return {scheduled:"в слоте", queued:"очередь", test_sent:"тест", published:"опубликован",
+    failed:"ошибка", skipped:"skip", cancelled:"отмена"}[s] || s;
+}
+function esc(s){ return String(s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+function render(){
+  if (!state) return;
+  const mode = state.mode || "test";
+  $("modeBadge").textContent = mode === "live" ? "живой" : "тест";
+  $("modeBadge").className = "badge " + (mode === "live" ? "live" : "test");
+  $("modeBtn").textContent = mode === "live" ? "Режим: живой" : "Режим: тест";
+  $("nowLabel").textContent = "МСК " + state.now;
+  $("weekLabel").textContent = state.grid.week_start + " — " + state.grid.week_end;
+  const c = state.counts || {};
+  $("counts").innerHTML = Object.entries(c).filter(([,n]) => n).map(([k,n]) =>
+    `<span>${statusRu(k)}: ${n}</span>`).join("");
+  $("bankDays").textContent = state.bank_days ?? "—";
+  $("bankCount").textContent = state.bank_count ?? 0;
+
+  const g = state.grid;
+  let html = `<div class="time"></div>` + g.days.map(d =>
+    `<div class="head">${d.label}<div style="font-weight:400;color:var(--muted)">${d.date_ru}</div></div>`).join("");
+  if (!g.times.length){
+    html += `<div class="cell" style="grid-column:1/-1">Нет слотов — добавьте на вкладке «Слоты».</div>`;
+  }
+  for (const t of g.times){
+    html += `<div class="time">${t}</div>`;
+    for (const d of g.days){
+      const key = d.date + " " + t;
+      const items = (g.cells[key] || []).map(p =>
+        `<div class="card-post"><div class="st st-${p.status}">${statusRu(p.status)}</div>${esc(p.title||"")}<div style="color:var(--muted)">${p.project_id}${p.bank_id?" · bank":""}</div></div>`
+      ).join("");
+      html += `<div class="cell">${items || ""}</div>`;
+    }
+  }
+  $("cal").innerHTML = html;
+
+  $("slotList").innerHTML = (state.slots || []).map(s =>
+    `<div class="slot-chip ${s.enabled===false?"off":""}">${WEEKDAYS[s.weekday]||s.weekday} ${s.time} ${esc(s.label||"")}
+      <button class="btn" style="padding:2px 8px;margin-left:6px" onclick="toggleSlot('${s.id}')">${s.enabled===false?"вкл":"выкл"}</button>
+      <button class="btn" style="padding:2px 8px" onclick="delSlot('${s.id}')">×</button>
+    </div>`).join("") || "<span class='quiet'>Слотов нет</span>";
+
+  $("bankBodyTbl").innerHTML = (state.bank_posts || []).map(b => `<tr>
+    <td>${esc(b.rubric_id||b.category)}</td>
+    <td>${esc(b.title)}<div style="color:var(--muted);font-size:12px">${esc((b.body||"").slice(0,90))}</div></td>
+    <td>${b.times_used||0}</td>
+    <td class="actions">
+      <button class="btn" onclick="queueBank('${b.id}')">в слот</button>
+      <button class="btn" onclick="delBank('${b.id}')">×</button>
+    </td></tr>`).join("") || "<tr><td colspan=4 class='hint'>База пуста — импорт пачки Gemini, вручную или ИИ</td></tr>";
+
+  const modes = state.image_modes || ["generate","archive_pool","fixed","post","none"];
+  $("rubricsList").innerHTML = (state.rubrics || []).map(r => `
+    <div class="draft-card" id="rub-${r.project_id}-${r.id}">
+      <strong>${esc(r.label||r.id)}</strong> <span style="color:var(--muted)">${esc(r.project_id)} / ${esc(r.id)}</span>
+      <div class="row" style="margin-top:8px">
+        <label class="quiet">image_mode
+          <select id="rm-${r.id}">${modes.map(m=>`<option value="${m}" ${m===r.image_mode?"selected":""}>${m}</option>`).join("")}</select>
+        </label>
+        <label class="quiet">on_missing
+          <input id="ro-${r.id}" value="${esc(r.on_missing||"stub")}" style="width:100px">
+        </label>
+        <label class="quiet">archive_dir
+          <input id="ra-${r.id}" value="${esc(r.archive_dir||"")}" style="min-width:180px">
+        </label>
+        <label class="quiet">fixed_image_path
+          <input id="rf-${r.id}" value="${esc(r.fixed_image_path||"")}" style="min-width:180px">
+        </label>
+      </div>
+      <label class="quiet">default_prompt_en
+        <textarea id="rp-${r.id}" style="min-height:60px">${esc(r.default_prompt_en||"")}</textarea>
+      </label>
+      <button class="btn btn-primary" onclick="saveRubric('${r.project_id}','${r.id}')">Сохранить рубрику</button>
+    </div>`).join("") || "<p class='hint'>Выберите проект (например Сад) — появятся рубрики пилота.</p>";
+
+  $("aiDrafts").innerHTML = (state.ai_drafts || []).filter(d => d.status==="pending").map(d => `
+    <div class="draft-card" id="draft-${d.id}">
+      <input style="width:100%;margin-bottom:6px" id="t-${d.id}" value="${esc(d.title||"")}">
+      <textarea id="b-${d.id}">${esc(d.body||"")}</textarea>
+      <input style="width:160px;margin:6px 0" id="c-${d.id}" value="${esc(d.category||"general")}">
+      <div class="actions">
+        <button class="btn btn-good" onclick="acceptAi('${d.id}')">Accept → база</button>
+        <button class="btn btn-bad" onclick="rejectAi('${d.id}')">Reject</button>
+      </div>
+    </div>`).join("") || "<p class='hint'>Черновиков нет. Нажмите «Сгенерировать».</p>";
+
+  const bs = state.bot_settings || {};
+  const be = state.bot_env || {};
+  $("botChat").value = bs.admin_chat_id || "";
+  $("botDigest").value = bs.digest || "daily";
+  $("nPub").checked = (bs.notify_on||[]).includes("published");
+  $("nSkip").checked = (bs.notify_on||[]).includes("skipped");
+  $("nFail").checked = (bs.notify_on||[]).includes("failed");
+  $("nImg").checked = bs.require_image !== false;
+  $("botMin").value = bs.min_body_chars || 80;
+  const arch = be.archive_images || {};
+  $("botEnv").innerHTML = `Token: ${be.has_token?"есть":"нет"} · Gemini: ${be.has_gemini?"есть":"нет"} · chat: ${esc(be.admin_chat_resolved||"—")} · архив: `
+    + Object.entries(arch).map(([k,v]) => `${k}=${v}`).join(", ");
+
+  $("queueBody").innerHTML = (state.posts || []).map(p => `<tr>
+    <td>${p.scheduled_at||"—"}</td><td>${p.project_id}</td>
+    <td>${esc(p.title||"")}<div style="color:var(--muted);font-size:12px">${esc((p.body||"").slice(0,80))}</div></td>
+    <td class="st-${p.status}">${statusRu(p.status)}</td>
+    <td class="actions">
+      ${p.status==="scheduled"?`<button class="btn" onclick="forceTick('${p.id}')">сейчас</button>`:""}
+      ${p.status==="scheduled"?`<button class="btn" onclick="cancelPost('${p.id}')">снять</button>`:""}
+    </td></tr>`).join("");
+
+  $("outbox").innerHTML = (state.outbox || []).slice(0,16).map(o =>
+    `<div class="card-post">${o.at} · ${o.mode} · ${o.project_id} · ${esc(o.title||"")} — ${esc(o.detail)}${o.skipped?" (skip)":""}${o.image_source?` [${o.image_source}]`:""}</div>`
+  ).join("") || "<p class='hint'>Пока пусто.</p>";
+}
+
+async function reload(){
+  const w = weekStart ? `&week=${weekStart}` : "";
+  const pr = pid() ? `&project=${encodeURIComponent(pid())}` : "";
+  state = await api(`/admin/studio/api/state?dummy=1${w}${pr}`);
+  if (!weekStart) weekStart = state.grid.week_start;
+  render();
+}
+function showTab(id){
+  currentTab = id;
+  document.querySelectorAll("nav.tabs button[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab===id));
+  ["cal","bank","ai","up","mx","slots","rubrics","bot","queue"].forEach(t => { const el=$("tab-"+t); if(el) el.hidden = t!==id; });
+}
+document.querySelectorAll("nav.tabs button[data-tab]").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+$("project").onchange = () => reload();
+$("prevWeek").onclick = () => { weekStart = shiftWeek(-7); reload(); };
+$("nextWeek").onclick = () => { weekStart = shiftWeek(7); reload(); };
+function shiftWeek(days){
+  const d = new Date(weekStart + "T12:00:00");
+  d.setDate(d.getDate()+days);
+  return d.toISOString().slice(0,10);
+}
+$("tickBtn").onclick = async () => {
+  try { const r = await api("/admin/studio/api/tick", {method:"POST", body: new FormData()});
+    toast("Отправок: " + (r.sent||[]).length + ", из базы: " + ((r.filled_from_bank||[]).length)); await reload(); }
+  catch(e){ toast(e.message); }
+};
+$("modeBtn").onclick = async () => {
+  const next = (state.mode === "live") ? "test" : "live";
+  const fd = new FormData(); fd.append("mode", next);
+  try { await api("/admin/studio/api/mode", {method:"POST", body: fd}); await reload(); }
+  catch(e){ toast(e.message); }
+};
+$("addSlot").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "tg:gdepar");
+  fd.append("weekday", $("slotDay").value);
+  fd.append("time", $("slotTime").value);
+  fd.append("label", $("slotLabel").value);
+  fd.append("rubric_id", $("slotLabel").value);
+  try { await api("/admin/studio/api/slots", {method:"POST", body: fd}); toast("Слот добавлен"); await reload(); }
+  catch(e){ toast(e.message); }
+};
+async function saveRubric(projectId, rid){
+  const fd = new FormData();
+  fd.append("project_id", projectId);
+  fd.append("image_mode", $("rm-"+rid).value);
+  fd.append("on_missing", $("ro-"+rid).value || "stub");
+  fd.append("archive_dir", $("ra-"+rid).value || "");
+  fd.append("fixed_image_path", $("rf-"+rid).value || "");
+  fd.append("default_prompt_en", $("rp-"+rid).value || "");
+  fd.append("enabled", "1");
+  try { await api(`/admin/studio/api/rubrics/${rid}`, {method:"POST", body: fd}); toast("Рубрика сохранена"); await reload(); }
+  catch(e){ toast(e.message); }
+}
+$("geminiImportBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "tg:garden");
+  fd.append("text", $("geminiPack").value || "");
+  const f = $("geminiFile").files[0];
+  if (f) fd.append("file", f);
+  try {
+    const r = await api("/admin/studio/api/import/gemini", {method:"POST", body: fd});
+    toast(`Импорт: +${r.added}, дублей ${r.skipped_dup}, разобрано ${r.parsed}`);
+    $("geminiPack").value = "";
+    await reload();
+  } catch(e){ toast(e.message); }
+};
+async function toggleSlot(id){ await api(`/admin/studio/api/slots/${id}/toggle`, {method:"POST"}); await reload(); }
+async function delSlot(id){
+  if (!confirm("Удалить слот?")) return;
+  await api(`/admin/studio/api/slots/${id}/delete`, {method:"POST"}); await reload();
+}
+async function cancelPost(id){ await api(`/admin/studio/api/posts/${id}/cancel`, {method:"POST"}); await reload(); }
+async function forceTick(id){
+  const fd = new FormData(); fd.append("force_id", id);
+  const r = await api("/admin/studio/api/tick", {method:"POST", body: fd});
+  toast(((r.sent&&r.sent[0]&&r.sent[0].detail) || "ok")); await reload();
+}
+$("uploadBtn").onclick = async () => {
+  const files = $("files").files;
+  if (!files.length){ toast("Выберите файлы"); return; }
+  const fd = new FormData(); fd.append("project_id", pid() || "tg:gdepar");
+  for (const f of files) fd.append("files", f);
+  try { const r = await api("/admin/studio/api/upload", {method:"POST", body: fd});
+    toast("В слоты: " + r.created.filter(x=>!x.error).length); await reload(); showTab("cal"); }
+  catch(e){ toast(e.message); }
+};
+$("pasteBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "tg:gdepar");
+  fd.append("title", $("pasteTitle").value);
+  fd.append("body", $("pasteBody").value);
+  try { await api("/admin/studio/api/paste", {method:"POST", body: fd});
+    $("pasteBody").value=""; toast("Пост в слоте"); await reload(); showTab("cal"); }
+  catch(e){ toast(e.message); }
+};
+$("matrixBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "");
+  fd.append("text", $("matrixText").value);
+  const f = $("matrixFile").files[0];
+  if (f) fd.append("file", f);
+  try { const r = await api("/admin/studio/api/matrix", {method:"POST", body: fd});
+    toast("Из матрицы: " + r.created.filter(x=>!x.error).length); await reload(); showTab("cal"); }
+  catch(e){ toast(e.message); }
+};
+$("bankAddBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "tg:gdepar");
+  fd.append("title", $("bankTitle").value);
+  fd.append("body", $("bankBody").value);
+  fd.append("category", $("bankCat").value || "general");
+  fd.append("cooldown_days", $("bankCooldown").value || "21");
+  fd.append("image_path", $("bankImage").value || "");
+  try { await api("/admin/studio/api/bank", {method:"POST", body: fd});
+    $("bankBody").value=""; toast("В базе"); await reload(); }
+  catch(e){ toast(e.message); }
+};
+$("fillBankBtn").onclick = async () => {
+  const fd = new FormData(); fd.append("project_id", pid() || "");
+  try { const r = await api("/admin/studio/api/bank/fill", {method:"POST", body: fd});
+    toast("Заполнено слотов: " + r.count); await reload(); showTab("cal"); }
+  catch(e){ toast(e.message); }
+};
+async function queueBank(id){
+  try { await api(`/admin/studio/api/bank/${id}/queue`, {method:"POST"}); toast("В слот"); await reload(); }
+  catch(e){ toast(e.message); }
+}
+async function delBank(id){
+  if (!confirm("Удалить из базы?")) return;
+  await api(`/admin/studio/api/bank/${id}/delete`, {method:"POST"}); await reload();
+}
+$("aiGenBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("project_id", pid() || "tg:gdepar");
+  fd.append("rubric", $("aiRubric").value || "общая");
+  fd.append("count", $("aiCount").value || "5");
+  fd.append("extra", $("aiExtra").value || "");
+  toast("Генерация…");
+  try { const r = await api("/admin/studio/api/ai/generate", {method:"POST", body: fd});
+    toast("Черновиков: " + (r.drafts||[]).length); await reload(); }
+  catch(e){ toast(e.message); }
+};
+async function acceptAi(id){
+  const fd = new FormData();
+  fd.append("title", $("t-"+id).value);
+  fd.append("body", $("b-"+id).value);
+  fd.append("category", $("c-"+id).value);
+  try { await api(`/admin/studio/api/ai/${id}/accept`, {method:"POST", body: fd}); toast("В базе"); await reload(); }
+  catch(e){ toast(e.message); }
+}
+async function rejectAi(id){
+  await api(`/admin/studio/api/ai/${id}/reject`, {method:"POST"}); await reload();
+}
+$("botSave").onclick = async () => {
+  const fd = new FormData();
+  fd.append("admin_chat_id", $("botChat").value);
+  fd.append("digest", $("botDigest").value);
+  fd.append("notify_published", $("nPub").checked ? "1" : "0");
+  fd.append("notify_skipped", $("nSkip").checked ? "1" : "0");
+  fd.append("notify_failed", $("nFail").checked ? "1" : "0");
+  fd.append("require_image", $("nImg").checked ? "1" : "0");
+  fd.append("min_body_chars", $("botMin").value || "80");
+  try { await api("/admin/studio/api/bot/settings", {method:"POST", body: fd}); toast("Сохранено"); await reload(); }
+  catch(e){ toast(e.message); }
+};
+$("botPing").onclick = async () => {
+  try { const r = await api("/admin/studio/api/bot/ping", {method:"POST"});
+    toast(r.ok ? "Ping ok → " + r.chat_id : "Ping fail: " + r.detail); }
+  catch(e){ toast(e.message); }
+};
+const drop = $("drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => {
+  e.preventDefault(); drop.classList.remove("over");
+  $("files").files = e.dataTransfer.files;
+});
+fillProjects();
+reload().catch(e => toast(e.message));
+</script>
+</body>
+</html>

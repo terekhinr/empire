@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import secrets
 from datetime import date
@@ -11,8 +12,8 @@ from typing import Any
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -896,16 +897,141 @@ def api_insights_refresh(llm: bool = True):
 
 
 @app.api_route("/", methods=["GET", "HEAD"])
-def pwa_index():
+def pwa_index(request: Request):
+    # Единый PWA: задачи + зал + замеры. Режим зала — ?app=gym внутри /tasks/, не отдельный сайт.
     index = PLANNING_STATIC / "index.html"
     if not index.is_file():
         return JSONResponse(
             {"detail": "planning_pwa_not_built", "static": str(PLANNING_STATIC)},
             status_code=503,
         )
-    return FileResponse(
-        index,
-        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    html = index.read_text(encoding="utf-8")
+    # Токен из cookie или ?native_token= — в HTML до app.js (на ПК localStorage с предыдущей страницы не доезжал).
+    expected = (os.getenv("PLANNING_API_TOKEN") or "").strip()
+    tok = (
+        request.cookies.get("empire_go_tasks_token")
+        or request.query_params.get("native_token")
+        or ""
+    ).strip()
+    if expected and tok and secrets.compare_digest(tok, expected):
+        inject = (
+            "<script>try{localStorage.setItem('empire_planning_token',"
+            + json.dumps(tok)
+            + ")}catch(e){}</script>"
+        )
+        html = html.replace("<head>", "<head>" + inject, 1)
+    return HTMLResponse(
+        html,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "X-Empire-Tasks": "v84",
+        },
+    )
+
+
+@app.api_route("/gym", methods=["GET", "HEAD"])
+@app.api_route("/gym/", methods=["GET", "HEAD"])
+def gym_index(request: Request):
+    """Старые закладки /gym/ → единый Задачник в режиме зала."""
+    q = request.url.query
+    parts = [p for p in q.split("&") if p]
+    extra = ("&" + "&".join(parts)) if parts else ""
+    return RedirectResponse(url=f"/tasks/?app=gym{extra}", status_code=302)
+
+
+def _sw_response(filename: str) -> Response:
+    path = PLANNING_STATIC / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="sw_missing")
+    return Response(
+        content=path.read_bytes(),
+        media_type="application/javascript; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Service-Worker-Allowed": "/tasks/",
+        },
+    )
+
+
+@app.api_route("/assets/sw.js", methods=["GET", "HEAD"])
+def planning_sw_kill():
+    return _sw_response("sw.js")
+
+
+@app.api_route("/assets/sw-push.js", methods=["GET", "HEAD"])
+def planning_sw_push():
+    return _sw_response("sw-push.js")
+
+
+@app.api_route("/assets/sw-hang-test.js", methods=["GET", "HEAD"])
+def planning_sw_hang_test():
+    return _sw_response("sw-hang-test.js")
+
+
+@app.get("/recover")
+@app.get("/recover/")
+def planning_recover_page():
+    """Яркая страница сброса: кнопка видна без JS. Никакого await register(SW) — он мог вешать вкладку в чёрный экран."""
+    html = r"""<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>Сброс Задачника</title>
+</head>
+<body style="margin:0;min-height:100vh;background:#ffe600;color:#111;font-family:system-ui,sans-serif;padding:28px;box-sizing:border-box">
+<div style="max-width:520px;margin:40px auto;background:#111;color:#ffe600;border:4px solid #111;border-radius:16px;padding:28px;text-align:center">
+  <h1 style="margin:0 0 12px;font-size:1.6rem;color:#ffe600">Сброс Задачника</h1>
+  <p id="msg" style="margin:0 0 18px;color:#fff;font-size:1.05rem;line-height:1.4">Нажмите кнопку. Иконку приложения не трогайте.</p>
+  <p style="margin:0">
+    <a id="open-x" href="/go-tasks/?src=recover"
+       style="display:inline-block;padding:16px 22px;background:#ffe600;color:#111;font-weight:800;font-size:1.15rem;text-decoration:none;border-radius:12px">
+      ВОЙТИ В ЗАДАЧНИК
+    </a>
+  </p>
+  <p style="margin:20px 0 0;color:#ccc;font-size:0.9rem;line-height:1.45;text-align:left">
+    Если снова чёрный экран:<br>
+    Chrome → замок/иконка слева от адреса → «Данные сайта» / Site settings →
+    «Удалить данные» для neverretire.ru → снова эта кнопка.
+  </p>
+</div>
+<script>
+(function () {
+  var msg = document.getElementById("msg");
+  function done(t) { try { msg.textContent = t; } catch (e) {} }
+  // Только unregister + caches. БЕЗ register() — он зависал в чёрный экран.
+  function wipe() {
+    var tasks = [];
+    try {
+      if (navigator.serviceWorker) {
+        tasks.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }));
+      }
+    } catch (e1) {}
+    try {
+      if (window.caches) {
+        tasks.push(caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }));
+      }
+    } catch (e2) {}
+    try { localStorage.removeItem("empire_offline_snapshot"); } catch (e3) {}
+    return Promise.all(tasks).then(function () { done("Кэш сброшен. Жмите «ВОЙТИ В ЗАДАЧНИК»."); })
+      .catch(function () { done("Жмите «ВОЙТИ В ЗАДАЧНИК» (сброс частичный)."); });
+  }
+  wipe();
+  setTimeout(function () { done("Жмите «ВОЙТИ В ЗАДАЧНИК»."); }, 2500);
+})();
+</script>
+</body></html>"""
+    return HTMLResponse(
+        html,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            # Чистит HTTP/Cache Storage у клиента; token в localStorage не трогаем (нет "storage").
+            "Clear-Site-Data": '"cache"',
+        },
     )
 
 

@@ -14,5 +14,9 @@ if [[ ! -f /etc/empire/dashboard.htpasswd ]]; then
 else
   sudo htpasswd -b /etc/empire/dashboard.htpasswd "$USER" "$PASS"
 fi
-sudo chmod 600 /etc/empire/dashboard.htpasswd
+# nginx (www-data) должен читать htpasswd, но не листать /etc/empire с секретами.
+sudo chgrp www-data /etc/empire /etc/empire/dashboard.htpasswd
+sudo chmod 710 /etc/empire
+sudo chmod 640 /etc/empire/dashboard.htpasswd
+# nginx (www-data) читает только htpasswd; каталог 710, секреты *.env остаются 600.
 echo "OK: /etc/empire/dashboard.htpasswd (user $USER)"

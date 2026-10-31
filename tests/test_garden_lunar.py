@@ -48,6 +48,17 @@ def test_june1_uses_calendar_not_squashed_rag():
     assert "Длякаждого" not in body
 
 
+def test_october30_is_winter_work_not_a_ban():
+    when = datetime(2026, 10, 30, 20, 0, tzinfo=ZoneInfo("Europe/Moscow"))
+    _topic, body = gc.build_lunar_calendar_post(when)
+    assert "30 октября" in body
+    assert "Фаза I" not in body
+    assert "пропол" not in body.lower()
+    assert "не делают" not in body.lower()
+    assert "не се" not in body.lower()
+    assert len(body) >= 180
+
+
 def test_rejects_squashed_ocr():
     squashed = (
         "изньсвоимрастениям, а несчитаетеэтуработу Длякаждогомесяцавкалендаредается"

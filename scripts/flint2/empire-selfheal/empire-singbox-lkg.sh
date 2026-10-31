@@ -77,12 +77,36 @@ restore() {
   return 0
 }
 
+config_ok() {
+  pgrep -f '/usr/bin/sing-box run' >/dev/null 2>&1 || return 1
+  sing-box check -c "$CFG" >/dev/null 2>&1 || return 1
+  grep -q 'ai_awg-user-domains-ruleset' "$CFG" 2>/dev/null || return 1
+  dns_fakeip telegram.org || return 1
+  dns_fakeip youtube.com || return 1
+  dns_fakeip chatgpt.com || dns_fakeip api2.cursor.sh || return 1
+  return 0
+}
+
 ensure() {
   if smoke; then
     # периодически обновляем LKG только если всё зелёное
     save >/dev/null 2>&1 || true
     return 0
   fi
+  # Конфиг и FakeIP живы, а HTTP мёртв — это путь до VPS, не битый json.
+  # Рестарт sing-box тут только роняет DNS на несколько секунд.
+  if config_ok; then
+    log "ENSURE skip restore: config+FakeIP ok, HTTP fail (upstream)"
+    return 1
+  fi
+  now=$(date +%s)
+  last=0
+  [ -f /tmp/empire-lkg-restore.ts ] && last=$(cat /tmp/empire-lkg-restore.ts 2>/dev/null || echo 0)
+  if [ $((now - last)) -lt 900 ]; then
+    log "ENSURE skip restore: cooldown"
+    return 1
+  fi
+  echo "$now" >/tmp/empire-lkg-restore.ts
   log "ENSURE smoke FAIL → restore"
   restore || return 1
   sleep 2

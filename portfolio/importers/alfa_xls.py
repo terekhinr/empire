@@ -14,8 +14,12 @@ from portfolio.asset_classify import classify_asset
 from portfolio.importers.isin_ticker import isin_to_ticker
 
 
+def _excel_engine(path: Path) -> str:
+    return "openpyxl" if path.suffix.lower() == ".xlsx" else "xlrd"
+
+
 def _parse_agreement(path: Path) -> str:
-    raw = pd.read_excel(path, sheet_name=0, header=None, nrows=8, engine="xlrd")
+    raw = pd.read_excel(path, sheet_name=0, header=None, nrows=8, engine=_excel_engine(path))
     blob = " ".join(str(x) for x in raw.values.flatten() if str(x) != "nan")
     m = re.search(r"№\s*(\d+)", blob)
     return m.group(1) if m else "Основной"
@@ -42,7 +46,7 @@ def import_alfa_report(conn: sqlite3.Connection, path: str | Path) -> dict[str, 
     agreement = _parse_agreement(path)
     account_id = ensure_account(conn, "alfa", label=agreement)
 
-    df = pd.read_excel(path, sheet_name="Завершенные сделки", header=14, engine="xlrd")
+    df = pd.read_excel(path, sheet_name="Завершенные сделки", header=14, engine=_excel_engine(path))
     qcol = "Количество актива⁷,\nшт./грамм"
     added = skipped = 0
     for _, r in df.iterrows():
@@ -106,7 +110,7 @@ def import_alfa_snapshot(conn: sqlite3.Connection, path: str | Path) -> dict[str
         (account_id,),
     )
 
-    raw = pd.read_excel(path, sheet_name="Динамика позиций", header=None, engine="xlrd")
+    raw = pd.read_excel(path, sheet_name="Динамика позиций", header=None, engine=_excel_engine(path))
     skip_names = {
         "Актив ¹",
         "RUB",
@@ -203,7 +207,7 @@ def _alfa_flow_date(row: pd.Series) -> str | None:
 def _import_cashflows(
     conn: sqlite3.Connection, path: Path, account_id: int, agreement: str
 ) -> int:
-    raw = pd.read_excel(path, sheet_name=" Движение ДС", header=None, engine="xlrd")
+    raw = pd.read_excel(path, sheet_name=" Движение ДС", header=None, engine=_excel_engine(path))
     added = 0
     for _, r in raw.iterrows():
         op = str(r.iloc[9] if len(r) > 9 else "").strip()

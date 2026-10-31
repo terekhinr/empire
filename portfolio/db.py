@@ -39,21 +39,31 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
+def get_connection(
+    db_path: Path | None = None,
+    *,
+    timeout: float = 15.0,
+    busy_ms: int = 5000,
+) -> sqlite3.Connection:
     path = db_path or PORTFOLIO_DB
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=60, check_same_thread=False)
+    conn = sqlite3.connect(path, timeout=timeout, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=60000")
+    conn.execute(f"PRAGMA busy_timeout={int(busy_ms)}")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
 
 @contextmanager
-def db_session(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
-    conn = get_connection(db_path)
+def db_session(
+    db_path: Path | None = None,
+    *,
+    timeout: float = 15.0,
+    busy_ms: int = 5000,
+) -> Iterator[sqlite3.Connection]:
+    conn = get_connection(db_path, timeout=timeout, busy_ms=busy_ms)
     try:
         yield conn
         _retry_locked(conn.commit)

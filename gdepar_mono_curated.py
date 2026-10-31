@@ -12,7 +12,7 @@ _DATA_PATH = _ROOT / "data" / "gdepar_mono_curated.json"
 _HISTORY_PATH = _ROOT / "data" / "gdepar_mono_curated_used.json"
 
 MONO_RUBRIC_TAG = "[Монолог]"
-_COOLDOWN_DAYS = 14
+_COOLDOWN_DAYS = 30
 # Совпадает с data/auto_publish.json → rubrics.gdepar_mono_curated.min_body_chars
 _MIN_BODY_CHARS = 100
 
@@ -98,7 +98,7 @@ def pick_entry(*, pool: str | None = None) -> dict | None:
 
     pool_eligible = [e for e in entries if eligible(e)]
     if not pool_eligible:
-        pool_eligible = list(entries)
+        return None
     entry = random.choice(pool_eligible)
     eid = entry.get("id")
     if eid:

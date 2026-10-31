@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Око Саурона</title>
+    <script data-cfasync="false">
+    (function () {
+        try {
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(function (rs) {
+                    rs.forEach(function (r) { r.unregister(); });
+                });
+            }
+            if (window.caches) {
+                caches.keys().then(function (keys) {
+                    keys.forEach(function (k) { caches.delete(k); });
+                });
+            }
+        } catch (e) {}
+    })();
+    </script>
+    <style>
+        :root { --bg:#0b1220; --card:#152033; --text:#f8fafc; --muted:#94a3b8; --neg:#f87171; --accent:#14b8a6; --accent2:#042f2e; color-scheme: dark; }
+        html, body { margin:0; background:#0b1220; color:#f8fafc; }
+        body { font-family: system-ui, sans-serif; }
+        form { max-width: 380px; margin: 18vh auto; background: var(--card); padding: 1.6rem; border-radius: 16px; }
+        h1 { margin: .2rem 0 .4rem; font-size: 1.4rem; }
+        .cap { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+        .hint { color: var(--muted); font-size: .85rem; margin: 0 0 1rem; line-height: 1.4; }
+        input, button { width: 100%; padding: .7rem .8rem; border-radius: 8px; border: 0; font: inherit; }
+        input { background: #0f172a; color: var(--text); margin: .6rem 0 1rem; }
+        button { background: var(--accent); color: var(--accent2); font-weight: 700; cursor: pointer; }
+        button:disabled { opacity: .7; }
+        .err { color: var(--neg); margin: 0 0 .8rem; font-weight: 650; }
+        .visually-hidden { position:absolute; left:-9999px; }
+    </style>
+</head>
+<body>
+<form method="post" action="/hub/login" onsubmit="var b=this.querySelector('button'); b.disabled=true; b.textContent='Входим…';">
+    <div class="cap">Empire</div>
+    <h1>Око Саурона</h1>
+    <p class="hint">Открывайте <strong>https://neverretire.ru/hub/</strong> — не localhost. Логин не нужен, только пароль кабинета.</p>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <input class="visually-hidden" type="text" name="username" value="empire" autocomplete="username" tabindex="-1">
+    <label>Пароль</label>
+    <input type="password" name="password" autocomplete="current-password" required autofocus>
+    <button type="submit">Войти</button>
+</form>
+</body>
+</html>

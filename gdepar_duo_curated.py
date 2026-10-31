@@ -140,17 +140,25 @@ def image_rel_path(entry: dict) -> str | None:
     return raw if rel.is_file() else None
 
 
+def publishable_count(*, pool: str | None = None) -> int:
+    entries = _load_data().get("entries") or []
+    if pool:
+        entries = [e for e in entries if (e.get("pool") or "any") == pool]
+    return sum(1 for e in entries if _publishable(e))
+
+
 async def build_duo_curated_slot(*, pool: str | None = None) -> tuple[str, str | None, str | None]:
-    """(topic_raw, prebuilt_html, image_path) — без LLM."""
+    """(topic_raw, prebuilt_html, image_path) — без LLM.
+
+    Если нет publishable дуэтов (нет картинок / cooldown) — fallback на mono
+    того же pool, чтобы слот не ушёл в пустой stub и не сломал автопост.
+    """
     entry = pick_entry(pool=pool)
     if not entry:
-        body = (
-            f"{DUO_RUBRIC_TAG}\n\n"
-            "Очередь ручных постов пуста — добавьте выпуски в "
-            "<code>data/gdepar_duo_curated.json</code> "
-            "(см. <code>docs/gdepar_duo_curated.md</code>)."
-        )
-        return f"{DUO_RUBRIC_TAG} fallback pool={pool or 'any'}", body, None
+        import gdepar_mono_curated as gmono
+
+        topic, body, img = await gmono.build_mono_curated_slot(pool=pool)
+        return topic, body, img
 
     eid = entry["id"]
     topic = f"{DUO_RUBRIC_TAG} {entry.get('headline', eid)} (id={eid})"

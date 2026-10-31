@@ -9,7 +9,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent
 _DATA_PATH = _ROOT / "data" / "garden_curated.json"
 _HISTORY_PATH = _ROOT / "data" / "garden_curated_used.json"
-_COOLDOWN_DAYS = 21
+_COOLDOWN_DAYS = 30
 
 
 def _load_entries() -> list[dict]:

@@ -102,7 +102,7 @@
             </form>
         </aside>
         <div class="map-wrap">
-            {% if map_spots_data %}
+            {% if map_spots_lazy or map_spots_data %}
             <div id="banya-map" role="application" aria-label="Карта бань"></div>
             {% else %}
             <div class="map-empty" style="display:flex;align-items:center;justify-content:center;min-height:420px;">
@@ -250,13 +250,14 @@
     </div>
 </footer>
 
+{% if map_spots_lazy or map_spots_data %}
 {% if map_spots_data %}
 <script type="application/json" id="spots-data">{{ map_spots_data|tojson }}</script>
+{% endif %}
 <script src="/static/gdepar/summary_render.js?v={{ asset_version }}"></script>
 <script src="/static/gdepar/vendor/leaflet/leaflet.js?v={{ asset_version }}"></script>
 <script>
 (function () {
-    var el = document.getElementById('spots-data');
     var mapHostEarly = document.getElementById('banya-map');
     if (!window.L) {
         if (mapHostEarly) {
@@ -264,10 +265,7 @@
         }
         return;
     }
-    if (!el) return;
-    var spots;
-    try { spots = JSON.parse(el.textContent); } catch (e) { return; }
-    if (!spots.length) return;
+    var spots = [];
 
     var HEAT_COLORS = { wood: '#b35a00', electric: '#6366f1', mixed: '#a855f7', unknown: '#71717a' };
 
@@ -801,17 +799,60 @@
         }
         requestAnimationFrame(waitThenInit);
     }
-    waitThenInit();
-    if (kartaWrap && typeof ResizeObserver !== 'undefined') {
-        var ro = new ResizeObserver(function () {
-            if (map) relayout();
-            else if (mapHost && mapHost.getBoundingClientRect().width >= 220) initMap();
-        });
-        ro.observe(kartaWrap);
+    function startWithSpots(list) {
+        spots = list || [];
+        if (!spots.length) {
+            if (mapHostEarly) {
+                mapHostEarly.innerHTML = '<p class="muted" style="padding:1rem">Пока нет точек на карте. Полная карта — <a href="/map">/map</a>.</p>';
+            }
+            return;
+        }
+        if (mapHostEarly && !document.getElementById('banya-map')) {
+            /* noop */
+        }
+        waitThenInit();
+        if (kartaWrap && typeof ResizeObserver !== 'undefined') {
+            var ro = new ResizeObserver(function () {
+                if (map) relayout();
+                else if (mapHost && mapHost.getBoundingClientRect().width >= 220) initMap();
+            });
+            ro.observe(kartaWrap);
+        }
+        setTimeout(function () {
+            if (!map) initMap();
+        }, 6000);
     }
-    setTimeout(function () {
-        if (!map) initMap();
-    }, 6000);
+
+    var el = document.getElementById('spots-data');
+    if (el && el.textContent && el.textContent.trim()) {
+        try {
+            startWithSpots(JSON.parse(el.textContent));
+        } catch (e) {
+            startWithSpots([]);
+        }
+    } else {
+        if (mapHostEarly) {
+            mapHostEarly.innerHTML = '<p class="muted" style="padding:1rem">Загрузка точек…</p>';
+        }
+        fetch('/api/banya/spots')
+            .then(function (r) {
+                if (!r.ok) throw new Error('spots ' + r.status);
+                return r.json();
+            })
+            .then(function (list) {
+                if (mapHostEarly) {
+                    mapHostEarly.innerHTML = '';
+                    mapHostEarly.id = 'banya-map';
+                }
+                mapHost = document.getElementById('banya-map');
+                startWithSpots(list);
+            })
+            .catch(function () {
+                if (mapHostEarly) {
+                    mapHostEarly.innerHTML = '<p class="muted" style="padding:1rem">Не удалось загрузить точки. Откройте <a href="/map">/map</a>.</p>';
+                }
+            });
+    }
 })();
 </script>
 {% endif %}

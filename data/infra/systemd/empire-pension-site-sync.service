@@ -1,0 +1,16 @@
+[Unit]
+Description=Pension site feed sync (dedupe articles + Dzen RSS)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/projects/empire
+EnvironmentFile=-/root/projects/empire/.env
+EnvironmentFile=-/etc/empire/empire.env
+Environment=EMPIRE_SKIP_EMBEDDINGS=1
+ExecStart=/root/projects/empire/venv/bin/python /root/projects/empire/scripts/pension_site_sync.py
+User=root
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

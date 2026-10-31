@@ -48,6 +48,8 @@
 /usr/sbin/empire-flint-watchdog --force
 ```
 
+Режимы (VLESS или чистый zapret): `docs/FLINT2_YOUTUBE_DUAL.md`.
+
 Только диск/шара:
 
 ```sh

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""VPS proxy → Flint empire-api через reverse SSH :6223.
+"""VPS proxy → Flint empire-api.
 
 Слушает 127.0.0.1:8767. Nginx /home-ops/ → сюда.
 Токен тот же, что на Flint (/etc/empire/flint-ui.token).
+
+Путь к Flint (по порядку):
+  1) reverse SSH :6223
+  2) прямой SSH root@192.168.1.1 (Tailscale subnet / LAN) + FLINT_ADMIN_PASSWORD
 """
 from __future__ import annotations
 
@@ -15,20 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN_FILE = Path(os.getenv("EMPIRE_FLINT_UI_TOKEN", "/etc/empire/flint-ui.token"))
+FLINT_ENV = Path(os.getenv("EMPIRE_FLINT_ADMIN_ENV", "/root/.flint-admin.env"))
 WWW = ROOT / "scripts/flint2/empire-flint-watchdog/www"
 LISTEN = ("127.0.0.1", int(os.getenv("EMPIRE_HOME_OPS_PORT", "8767")))
-SSH = [
-    "ssh",
-    "-p",
-    "6223",
-    "-o",
-    "BatchMode=yes",
-    "-o",
-    "ConnectTimeout=12",
-    "-o",
-    "StrictHostKeyChecking=accept-new",
-    "root@127.0.0.1",
-]
 
 
 def load_token() -> str:
@@ -37,24 +30,83 @@ def load_token() -> str:
     return ""
 
 
+def load_flint_password() -> str:
+    if not FLINT_ENV.is_file():
+        return os.getenv("FLINT_ADMIN_PASSWORD", "").strip()
+    for line in FLINT_ENV.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if line.startswith("FLINT_ADMIN_PASSWORD="):
+            return line.split("=", 1)[1].strip().strip('"').strip("'")
+    return os.getenv("FLINT_ADMIN_PASSWORD", "").strip()
+
+
+def _run(cmd: list[str], timeout: int = 90) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, capture_output=True, timeout=timeout)
+
+
 def flint_api(action: str, token: str, svc: str = "") -> tuple[int, bytes]:
     q = urllib.parse.urlencode({"action": action, "token": token, "svc": svc})
-    # wget on OpenWrt
     remote = f"wget -qO- 'http://127.0.0.1/cgi-bin/empire-api?{q}'"
+
+    # 1) reverse tunnel
+    ssh6223 = [
+        "ssh",
+        "-p",
+        "6223",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "ConnectTimeout=6",
+        "-o",
+        "StrictHostKeyChecking=accept-new",
+        "root@127.0.0.1",
+        remote,
+    ]
     try:
-        p = subprocess.run(
-            SSH + [remote],
-            capture_output=True,
-            timeout=90,
-        )
-        body = p.stdout or p.stderr or b'{"ok":false,"error":"empty"}'
-        if p.returncode != 0 and not p.stdout:
-            return 502, json.dumps({"ok": False, "error": "ssh_fail", "detail": (p.stderr or b"").decode()[:200]}).encode()
-        return 200, body
+        p = _run(ssh6223, timeout=90)
+        if p.returncode == 0 and p.stdout:
+            return 200, p.stdout
     except subprocess.TimeoutExpired:
-        return 504, b'{"ok":false,"error":"timeout"}'
-    except Exception as exc:
-        return 500, json.dumps({"ok": False, "error": str(exc)}).encode()
+        pass
+    except Exception:
+        pass
+
+    # 2) direct LAN / Tailscale subnet
+    pw = load_flint_password()
+    if pw:
+        env = os.environ.copy()
+        env["SSHPASS"] = pw
+        ssh_lan = [
+            "sshpass",
+            "-e",
+            "ssh",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+            "-o",
+            "ConnectTimeout=12",
+            "root@192.168.1.1",
+            remote,
+        ]
+        try:
+            p = subprocess.run(ssh_lan, capture_output=True, timeout=90, env=env)
+            body = p.stdout or p.stderr or b'{"ok":false,"error":"empty"}'
+            if p.returncode != 0 and not p.stdout:
+                return (
+                    502,
+                    json.dumps(
+                        {
+                            "ok": False,
+                            "error": "ssh_lan_fail",
+                            "detail": (p.stderr or b"").decode(errors="ignore")[:200],
+                        }
+                    ).encode(),
+                )
+            return 200, body
+        except subprocess.TimeoutExpired:
+            return 504, b'{"ok":false,"error":"timeout"}'
+        except Exception as exc:
+            return 500, json.dumps({"ok": False, "error": str(exc)}).encode()
+
+    return 502, b'{"ok":false,"error":"flint_unreachable","detail":"no :6223 and no FLINT_ADMIN_PASSWORD"}'
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -93,7 +145,6 @@ class Handler(BaseHTTPRequestHandler):
         elif rel.endswith(".png"):
             ctype = "image/png"
         data = path.read_bytes()
-        # rewrite API path + PWA install target for VPS mirror (HTTPS works off-LAN)
         if rel.endswith(".js"):
             data = data.replace(b'const API = "/cgi-bin/empire-api";', b'const API = "/home-ops/api";')
         if rel.endswith("manifest.json"):
@@ -102,7 +153,6 @@ class Handler(BaseHTTPRequestHandler):
                 b'"start_url": "https://neverretire.ru/home-ops/?source=pwa"',
             )
             data = data.replace(b'"scope": "./"', b'"scope": "https://neverretire.ru/home-ops/"')
-            data = data.replace(b'"name": "Empire Heal"', b'"name": "Empire Heal"')
         self.send_response(200)
         self.send_header("Content-Type", ctype)
         self.send_header("Cache-Control", "no-store")
@@ -140,7 +190,6 @@ class Handler(BaseHTTPRequestHandler):
             rel = path[len("/home-ops/") :] or "index.html"
             self._serve_file(rel)
             return
-        # bare paths when proxied with strip
         if path == "/" or path == "/index.html":
             self._serve_file("index.html")
             return
@@ -151,6 +200,8 @@ class Handler(BaseHTTPRequestHandler):
             "sw.js",
             "icon-192.png",
             "icon-512.png",
+            "usb.html",
+            "usb-disk.bat",
         ):
             self._serve_file(path.lstrip("/"))
             return

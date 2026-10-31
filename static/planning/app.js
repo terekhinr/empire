@@ -1,6 +1,20 @@
-const API_BASE = "/tasks/api/planning";
+// /tasks/, /x/, /go-tasks/app/ (последние вне scope сломанного SW)
+const TASKS_MOUNT = (function () {
+  try {
+    const forced = window.__TASKS_MOUNT__;
+    if (forced === "/go-tasks/app" || forced === "/x" || forced === "/tasks") {
+      return forced;
+    }
+    const p = location.pathname || "";
+    if (p === "/go-tasks/app" || p.startsWith("/go-tasks/app/")) return "/go-tasks/app";
+    if (p === "/x" || p.startsWith("/x/")) return "/x";
+  } catch (_) {}
+  return "/tasks";
+})();
+const API_BASE = TASKS_MOUNT + "/api/planning";
+const ASSET_BASE = TASKS_MOUNT + "/assets";
 const TOKEN_KEY = "empire_planning_token";
-const APP_VER = "65";
+const APP_VER = "91";
 const FONT_SCALE_KEY = "empire_font_scale";
 const FONT_SCALE_MIN = 85;
 const FONT_SCALE_MAX = 140;
@@ -116,7 +130,39 @@ const HEALTH_TABS = [
   { view: "health-notify", icon: "bell", title: "Напомин.", action: "open-settings-notify" },
 ];
 
+function isGymApp() {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get("app") === "gym") {
+      localStorage.setItem("empire_app_mode", "gym");
+      return true;
+    }
+    if (q.get("app") === "tasks") {
+      localStorage.setItem("empire_app_mode", "tasks");
+      return false;
+    }
+    return localStorage.getItem("empire_app_mode") === "gym";
+  } catch {
+    return false;
+  }
+}
+
+function applyGymChrome() {
+  const gym = isGymApp();
+  document.body.classList.toggle("gym-app", gym);
+  document.documentElement.classList.toggle("gym-app", gym);
+  if (gym) {
+    document.title = "Зал";
+    document.querySelectorAll(".sidebar-brand span, .mobile-drawer-brand span, #auth-screen h2").forEach((el) => {
+      el.textContent = "Зал";
+    });
+    const authP = document.querySelector("#auth-screen .auth-card > p");
+    if (authP) authP.textContent = "Тренировки, замеры и статистика. Токен: PLANNING_API_TOKEN.";
+  }
+}
+
 function getTabbarMode(view = state.currentView) {
+  if (isGymApp()) return "health";
   return HEALTH_VIEWS.has(view) ? "health" : "pipeline";
 }
 
@@ -586,6 +632,18 @@ function drawerNavRow(view, label, count, { action, icon } = {}) {
 function renderMobileDrawer() {
   const nav = document.getElementById("mobile-drawer-nav");
   if (!nav) return;
+  if (isGymApp()) {
+    nav.innerHTML = [
+      drawerNavRow("program", "Программа", "", { icon: "program" }),
+      drawerNavRow("workouts", "Дневник", "", { icon: "workouts" }),
+      drawerNavRow("measurements", "Замеры", "", { icon: "measurements" }),
+      drawerNavRow("health-stats", "Статистика", "", { icon: "health-stats" }),
+      `<div class="drawer-divider" aria-hidden="true"></div>`,
+      drawerNavRow(null, "Настройки", "", { action: "open-settings", icon: "settings" }),
+    ].join("");
+    hydrateNavIcons(nav);
+    return;
+  }
   const c = taskNavCounts();
   const inboxCount = activeTasksRaw().filter((t) => !t.project_id).length;
   nav.innerHTML = [
@@ -745,7 +803,14 @@ function renderSidebarNav() {
   const c = taskNavCounts();
   const inboxCount = activeTasksRaw().filter((t) => !t.project_id).length;
   const main = document.getElementById("sidebar-nav-main");
-  if (main) {
+  if (main && isGymApp()) {
+    main.innerHTML = [
+      navRowHtml("program", "Программа", ""),
+      navRowHtml("workouts", "Дневник", ""),
+      navRowHtml("measurements", "Замеры", ""),
+      navRowHtml("health-stats", "Статистика", ""),
+    ].join("");
+  } else if (main) {
     const inboxActive = state.inboxOnly && state.currentView === "all-tasks" ? " active" : "";
     main.innerHTML = [
       navRowHtml("today", "Сегодня", c.todayNav || ""),
@@ -886,9 +951,15 @@ function applyFontScale(pct = getFontScale()) {
 
 function showToast(msg) {
   const el = document.getElementById("toast");
+  if (!el) return;
   el.textContent = msg;
   el.classList.remove("hidden");
   setTimeout(() => el.classList.add("hidden"), 2400);
+}
+
+function setBootMsg(msg) {
+  const p = document.querySelector("#boot-splash [data-boot-msg]");
+  if (p) p.textContent = msg || "";
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -932,14 +1003,30 @@ function applyOfflineSnapshot(snap) {
 
 async function api(path, opts = {}) {
   const headers = { "Content-Type": "application/json", "X-Planning-Token": token() };
-  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+  const ctrl = new AbortController();
+  const ms = opts.timeoutMs ?? 12000;
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...opts,
+      cache: "no-store",
+      signal: opts.signal || ctrl.signal,
+      headers: { ...headers, ...opts.headers },
+    });
+  } catch (e) {
+    if (e && e.name === "AbortError") throw new Error("Сервер не ответил (таймаут)");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 401) {
-    document.getElementById("auth-screen").classList.remove("hidden");
+    document.getElementById("auth-screen")?.classList.remove("hidden");
     throw new Error("auth");
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(formatApiError(err.detail, res.statusText));
+    throw new Error(formatApiError(err.detail, res.statusText || `HTTP ${res.status}`));
   }
   if (res.status === 204) return null;
   return res.json();
@@ -982,6 +1069,29 @@ async function apiUpload(path, file) {
     throw new Error(formatApiError(err.detail, res.statusText));
   }
   return res.json();
+}
+
+async function apiDownload(path, filename, { method = "GET" } = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { "X-Planning-Token": token() },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(formatApiError(err.detail, res.statusText));
+  }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 2000);
 }
 
 function taskImageSrc(task, pendingFile) {
@@ -1327,18 +1437,131 @@ function renderFinanceModel() {
     return;
   }
 
-  const tab = state.fmPipelineTab === "snegiri" ? "snegiri" : "empire";
+  const tab =
+    state.fmPipelineTab === "snegiri"
+      ? "snegiri"
+      : state.fmPipelineTab === "career"
+        ? "career"
+        : "empire";
   const tabsHtml = `<div class="fm-tabs" role="tablist">
     <button type="button" class="fm-tab ${tab === "empire" ? "active" : ""}" data-fm-tab="empire" role="tab" aria-selected="${tab === "empire"}">Empire · книга и Где Пар</button>
     <button type="button" class="fm-tab ${tab === "snegiri" ? "active" : ""}" data-fm-tab="snegiri" role="tab" aria-selected="${tab === "snegiri"}">Снегири · гири</button>
+    <button type="button" class="fm-tab ${tab === "career" ? "active" : ""}" data-fm-tab="career" role="tab" aria-selected="${tab === "career"}">Карьера · B2B</button>
   </div>`;
 
   if (tab === "snegiri") {
     el.innerHTML = tabsHtml + renderFinanceModelSnegiriBody(FM.snegiri);
     return;
   }
+  if (tab === "career") {
+    el.innerHTML = tabsHtml + renderFinanceModelCareerBody(FM.career);
+    return;
+  }
 
   el.innerHTML = tabsHtml + renderFinanceModelEmpireBody(FM);
+}
+
+function renderFinanceModelCareerBody(C) {
+  if (!C) {
+    return '<div class="empty">Нет блока career в finance_model_content.js</div>';
+  }
+  const pipeCl = checklistByRef(C.pipelineRef || "career-b2b-pipeline");
+  const pipePct = checklistPct(pipeCl);
+
+  const introHtml = (C.intro || [])
+    .map((p) => `<p class="fm-intro-p">${formatPlainText(p)}</p>`)
+    .join("");
+
+  const phasesHtml = (C.phases || [])
+    .map((ph) => {
+      const cl = checklistByRef(ph.key);
+      const pct = checklistPct(cl);
+      const clId = cl?.id || "";
+      return `<div class="fm-phase card">
+        <div class="fm-phase-head">
+          <strong>${escapeHtml(ph.label)}</strong>
+          <span class="fm-phase-dates">${escapeHtml(ph.dates || "")}</span>
+          ${pct != null ? `<span class="fm-phase-pct">${pct}%</span>` : ""}
+        </div>
+        <p class="fm-phase-focus">${escapeHtml(ph.focus || "")}</p>
+        ${clId ? `<button type="button" class="btn small" data-goto-checklist="${clId}">Чеклист фазы →</button>` : '<p class="muted">Чеклист не найден — запусти seed_career_b2b_plan_2026.py</p>'}
+      </div>`;
+    })
+    .join("");
+
+  const weeksHtml = (C.weekChecklists || [])
+    .map((w) => {
+      const cl = checklistByRef(w.key);
+      const pct = checklistPct(cl);
+      const clId = cl?.id || "";
+      return `<button type="button" class="fm-block" data-goto-checklist="${clId}" ${clId ? "" : "disabled"}>
+        <span class="fm-block-title">${escapeHtml(w.label)}</span>
+        ${pct != null ? `<span class="fm-block-pct">${pct}%</span>` : ""}
+      </button>`;
+    })
+    .join("");
+
+  const extraHtml = (C.extraChecklists || [])
+    .map((w) => {
+      const cl = checklistByRef(w.key);
+      const pct = checklistPct(cl);
+      const clId = cl?.id || "";
+      return `<button type="button" class="btn small" data-goto-checklist="${clId}" ${clId ? "" : "disabled"} style="margin:4px">
+        ${escapeHtml(w.label)}${pct != null ? ` · ${pct}%` : ""}
+      </button>`;
+    })
+    .join("");
+
+  const careerTasks = state.tasks
+    .filter(
+      (t) =>
+        (t.obsidian_source || "").startsWith("career-b2b:") &&
+        t.status !== "done" &&
+        t.status !== "archived" &&
+        t.status !== "cancelled"
+    )
+    .sort((a, b) => String(a.due_date || "").localeCompare(String(b.due_date || "")))
+    .slice(0, 12);
+
+  const milestonesHtml = careerTasks.length
+    ? `<ul class="fm-milestones">${careerTasks
+        .map(
+          (t) => `<li>
+          <button type="button" class="btn-link" data-open-task="${t.id}">${escapeHtml(t.title)}</button>
+          <span class="muted">${escapeHtml(t.due_date || "—")}</span>
+        </li>`
+        )
+        .join("")}</ul>`
+    : '<p class="muted">Вехи появятся после seed (задачи career-b2b:*).</p>';
+
+  const howToHtml = (C.howTo || [])
+    .map((line) => `<li>${formatPlainText(line)}</li>`)
+    .join("");
+
+  const proj = (state.projects || []).find((p) => p.title === C.projectTitle);
+
+  return `
+    <div class="card fm-hero">
+      <h2 class="fm-title">${escapeHtml(C.title)}</h2>
+      <p class="fm-period">${escapeHtml(C.period || "")}</p>
+      <div class="fm-progress-row">
+        <span>Общий прогресс пайплайна: <strong>${pipePct != null ? pipePct + "%" : "—"}</strong></span>
+        ${pipeCl?.id ? `<button type="button" class="btn small" data-goto-checklist="${pipeCl.id}">Итоговый чеклист →</button>` : ""}
+      </div>
+      <div class="fm-intro">${introHtml}</div>
+      ${proj?.id ? `<button type="button" class="btn small" data-project-id="${proj.id}">Открыть список задач проекта →</button>` : ""}
+    </div>
+    <div class="section-title">Как пользоваться</div>
+    <ul class="fm-howto">${howToHtml}</ul>
+    <div class="section-title">Фазы</div>
+    ${phasesHtml}
+    <div class="section-title">${escapeHtml(C.modulesSectionTitle || "Модули курса")}</div>
+    <div class="fm-blocks">${weeksHtml}</div>
+    <div class="section-title">EN · review · готовность</div>
+    <div>${extraHtml}</div>
+    <div class="section-title">Ближайшие вехи</div>
+    ${milestonesHtml}
+  `;
 }
 
 function renderFinanceModelEmpireBody(FM) {
@@ -1845,26 +2068,54 @@ function isSunday(d = new Date()) {
   return d.getDay() === 0;
 }
 
-function renderSparkChart(points, title, valueFn, unit = "") {
-  const pts = points.filter((p) => valueFn(p) != null).slice(0, 14).reverse();
-  if (pts.length < 2) return "";
-  const values = pts.map((p) => Number(valueFn(p)));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+function renderLineChart(points, title, valueFn, unit = "") {
+  const pts = (points || [])
+    .filter((p) => valueFn(p) != null)
+    .map((p) => ({ x: p.measured_on || p.logged_on || "", y: Number(valueFn(p)) }))
+    .filter((p) => p.x && Number.isFinite(p.y))
+    .sort((a, b) => a.x.localeCompare(b.x));
+  if (pts.length < 2) {
+    return `<div class="spark-card"><div class="section-title">${escapeHtml(title)}</div><div class="empty" style="padding:12px">Нужно минимум два замера</div></div>`;
+  }
+  const w = 320;
+  const h = 148;
+  const padL = 36;
+  const padR = 12;
+  const padT = 12;
+  const padB = 28;
+  const ys = pts.map((p) => p.y);
+  const min = Math.min(...ys);
+  const max = Math.max(...ys);
   const span = max - min || 1;
-  const bars = pts
-    .map((p) => {
-      const val = Number(valueFn(p));
-      const h = 20 + Math.round(((val - min) / span) * 80);
-      const label = formatNum(val);
-      const date = p.measured_on || p.logged_on || "";
-      return `<div class="spark-item" title="${escapeHtml(date)}: ${label}${unit}">
-        <div class="spark-bar" style="height:${h}%"></div>
-        <div class="spark-label">${label}</div>
-      </div>`;
-    })
+  const innerW = w - padL - padR;
+  const innerH = h - padT - padB;
+  const xy = pts.map((p, i) => {
+    const x = padL + (pts.length === 1 ? innerW / 2 : (i / (pts.length - 1)) * innerW);
+    const y = padT + innerH - ((p.y - min) / span) * innerH;
+    return { ...p, px: x, py: y };
+  });
+  const d = xy.map((p, i) => `${i ? "L" : "M"}${p.px.toFixed(1)},${p.py.toFixed(1)}`).join(" ");
+  const last = xy[xy.length - 1];
+  const firstLbl = escapeHtml(pts[0].x.slice(5));
+  const lastLbl = escapeHtml(pts[pts.length - 1].x.slice(5));
+  const dots = xy
+    .map((p) => `<circle cx="${p.px.toFixed(1)}" cy="${p.py.toFixed(1)}" r="2.4" fill="currentColor"><title>${escapeHtml(p.x)}: ${formatNum(p.y)}${unit}</title></circle>`)
     .join("");
-  return `<div class="spark-card"><div class="section-title">${escapeHtml(title)}</div><div class="spark-chart">${bars}</div></div>`;
+  return `<div class="spark-card line-chart-card">
+    <div class="section-title">${escapeHtml(title)} <span class="line-chart-now">${formatNum(last.y)}${escapeHtml(unit)}</span></div>
+    <svg class="line-chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(title)}">
+      <text x="4" y="${padT + 10}" class="line-chart-axis">${formatNum(max)}</text>
+      <text x="4" y="${h - padB}" class="line-chart-axis">${formatNum(min)}</text>
+      <path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+      <text x="${padL}" y="${h - 8}" class="line-chart-axis">${firstLbl}</text>
+      <text x="${w - padR}" y="${h - 8}" class="line-chart-axis" text-anchor="end">${lastLbl}</text>
+    </svg>
+  </div>`;
+}
+
+function renderSparkChart(points, title, valueFn, unit = "") {
+  return renderLineChart(points, title, valueFn, unit);
 }
 
 function bicepsAvg(m) {
@@ -1925,7 +2176,8 @@ function renderMeasurements() {
   const list = state.measurements.length
     ? `<div class="section-title">История</div><div class="card">${state.measurements.map(measurementRowHtml).join("")}</div>`
     : "";
-  el.innerHTML = sundayBannerHtml() + measurementSettingsHtml() + head + list;
+  const charts = renderMeasurementCharts();
+  el.innerHTML = sundayBannerHtml() + measurementSettingsHtml() + head + charts + list;
   const saveBtn = document.getElementById("hs-save");
   if (saveBtn) {
     saveBtn.onclick = async () => {
@@ -2639,10 +2891,27 @@ function programSwitcherHtml() {
   const chips = programs
     .map((p) => {
       const active = (state.programId || "gym_2026") === p.id ? " active" : "";
-      return `<button type="button" class="chip program-switch-chip${active}" data-action="switch-program" data-program-id="${escapeHtml(p.id)}">${escapeHtml(p.short || p.title)}</button>`;
+      const src = p.source === "user" ? " user" : "";
+      return `<button type="button" class="chip program-switch-chip${active}${src}" data-action="switch-program" data-program-id="${escapeHtml(p.id)}">${escapeHtml(p.short || p.title)}</button>`;
     })
     .join("");
-  return `<div class="program-switcher chip-row">${chips}</div>`;
+  const current = programs.find((p) => p.id === (state.programId || "gym_2026"));
+  const del = current && current.source === "user"
+    ? `<button type="button" class="btn small" data-action="delete-program">Удалить файл</button>`
+    : "";
+  return `<div class="program-switcher">
+    <div class="chip-row">${chips}</div>
+    <div class="program-file-row">
+      <label class="btn small program-upload-btn">Загрузить файл
+        <input id="program-file-input" type="file" accept=".json,.yaml,.yml,.md,application/json" hidden>
+      </label>
+      <button type="button" class="btn small" data-action="download-program-template">Скачать шаблон</button>
+      <button type="button" class="btn small" data-action="export-program">Экспорт JSON</button>
+      <button type="button" class="btn small" data-action="backup-health">Бэкап на VPS</button>
+      ${del}
+    </div>
+    <p class="program-schedule-hint">Формат: empire-workout-program/v1 · JSON или YAML. Старый markdown тоже принимается.</p>
+  </div>`;
 }
 
 function bindProgramChrome(el) {
@@ -2654,6 +2923,27 @@ function bindProgramChrome(el) {
       await renderWorkoutProgram();
     },
   });
+  const fileInp = el.querySelector("#program-file-input");
+  if (fileInp) {
+    fileInp.onchange = async () => {
+      const file = fileInp.files && fileInp.files[0];
+      if (!file) return;
+      try {
+        const r = await apiUpload("/workouts/program/upload", file);
+        state.workoutPrograms = r.programs || [];
+        if (r.program?.id) {
+          state.programId = r.program.id;
+          localStorage.setItem("empire_workout_program", r.program.id);
+        }
+        showToast("Программа загружена");
+        await renderWorkoutProgram();
+      } catch (err) {
+        showToast(err.message || "Не удалось загрузить файл");
+      } finally {
+        fileInp.value = "";
+      }
+    };
+  }
 }
 
 function collectProgramEntries() {
@@ -2880,8 +3170,8 @@ function renderAllTasks() {
 async function showLocalNotification(title, options = {}) {
   if (!("Notification" in window) || Notification.permission !== "granted") return false;
   const opts = {
-    icon: "/tasks/assets/icon-192.png",
-    badge: "/tasks/assets/icon-192.png",
+    icon: ASSET_BASE + "/icon-192.png",
+    badge: ASSET_BASE + "/icon-192.png",
     ...options,
   };
   if (opts.image && typeof opts.image === "string" && opts.image.startsWith("/")) {
@@ -2889,7 +3179,10 @@ async function showLocalNotification(title, options = {}) {
   }
   try {
     if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, rej) => setTimeout(() => rej(new Error("sw_ready_timeout")), 3000)),
+      ]);
       await reg.showNotification(title, opts);
       return true;
     }
@@ -3784,14 +4077,28 @@ function requestNotify() {
 
 async function subscribeWebPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
-  const reg = await navigator.serviceWorker.ready;
+  // Отдельный push-SW без fetch — не глушит загрузку PWA.
+  // Push SW только на /tasks/; на /x/ не трогаем SW.
+  if (TASKS_MOUNT !== "/tasks") return false;
+  const reg = await navigator.serviceWorker.register(ASSET_BASE + "/sw-push.js?v=1", {
+    scope: "/tasks/",
+    updateViaCache: "none",
+  });
+  await Promise.race([
+    reg.update().catch(() => {}),
+    new Promise((r) => setTimeout(r, 2000)),
+  ]);
+  const ready = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("sw_ready_timeout")), 5000)),
+  ]);
   const res = await fetch(`${API_BASE}/push/vapid-public-key`);
   if (!res.ok) throw new Error("push_not_configured");
   const { public_key: publicKey } = await res.json();
   if (!publicKey) throw new Error("push_not_configured");
-  let sub = await reg.pushManager.getSubscription();
+  let sub = await ready.pushManager.getSubscription();
   if (!sub) {
-    sub = await reg.pushManager.subscribe({
+    sub = await ready.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
@@ -3945,7 +4252,7 @@ function settingsPanelHtml(section) {
     <p class="settings-desc">Задачник — задачи, календарь, здоровье и ИИ-ассистент на neverretire.ru.</p>
     <div class="settings-card">
       <div class="settings-row"><label>Версия</label><span>${escapeHtml(APP_VER)}</span></div>
-      <div class="settings-row"><label>Адрес</label><a href="/tasks/" style="color:var(--accent)">neverretire.ru/tasks</a></div>
+      <div class="settings-row"><label>Адрес</label><a href="${TASKS_MOUNT}/" style="color:var(--accent)">neverretire.ru${TASKS_MOUNT}</a></div>
       <div class="settings-row"><label>Android APK</label><span class="hint">android/zadachnik/zadachnik-debug.apk на VPS</span></div>
       <div class="settings-row"><label>Аккаунт</label><span class="hint">Один токен доступа — без отдельного профиля</span></div>
       <p class="hint">Виджет: рабочий стол → Виджеты → «Задачник · 7 дней». Тап по заголовку меняет фильтр. Лонгтап иконки — новая задача / ИИ / когда-нибудь.</p>
@@ -4431,6 +4738,7 @@ function showView(name) {
     (isHealth ? ["measurements"].includes(name) : !["settings", "task-stats", "insights", "program", "health-stats", "workouts"].includes(name));
   // На тренировках/программе FAB мешает таймерам отдыха и удержания
   const showAiFab =
+    !isGymApp() &&
     !isHealth &&
     !isStats &&
     !isPipelineHub &&
@@ -4470,6 +4778,29 @@ function showSection(section) {
 
 async function loadAll() {
   try {
+    if (isGymApp()) {
+      const [measRes, workRes, bodySum, summary] = await Promise.all([
+        api("/measurements"),
+        api("/workouts"),
+        api("/body/summary"),
+        api("/summary").catch(() => ({})),
+      ]);
+      state.tasks = [];
+      state.doneTasks = [];
+      state.checklists = [];
+      state.projects = [];
+      state.summary = summary || {};
+      state.measurements = measRes.measurements || [];
+      state.workouts = workRes.workouts || [];
+      state.healthSummary = bodySum || {};
+      state.healthSettings = bodySum.settings || state.healthSettings;
+      state.exercises = bodySum.exercises || {};
+      saveOfflineSnapshot();
+      fillExerciseSelect();
+      renderSidebarNav();
+      renderMetrics();
+      return;
+    }
     const [tasksRes, doneRes, listsRes, projRes, summary, measRes, workRes, bodySum] = await Promise.all([
       api("/tasks"),
       api("/tasks?include_done=true&status=done"),
@@ -4500,11 +4831,15 @@ async function loadAll() {
         return null;
       }
     })();
-    if (snap?.tasks) {
+    if (snap?.tasks || snap?.measurements || snap?.workouts) {
       applyOfflineSnapshot(snap);
       renderSidebarNav();
-      renderToday();
-      renderMetrics();
+      if (!isGymApp()) {
+        renderToday();
+        renderMetrics();
+      } else {
+        renderMetrics();
+      }
       showToast("Офлайн — сохранённые данные");
       return;
     }
@@ -4512,26 +4847,48 @@ async function loadAll() {
   }
   fillProjectSelect();
   fillExerciseSelect();
-  renderSidebarNav();
-  renderMetrics();
-  renderToday();
-  renderWeek();
-  renderSearch(document.getElementById("search-input").value);
-  renderProjects();
-  renderLists();
-  renderDone();
-  if (state.currentView === "all-tasks") renderAllTasks();
-  if (state.currentView === "week") renderWeek();
-  if (state.currentView === "calendar") renderCalendar();
-  if (state.currentView === "cal-day") renderCalendarDay();
-  if (state.currentView === "matrix") renderMatrix();
-  if (state.currentView === "measurements") renderMeasurements();
-  if (state.currentView === "workouts") renderWorkouts();
-  if (state.currentView === "task-stats") await renderTaskStats();
-  if (state.currentView === "health-stats") await renderHealthStats();
-  if (state.projectFilter) renderProjectTasks(state.projectFilter);
-  checkReminders();
-  checkHealthReminders();
+  const safe = (label, fn) => {
+    try {
+      fn();
+    } catch (err) {
+      console.error("loadAll render failed:", label, err);
+      showToast?.(`Ошибка экрана: ${label}`);
+    }
+  };
+  safe("sidebar", () => renderSidebarNav());
+  safe("metrics", () => renderMetrics());
+  safe("today", () => renderToday());
+  safe("week", () => renderWeek());
+  safe("search", () => renderSearch(document.getElementById("search-input")?.value || ""));
+  safe("projects", () => renderProjects());
+  safe("lists", () => renderLists());
+  safe("done", () => renderDone());
+  if (state.currentView === "all-tasks") safe("all-tasks", () => renderAllTasks());
+  if (state.currentView === "week") safe("week2", () => renderWeek());
+  if (state.currentView === "calendar") safe("calendar", () => renderCalendar());
+  if (state.currentView === "cal-day") safe("cal-day", () => renderCalendarDay());
+  if (state.currentView === "matrix") safe("matrix", () => renderMatrix());
+  if (state.currentView === "measurements") safe("measurements", () => renderMeasurements());
+  if (state.currentView === "workouts") safe("workouts", () => renderWorkouts());
+  if (state.currentView === "task-stats") {
+    try {
+      await renderTaskStats();
+    } catch (err) {
+      console.error("loadAll render failed: task-stats", err);
+    }
+  }
+  if (state.currentView === "health-stats") {
+    try {
+      await renderHealthStats();
+    } catch (err) {
+      console.error("loadAll render failed: health-stats", err);
+    }
+  }
+  if (state.projectFilter) safe("project-tasks", () => renderProjectTasks(state.projectFilter));
+  try {
+    checkReminders();
+    checkHealthReminders();
+  } catch (_) {}
 }
 
 async function toggleTask(id, status) {
@@ -4616,7 +4973,7 @@ async function checkReminders() {
     for (const t of data.reminders || []) {
       if (state.reminded.has(t.id)) continue;
       if (Notification.permission !== "granted") continue;
-      const opts = { body: t.title, tag: `task-${t.id}`, data: { url: "/tasks/", task_id: t.id } };
+      const opts = { body: t.title, tag: `task-${t.id}`, data: { url: TASKS_MOUNT + "/", task_id: t.id } };
       if (t.image_url) opts.image = t.image_url;
       const shown = await showLocalNotification("Задачник", opts);
       if (!shown) continue;
@@ -4670,7 +5027,8 @@ function bindEvents() {
     const fmTab = e.target.closest("[data-fm-tab]");
     if (fmTab?.closest("#view-finance-model")) {
       e.preventDefault();
-      const next = fmTab.dataset.fmTab === "snegiri" ? "snegiri" : "empire";
+      const raw = fmTab.dataset.fmTab;
+      const next = raw === "snegiri" || raw === "career" ? raw : "empire";
       if (next !== state.fmPipelineTab) {
         state.fmPipelineTab = next;
         localStorage.setItem("empire_fm_tab", next);
@@ -4763,10 +5121,10 @@ function bindEvents() {
   });
 
   document.getElementById("btn-refresh")?.addEventListener("click", () => loadAll().catch((e) => showToast(e.message)));
-  document.getElementById("fab-add").addEventListener("click", () => onPrimaryAdd());
+  document.getElementById("fab-add")?.addEventListener("click", () => onPrimaryAdd());
   document.getElementById("fab-ai")?.addEventListener("click", () => showView("assistant"));
-  document.getElementById("btn-add-header").addEventListener("click", () => onPrimaryAdd());
-  document.getElementById("task-form").addEventListener("submit", (e) => saveTaskForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("btn-add-header")?.addEventListener("click", () => onPrimaryAdd());
+  document.getElementById("task-form")?.addEventListener("submit", (e) => saveTaskForm(e).catch((err) => showToast(err.message)));
   document.getElementById("tf-image-file")?.addEventListener("change", (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4779,7 +5137,7 @@ function bindEvents() {
     state.pendingTaskImageRemove = true;
     renderTaskImagePreview();
   });
-  document.getElementById("tf-delete").addEventListener("click", async () => {
+  document.getElementById("tf-delete")?.addEventListener("click", async () => {
     const id = document.getElementById("tf-id").value;
     if (!id || !confirm("Удалить задачу?")) return;
     await api(`/tasks/${id}`, { method: "DELETE" });
@@ -4787,7 +5145,7 @@ function bindEvents() {
     await loadAll();
     showToast("Удалено");
   });
-  document.getElementById("tf-complete").addEventListener("click", async () => {
+  document.getElementById("tf-complete")?.addEventListener("click", async () => {
     const id = document.getElementById("tf-id").value;
     if (!id) return;
     await toggleTask(+id, "doing");
@@ -4803,9 +5161,9 @@ function bindEvents() {
   document.querySelectorAll("[data-action='close-workout']").forEach((el) => {
     el.addEventListener("click", closeWorkoutSheet);
   });
-  document.getElementById("measurement-form").addEventListener("submit", (e) => saveMeasurementForm(e).catch((err) => showToast(err.message)));
-  document.getElementById("workout-form").addEventListener("submit", (e) => saveWorkoutForm(e).catch((err) => showToast(err.message)));
-  document.getElementById("mf-delete").addEventListener("click", async () => {
+  document.getElementById("measurement-form")?.addEventListener("submit", (e) => saveMeasurementForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("workout-form")?.addEventListener("submit", (e) => saveWorkoutForm(e).catch((err) => showToast(err.message)));
+  document.getElementById("mf-delete")?.addEventListener("click", async () => {
     const id = document.getElementById("mf-id").value;
     if (!id || !confirm("Удалить замер?")) return;
     await api(`/measurements/${id}`, { method: "DELETE" });
@@ -4813,7 +5171,7 @@ function bindEvents() {
     await loadAll();
     showToast("Удалено");
   });
-  document.getElementById("wf-delete").addEventListener("click", async () => {
+  document.getElementById("wf-delete")?.addEventListener("click", async () => {
     const id = document.getElementById("wf-id").value;
     if (!id || !confirm("Удалить запись?")) return;
     await api(`/workouts/${id}`, { method: "DELETE" });
@@ -4822,7 +5180,7 @@ function bindEvents() {
     showToast("Удалено");
   });
 
-  document.getElementById("date-chips").addEventListener("click", (e) => {
+  document.getElementById("date-chips")?.addEventListener("click", (e) => {
     const chip = e.target.closest("[data-date]");
     if (!chip) return;
     const kind = chip.dataset.date;
@@ -4834,9 +5192,9 @@ function bindEvents() {
     syncSheetMetaDisplay();
   });
 
-  document.getElementById("search-input").addEventListener("input", (e) => renderSearch(e.target.value));
+  document.getElementById("search-input")?.addEventListener("input", (e) => renderSearch(e.target.value));
 
-  document.getElementById("subtask-add-btn").addEventListener("click", async () => {
+  document.getElementById("subtask-add-btn")?.addEventListener("click", async () => {
     const parentId = document.getElementById("tf-id").value;
     const title = document.getElementById("subtask-new").value.trim();
     if (!parentId || !title) return;
@@ -5067,6 +5425,54 @@ function bindEvents() {
         renderWorkoutProgram().catch((err) => showToast(err.message));
         return;
       }
+      if (action === "download-program-template") {
+        e.preventDefault();
+        apiDownload("/workouts/program/template", "full_body_3day.json").catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "export-program") {
+        e.preventDefault();
+        const id = state.programId || "gym_2026";
+        api(`/workouts/program/${encodeURIComponent(id)}/export`)
+          .then((spec) => {
+            const blob = new Blob([JSON.stringify(spec, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${id}.json`;
+            a.rel = "noopener";
+            a.style.display = "none";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              URL.revokeObjectURL(a.href);
+              a.remove();
+            }, 2000);
+          })
+          .catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "backup-health") {
+        e.preventDefault();
+        apiDownload("/body/backup", `health_backup.zip`, { method: "POST" })
+          .then(() => showToast("Бэкап сохранён на VPS и скачан"))
+          .catch((err) => showToast(err.message));
+        return;
+      }
+      if (action === "delete-program") {
+        e.preventDefault();
+        const id = state.programId;
+        if (!id || !confirm(`Удалить загруженный файл «${id}»? Логи подходов останутся.`)) return;
+        api(`/workouts/program/${encodeURIComponent(id)}`, { method: "DELETE" })
+          .then(async (r) => {
+            state.workoutPrograms = r.programs || [];
+            state.programId = "gym_2026";
+            localStorage.setItem("empire_workout_program", "gym_2026");
+            showToast("Файл удалён");
+            await renderWorkoutProgram();
+          })
+          .catch((err) => showToast(err.message));
+        return;
+      }
       if (action === "rest-start") {
         e.preventDefault();
         startRestTimer(Number(actionEl.dataset.sec) || getRestTimerDefaultSec());
@@ -5184,103 +5590,264 @@ function bindEvents() {
     }
   });
 
-  document.getElementById("token-save").addEventListener("click", () => {
+  document.getElementById("token-save")?.addEventListener("click", async () => {
     const v = document.getElementById("token-input").value.trim();
     if (!v) return;
     localStorage.setItem(TOKEN_KEY, v);
     document.getElementById("auth-screen").classList.add("hidden");
-    loadAll().catch(() => {});
+    const splash = document.getElementById("boot-splash");
+    if (splash) {
+      splash.classList.remove("hidden");
+      const p = splash.querySelector("[data-boot-msg]");
+      if (p) p.textContent = "Вход…";
+    }
+    try {
+      await loadAll();
+      if (isGymApp()) showView("program");
+      else showView("today");
+      hideBootSplash();
+    } catch (e) {
+      showBootFailure(e.message === "auth" ? "Неверный токен" : (e.message || "Ошибка входа"));
+      document.getElementById("auth-screen")?.classList.remove("hidden");
+    }
   });
+}
+
+let bootWatchdogId = null;
+
+function clearBootWatchdog() {
+  if (bootWatchdogId != null) {
+    clearTimeout(bootWatchdogId);
+    bootWatchdogId = null;
+  }
+}
+
+function uiLooksAlive() {
+  const auth = document.getElementById("auth-screen");
+  const authOpen = !!(auth && !auth.classList.contains("hidden"));
+  const tasksN = Array.isArray(state.tasks) ? state.tasks.length : 0;
+  const todayLen = (document.getElementById("view-today")?.innerHTML || "").length;
+  return authOpen || tasksN > 0 || todayLen > 40;
+}
+
+function hidePcLifeline() {
+  document.getElementById("pc-lifeline")?.classList.add("ok");
+}
+
+function hideBootSplash() {
+  clearBootWatchdog();
+  window.__empireDiag = {
+    appVer: APP_VER,
+    tasks: Array.isArray(state.tasks) ? state.tasks.length : 0,
+    checklists: Array.isArray(state.checklists) ? state.checklists.length : 0,
+    projects: Array.isArray(state.projects) ? state.projects.length : 0,
+    hasToken: !!token(),
+  };
+  // Не прячем splash в чёрную пустоту: всегда показываем auth или UI.
+  if (!uiLooksAlive()) {
+    if (!token()) {
+      document.getElementById("auth-screen")?.classList.remove("hidden");
+    } else if ((window.__empireDiag.tasks || 0) === 0) {
+      setBootMsg("Нет задач с сервера — введите токен заново или обновите.");
+      document.getElementById("auth-screen")?.classList.remove("hidden");
+    } else {
+      setBootMsg("Рисую экран…");
+    }
+  }
+  window.__empireReady = true;
+  document.getElementById("boot-splash")?.classList.add("hidden");
+  const err = document.getElementById("boot-error");
+  if (err) err.style.display = "none";
+  if (token() && uiLooksAlive() && (window.__empireDiag.tasks || 0) > 0) {
+    document.getElementById("auth-screen")?.classList.add("hidden");
+    hidePcLifeline();
+  } else if (!token() || !uiLooksAlive()) {
+    document.getElementById("auth-screen")?.classList.remove("hidden");
+  }
+}
+
+function showBootFailure(msg) {
+  clearBootWatchdog();
+  window.__empireReady = true;
+  document.getElementById("boot-splash")?.classList.add("hidden");
+  const box = document.getElementById("boot-error");
+  if (box) {
+    box.style.display = "block";
+    box.textContent = msg || "Ошибка загрузки";
+  }
+  document.getElementById("auth-screen")?.classList.remove("hidden");
+  // lifeline остаётся видимой на ПК
 }
 
 async function purgeOldAppCache() {
-  const prev = localStorage.getItem("empire_app_ver");
-  if (prev === APP_VER) return;
-  localStorage.setItem("empire_app_ver", APP_VER);
-  if ("caches" in window) {
-    const keys = await caches.keys();
-    await Promise.all(keys.map((k) => caches.delete(k)));
-  }
-  if ("serviceWorker" in navigator) {
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(regs.map((r) => r.unregister()));
-  }
-  if (prev) location.reload();
+  try {
+    const prev = localStorage.getItem("empire_app_ver");
+    if (prev === APP_VER) return;
+    localStorage.setItem("empire_app_ver", APP_VER);
+    if (!("caches" in window)) return;
+    const keysPromise = caches.keys();
+    const keys = await Promise.race([
+      keysPromise,
+      new Promise((_, rej) => setTimeout(() => rej(new Error("cache-timeout")), 800)),
+    ]);
+    await Promise.race([
+      Promise.all(keys.map((k) => caches.delete(k).catch(() => {}))),
+      new Promise((r) => setTimeout(r, 800)),
+    ]);
+  } catch (_) {}
 }
 
 async function init() {
-  applyFontScale();
-  await purgeOldAppCache();
-  closeAllSheets();
-  loadColumnWidths();
-  const projectsWrap = document.querySelector(".nav-projects-wrap");
-  if (projectsWrap && localStorage.getItem("empire_projects_open") === "0") {
-    projectsWrap.open = false;
-  }
-  bindEvents();
-  initRestTimerControls();
-  bindColumnResizers();
-  renderMobileTabbar();
-  syncOverflowHideDoneLabel();
-  hydrateNavIcons();
-  suppressAutofillBar(document.getElementById("tf-title"));
-  suppressAutofillBar(document.getElementById("search-input"));
-  suppressAutofillBar(document.getElementById("tf-tag-add"));
-  suppressAutofillBar(document.getElementById("tf-note"));
-  if (window.matchMedia("(min-width: 900px)").matches) {
-    document.getElementById("sheet-fields-details")?.setAttribute("open", "");
-  }
-  window.addEventListener("resize", () => syncSplitTaskLayout());
-  document.addEventListener("keydown", (e) => {
-    if (state.currentView !== "calendar") return;
-    if (e.target.closest("input, textarea, select, [contenteditable]")) return;
-    if (e.key === "ArrowLeft") {
-      state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, -1);
-      renderCalendar();
-    } else if (e.key === "ArrowRight") {
-      state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, 1);
-      renderCalendar();
-    }
-  });
-  if (!token()) {
-    document.getElementById("auth-screen").classList.remove("hidden");
-    return;
-  }
+  const splash = document.getElementById("boot-splash");
+  if (splash) splash.classList.remove("hidden");
+  setBootMsg("Старт…");
   try {
-    await loadAll();
-    closeAllSheets();
-    const params = new URLSearchParams(location.search);
-    const view = params.get("view");
-    const settingsSection = params.get("section");
-    if (view === "settings") {
-      if (settingsSection && SETTINGS_SECTIONS.some((s) => s.id === settingsSection)) {
-        state.settingsSection = settingsSection;
-      }
-      openSettings(state.settingsSection);
-    } else if (view && TITLES[view]) showView(view);
-    else closeAllSheets();
-    if (params.get("action") === "new") onPrimaryAdd();
-    const taskId = params.get("task");
-    if (taskId) {
-      const t = state.tasks.find((x) => String(x.id) === taskId) || state.doneTasks.find((x) => String(x.id) === taskId);
-      if (t) await openSheet(t);
-      else {
-        try {
-          const remote = await api(`/tasks/${taskId}`);
-          if (remote) await openSheet(remote);
-        } catch (_) {}
-      }
+    try {
+      applyFontScale();
+      applyGymChrome();
+    } catch (e) {
+      console.error("chrome", e);
     }
-    await ensurePushSubscription();
-    syncSplitTaskLayout();
+    setBootMsg("Кэш…");
+    await Promise.race([purgeOldAppCache(), new Promise((r) => setTimeout(r, 1000))]);
+    try {
+      closeAllSheets();
+      loadColumnWidths();
+    } catch (e) {
+      console.error("sheets/cols", e);
+    }
+    const projectsWrap = document.querySelector(".nav-projects-wrap");
+    if (projectsWrap && localStorage.getItem("empire_projects_open") === "0") {
+      projectsWrap.open = false;
+    }
+    setBootMsg("Интерфейс…");
+    try {
+      bindEvents();
+    } catch (e) {
+      console.error("bindEvents", e);
+      showBootFailure("Ошибка UI: " + (e && e.message ? e.message : e));
+    }
+    try {
+      initRestTimerControls();
+      bindColumnResizers();
+      renderMobileTabbar();
+      syncOverflowHideDoneLabel();
+      hydrateNavIcons();
+      suppressAutofillBar(document.getElementById("tf-title"));
+      suppressAutofillBar(document.getElementById("search-input"));
+      suppressAutofillBar(document.getElementById("tf-tag-add"));
+      suppressAutofillBar(document.getElementById("tf-note"));
+    } catch (e) {
+      console.error("ui extras", e);
+    }
+    if (window.matchMedia("(min-width: 900px)").matches) {
+      document.getElementById("sheet-fields-details")?.setAttribute("open", "");
+    }
+    window.addEventListener("resize", () => {
+      try {
+        syncSplitTaskLayout();
+      } catch (_) {}
+    });
+    document.addEventListener("keydown", (e) => {
+      if (state.currentView !== "calendar") return;
+      if (e.target.closest("input, textarea, select, [contenteditable]")) return;
+      if (e.key === "ArrowLeft") {
+        state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, -1);
+        renderCalendar();
+      } else if (e.key === "ArrowRight") {
+        state.calendarMonth = addMonthsToMonthStart(state.calendarMonth, 1);
+        renderCalendar();
+      }
+    });
+    if (!token()) {
+      hideBootSplash();
+      document.getElementById("auth-screen")?.classList.remove("hidden");
+      try {
+        renderSidebarNav();
+      } catch (_) {}
+      return;
+    }
+    try {
+      setBootMsg("Данные с сервера…");
+      await loadAll();
+      closeAllSheets();
+      const params = new URLSearchParams(location.search);
+      const view = params.get("view");
+      const settingsSection = params.get("section");
+      if (view === "settings") {
+        if (settingsSection && SETTINGS_SECTIONS.some((s) => s.id === settingsSection)) {
+          state.settingsSection = settingsSection;
+        }
+        openSettings(state.settingsSection);
+      } else if (view && TITLES[view]) {
+        showView(view);
+        if (view === "program") await renderWorkoutProgram();
+      } else if (isGymApp()) {
+        showView("program");
+        await renderWorkoutProgram();
+      } else {
+        closeAllSheets();
+        showView(state.currentView || "today");
+      }
+      if (params.get("action") === "new") onPrimaryAdd();
+      const taskId = params.get("task");
+      if (taskId) {
+        const t = state.tasks.find((x) => String(x.id) === taskId) || state.doneTasks.find((x) => String(x.id) === taskId);
+        if (t) await openSheet(t);
+        else {
+          try {
+            const remote = await api(`/tasks/${taskId}`);
+            if (remote) await openSheet(remote);
+          } catch (_) {}
+        }
+      }
+      syncSplitTaskLayout();
+      hideBootSplash();
+      if (!isGymApp()) ensurePushSubscription().catch(() => {});
+    } catch (e) {
+      if (e.message === "auth") {
+        hideBootSplash();
+        document.getElementById("auth-screen")?.classList.remove("hidden");
+        return;
+      }
+      showToast(e.message);
+      // офлайн-снимок уже мог примениться в loadAll; всё равно покажем UI
+      try {
+        if (isGymApp()) {
+          const el = document.getElementById("view-program");
+          if (el) {
+            document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+            el.classList.add("active");
+            el.innerHTML = `<div class="card"><h3>Не удалось загрузить</h3><p>${escapeHtml(e.message || "ошибка")}</p><p class="muted">Обновите страницу или введите токен заново.</p><p><button type="button" class="btn" id="btn-retry-auth">Сменить токен</button></p></div>`;
+            document.getElementById("btn-retry-auth")?.addEventListener("click", () => {
+              localStorage.removeItem(TOKEN_KEY);
+              document.getElementById("auth-screen")?.classList.remove("hidden");
+            });
+          }
+          document.getElementById("page-title").textContent = "Программа";
+        } else {
+          showView("today");
+          showBootFailure(e.message || "Ошибка загрузки данных");
+        }
+      } catch (_) {
+        showBootFailure(e.message || "Ошибка загрузки");
+      }
+      hideBootSplash();
+    }
+    setInterval(() => checkReminders(), 60000);
+    setInterval(() => checkHealthReminders(), 60000);
   } catch (e) {
-    if (e.message !== "auth") showToast(e.message);
-  }
-  setInterval(() => checkReminders(), 60000);
-  setInterval(() => checkHealthReminders(), 60000);
-  if ("serviceWorker" in navigator && !/ZadachnikApp\//.test(navigator.userAgent || "")) {
-    navigator.serviceWorker.register("/tasks/assets/sw.js?v=26", { scope: "/tasks/" }).catch(() => {});
+    showBootFailure(e && e.message ? e.message : String(e));
   }
 }
 
-init();
+// 25s: loadAll тянет 8 эндпоинтов + рендер; 8s давал ложный «зависла» и оставлял auth поверх UI.
+bootWatchdogId = setTimeout(() => {
+  if (!window.__empireReady) {
+    showBootFailure(
+      "Загрузка зависла. Закройте ВСЕ вкладки neverretire.ru, откройте https://neverretire.ru/go-tasks/ и нажмите кнопку."
+    );
+  }
+}, 12000);
+
+init().catch((e) => showBootFailure(e && e.message ? e.message : String(e)));

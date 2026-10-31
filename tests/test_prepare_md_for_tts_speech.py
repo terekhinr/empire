@@ -58,3 +58,31 @@ def test_double_prepare_preserves_when_accent_off_on_plain():
 def test_markdown_stripped():
     raw = prepare_md_for_tts("# Заголовок\n\n**Жирный** текст.\n")
     assert "**" not in raw
+
+
+def test_expand_abbreviations_uv_and_td():
+    from prepare_md_for_tts import expand_speech_abbreviations
+
+    assert "уважаемый" in expand_speech_abbreviations("Ув. Иванов, здравствуйте.")
+    assert "уважаемая" in expand_speech_abbreviations("ув. Петрова пишет.")
+    assert "так далее" in expand_speech_abbreviations("книги, журналы и т.д.")
+    assert "тому подобное" in expand_speech_abbreviations("и т.п.")
+    assert "то есть" in expand_speech_abbreviations("т.е. важно")
+    assert "в том числе" in expand_speech_abbreviations("в т.ч. Москва")
+    # не ломаем обычные слова
+    assert "страна" in expand_speech_abbreviations("большая страна.")
+
+
+def test_prepare_expands_abbreviations(monkeypatch):
+    monkeypatch.setenv("PDF_AUDIO_STRESS", "0")
+    text = prepare_for_tts(
+        "Ув. Сидоров пишет письмо и т.д. См. также рис. 3.",
+        accent=False,
+    )
+    low = text.lower()
+    assert "уважаемый" in low
+    assert "так далее" in low
+    assert "смотри" in low
+    assert "рисунок" in low
+    assert "ув." not in low
+    assert "т.д." not in low.replace("т.д", "XX")  # no leftover abbr

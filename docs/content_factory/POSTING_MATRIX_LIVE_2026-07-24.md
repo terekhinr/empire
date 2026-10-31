@@ -1,7 +1,7 @@
 # Матрицы постов · live (МСК)
 
 Автопост: `data/auto_publish.json` → `enabled=true`.
-Контент только из curated JSON (+ fal для Сада без файла).
+Триаж 2026-08-27: выключены слоты без медиа; Ленин 1/день.
 
 ## Gdepar · 3/день
 
@@ -9,22 +9,21 @@
 |--|-------|-------|-------|
 | Пн | promo_map | classic | mono evening |
 | Вт | book pechi | classic | mono evening |
-| Ср | mono practice | classic | duo evening |
+| Ср | mono practice | classic | mono evening |
 | Чт | mono practice | classic | book istoriya |
-| Пт | duo practice | classic | mono evening |
-| Сб | mono practice | classic | duo evening |
-| Вс | mono practice | classic | duo evening |
+| Пт | mono practice | classic | mono evening |
+| Сб | mono practice | classic | mono evening |
+| Вс | mono practice | classic | mono evening |
 
-Дуэт ≤4/нед. Монологи: `data/gdepar_mono_curated.json`. Книги: `gdepar_book_excerpts.json`.
+Дуэт снят (`media/gdepar/topics/` пуст). Монологи: `data/gdepar_mono_curated.json`. Книги: `gdepar_book_excerpts.json`.
 
-## Stern · ~6–7/нед
+## Stern · 2/нед
 
-Пн/Ср/Пт 19:00 curated · Вт/Чт 09:30 curated + 10:00 legacy · Сб 15:00 technique + 19:00 · Вс 09:30.
-Картинки только из `media/stern/topics/` (записи без файла deprecated).
+Вт/Чт 10:00 `athletic_legacy` только. curated / technique сняты (`media/stern/topics/` и clips пусты).
 
-## Lenin · 3/день
+## Lenin · 1/день
 
-08:30 calendar · 12:00 rubric (art/cinema — картинка работы, не портрет 1917) · 19:00 ПСС/сказка/support.
+12:00 `lenin_rubric` (art/cinema — картинка работы, не портрет 1917). Календарь 08:30 и вечер 19:00 сняты.
 
 ## Garden · 3–4/нед
 

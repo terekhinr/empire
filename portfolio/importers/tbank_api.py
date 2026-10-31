@@ -11,7 +11,7 @@ import requests
 
 from portfolio.config import TBANK_ACCOUNT_ID, TBANK_TOKEN
 from portfolio.asset_classify import classify_asset
-from portfolio.db import broker_account_id, insert_cashflow, insert_transaction, upsert_instrument
+from portfolio.db import broker_account_id, ensure_account, insert_cashflow, insert_transaction, upsert_instrument
 
 log = logging.getLogger(__name__)
 
@@ -93,15 +93,67 @@ def figi_to_ticker(figi: str) -> str | None:
     return ticker
 
 
-def sync_tbank_positions(conn: sqlite3.Connection) -> dict[str, Any]:
-    """Текущие позиции из GetPortfolio → manual_positions (надёжнее для пассивного счёта)."""
+def _account_label(acc: dict) -> str:
+    name = str(acc.get("name") or "").strip()
+    if name:
+        return name[:80]
+    mapping = {
+        "ACCOUNT_TYPE_TINKOFF": "Брокерский",
+        "ACCOUNT_TYPE_TINKOFF_IIS": "ИИС",
+        "ACCOUNT_TYPE_INVEST_BOX": "Инвесткопилка",
+    }
+    return mapping.get(str(acc.get("type") or ""), str(acc.get("id") or "Основной")[:12])
+
+
+def list_open_accounts() -> list[dict]:
+    accounts = []
+    for acc in list_accounts():
+        status = str(acc.get("status") or "")
+        if status and status not in ("ACCOUNT_STATUS_OPEN", "ACCOUNT_STATUS_NEW"):
+            continue
+        accounts.append(acc)
+    return accounts
+
+
+def resolve_sync_accounts() -> list[tuple[str, str]]:
+    """[(external_id, label)] — все открытые счета, либо один из PORTFOLIO_TBANK_ACCOUNT_ID."""
+    accounts = list_open_accounts()
+    if TBANK_ACCOUNT_ID:
+        accounts = [a for a in accounts if a.get("id") == TBANK_ACCOUNT_ID] or accounts[:1]
+    if not accounts:
+        raise RuntimeError("Т-Банк: нет доступных счетов")
+    if len(accounts) == 1:
+        return [(accounts[0]["id"], "Основной")]
+    seen: dict[str, int] = {}
+    out: list[tuple[str, str]] = []
+    for acc in accounts:
+        label = _account_label(acc)
+        n = seen.get(label, 0)
+        seen[label] = n + 1
+        if n:
+            label = f"{label} ({n + 1})"
+        out.append((acc["id"], label))
+    return out
+
+
+def sync_tbank_positions(
+    conn: sqlite3.Connection,
+    account_ext: str | None = None,
+    account_id: int | None = None,
+) -> dict[str, Any]:
+    """Текущие позиции из GetPortfolio → manual_positions."""
     from portfolio.db import upsert_manual_position
 
-    account_ext = resolve_account_id()
-    account_id = broker_account_id(conn, "tbank")
+    if account_ext is None or account_id is None:
+        account_ext = resolve_account_id()
+        account_id = broker_account_id(conn, "tbank")
     portfolio = _post(
         "tinkoff.public.invest.api.contract.v1.OperationsService/GetPortfolio",
         {"accountId": account_ext},
+    )
+    conn.execute(
+        "DELETE FROM manual_positions WHERE account_id=? AND note='tbank_api'",
+        (account_id,),
     )
     updated = 0
     for pos in portfolio.get("positions", []):
@@ -132,16 +184,18 @@ def sync_tbank_positions(conn: sqlite3.Connection) -> dict[str, Any]:
             note="tbank_api",
         )
         updated += 1
-    return {"broker": "tbank", "positions_updated": updated}
+    return {"broker": "tbank", "account": account_ext, "positions_updated": updated}
 
 
-def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]:
-    account_ext = resolve_account_id()
-    account_id = broker_account_id(conn, "tbank")
+def _sync_tbank_operations(
+    conn: sqlite3.Connection,
+    account_ext: str,
+    account_id: int,
+    days_back: int,
+) -> dict[str, int]:
     now = datetime.now(timezone.utc)
     frm = (now - timedelta(days=days_back)).isoformat()
     to = now.isoformat()
-
     ops = _post(
         "tinkoff.public.invest.api.contract.v1.OperationsService/GetOperations",
         {
@@ -152,10 +206,7 @@ def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]
         },
     ).get("operations", [])
 
-    added_tx = 0
-    skipped_tx = 0
-    added_cf = 0
-
+    added_tx = skipped_tx = added_cf = 0
     for op in ops:
         op_id = op.get("id")
         if not op_id:
@@ -167,7 +218,6 @@ def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]
         payment = _money_to_float(op.get("payment"))
         price = _quotation_to_float(op.get("price"))
         qty = _quotation_to_float(op.get("quantity")) or 0.0
-
         desc = op.get("description") or ""
         symbol = figi_to_ticker(figi) or _guess_ticker(desc, op.get("instrumentUid", ""))
 
@@ -179,7 +229,7 @@ def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]
                 amount=abs(payment),
                 flow_type="deposit",
                 note=desc,
-                external_id=f"tbank:cf:{op_id}",
+                external_id=f"tbank:cf:{account_ext}:{op_id}",
             ):
                 added_cf += 1
             continue
@@ -192,7 +242,7 @@ def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]
                 amount=abs(payment),
                 flow_type="withdrawal",
                 note=desc,
-                external_id=f"tbank:cf:{op_id}",
+                external_id=f"tbank:cf:{account_ext}:{op_id}",
             ):
                 added_cf += 1
             continue
@@ -218,25 +268,41 @@ def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]
             quantity=abs(qty) if qty else None,
             price=price,
             amount=abs(payment) if payment else None,
-            external_id=f"tbank:tx:{op_id}",
+            external_id=f"tbank:tx:{account_ext}:{op_id}",
             note=desc,
         )
         if ok:
             added_tx += 1
         else:
             skipped_tx += 1
-
-    pos_result = sync_tbank_positions(conn)
-
     return {
-        "broker": "tbank",
-        "account_id": account_ext,
         "operations": len(ops),
         "added_tx": added_tx,
         "skipped_tx": skipped_tx,
         "added_cashflows": added_cf,
-        "positions_updated": pos_result.get("positions_updated", 0),
     }
+
+
+def sync_tbank(conn: sqlite3.Connection, days_back: int = 365) -> dict[str, Any]:
+    accounts = resolve_sync_accounts()
+    totals = {
+        "broker": "tbank",
+        "accounts": [],
+        "added_tx": 0,
+        "skipped_tx": 0,
+        "added_cashflows": 0,
+        "positions_updated": 0,
+    }
+    for ext_id, label in accounts:
+        account_id = ensure_account(conn, "tbank", label=label)
+        ops = _sync_tbank_operations(conn, ext_id, account_id, days_back)
+        pos = sync_tbank_positions(conn, ext_id, account_id)
+        totals["accounts"].append({"id": ext_id, "label": label, **ops, **pos})
+        totals["added_tx"] += ops["added_tx"]
+        totals["skipped_tx"] += ops["skipped_tx"]
+        totals["added_cashflows"] += ops["added_cashflows"]
+        totals["positions_updated"] += pos.get("positions_updated", 0)
+    return totals
 
 
 def _guess_ticker(description: str, uid: str) -> str | None:

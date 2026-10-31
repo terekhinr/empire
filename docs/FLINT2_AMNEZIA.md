@@ -52,3 +52,15 @@ wg show
 ping -c2 1.1.1.1
 curl -sI https://ifconfig.me
 ```
+
+## ИИ через Amnezia (podkop `ai_awg`)
+
+Список доменов: `scripts/flint2/ai-domains.txt` (Cursor, OpenAI, Claude, Gemini AI, Windsurf, OpenRouter, …).  
+Применение на Flint:
+
+```sh
+curl -fsSL http://193.233.232.48:8789/36-ai-via-amnezia.sh | sh
+```
+
+YouTube / Telegram остаются в VLESS. На ПК дома Amnezia-клиент **выкл**.  
+Не добавлять в список целиком `google.com` / `gstatic.com` — только узкие AI-хосты.

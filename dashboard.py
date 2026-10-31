@@ -8,6 +8,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
+from dashboard_auth import require_dashboard_login
 from dashboard_longread import page_longread_publish
 from dashboard_health import page_health
 from dashboard_planning import page_planning
@@ -33,6 +34,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 FAL_KEY = os.getenv("FAL_KEY")
 
 st.set_page_config(page_title="Empire Dashboard", page_icon="👑", layout="wide")
+require_dashboard_login()
 DB_PATH = "empire.db"
 
 # Идентификаторы каналов 
@@ -138,12 +140,12 @@ async def _publish_multi_async(draft_id: int, channels: list[str], text: str, im
 
 st.sidebar.title("👑 Око Саурона")
 st.sidebar.caption(
-    "Вход: `docs/dashboard_access.md` · "
-    "[neverretire.ru/hub/](https://neverretire.ru/hub/) · туннель :8501"
+    "Кабинет: [http://193.233.232.48:8503/](http://193.233.232.48:8503/) — Streamlit. "
+    "Сайт neverretire.ru — это книга, не Око."
 )
 section = st.sidebar.radio(
     "Раздел",
-    ["Система", "Инвестиции", "Личное", "Контент и постинг"],
+    ["Инвестиции", "Система", "Личное", "Контент и постинг"],
     index=0,
 )
 if section == "Система":
@@ -176,6 +178,7 @@ else:
         "Контент и постинг",
         [
             "Модерация постов",
+            "Издательство",
             "Лонгриды · Дзен/VK",
             "Obsidian · практичный режим",
             "Пенсия · новости",
@@ -189,7 +192,23 @@ else:
         ],
     )
 
-if menu == "Модерация постов":
+if menu == "Издательство":
+    st.header("Издательство — посты без ИИ")
+    st.caption("Заливка .md/.txt и матрицы в слоты Telegram и сайтов. Расписание задаётся в оболочке.")
+    st.markdown(
+        """
+Откройте оболочку (логин — токен `BANYA_ADMIN_TOKEN` или `EMPIRE_STUDIO_TOKEN`):
+
+- [gdepar.ru/admin/studio](https://gdepar.ru/admin/studio)
+- [neverretire.ru/admin/studio](https://neverretire.ru/admin/studio)
+
+Пока режим **тест**: «Обработать» пишет в журнал отправок, в каналы ничего не уходит.
+Живой режим: `EMPIRE_PUBLISHER_LIVE=1` в env, затем переключатель в оболочке.
+
+Инструкция: `docs/publisher_studio.md`
+        """
+    )
+elif menu == "Модерация постов":
     st.header("📝 Черновики на проверке")
 
     conn = get_db_connection()

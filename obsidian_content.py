@@ -174,20 +174,31 @@ def _body_to_html(body: str, fix_html_fn) -> str:
     return fix_html_fn(text)
 
 
+def entry_skips_image(entry: dict) -> bool:
+    """Явная отметка: не звать генерацию, если своего кадра нет."""
+    raw = entry.get("skip_image")
+    if raw is True:
+        return True
+    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def build_post_html(entry: dict, *, fix_html_fn, finalize_fn) -> str:
-    """Сборка поста для Telegram: 📌 заголовок + тело + хештеги (Вариант A)."""
+    """Сборка поста для Telegram: заголовок + тело + хештеги (Вариант A)."""
     persona = (entry.get("persona") or "pension").strip().lower()
     title = (entry.get("title") or entry.get("id") or "Пост").strip()
     body_md = entry.get("body_markdown") or ""
 
     body_html = _body_to_html(body_md, fix_html_fn)
-    core = f"📌 <b>{html_std.escape(title)}</b>"
+    mark = "🌿" if persona == "garden" else "📌"
+    core = f"{mark} <b>{html_std.escape(title)}</b>"
     if body_html:
         core = f"{core}\n\n{body_html}"
 
     # Рубрика только для topic_raw в БД; в хэштеги — не title (иначе #[Obsidian]"Заголовок").
+    # Сад: без #obsidian, хэштеги только из тела поста.
     is_video = persona == "pension" and "видео" in body_md.lower()
-    return finalize_fn(core, persona, "Obsidian", is_video)
+    rubric = None if persona == "garden" else "Obsidian"
+    return finalize_fn(core, persona, rubric, is_video)
 
 
 def topic_raw_for_entry(entry: dict) -> str:
@@ -387,6 +398,8 @@ def queue_entry_by_id(entry_id: str) -> dict | None:
 
 async def resolve_image_path(entry: dict, generate_image_fn, draft_id: int, persona: str, topic: str) -> str | None:
     """Локальный файл рядом с .md или генерация по image_prompt."""
+    if entry_skips_image(entry):
+        return None
     src = find_obsidian_image_source(entry)
     if src:
         return copy_obsidian_image(entry, src, persona=persona, draft_id=draft_id)

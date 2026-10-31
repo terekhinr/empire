@@ -140,17 +140,71 @@ def compute_positions(conn: sqlite3.Connection) -> list[PositionRow]:
     return sorted(merged.values(), key=lambda p: (p.broker_code, p.ticker))
 
 
+def realized_pnl(conn: sqlite3.Connection) -> float:
+    """Реализованный P&L по сделкам продажи (средняя себестоимость FIFO-avg)."""
+    rows = conn.execute(
+        """
+        SELECT t.account_id, t.instrument_id, t.tx_type, t.quantity, t.price, t.amount
+        FROM transactions t
+        WHERE t.instrument_id IS NOT NULL
+        ORDER BY t.tx_date, t.id
+        """
+    ).fetchall()
+    state: dict[tuple[int, int], dict[str, float]] = {}
+    realized = 0.0
+    for r in rows:
+        key = (int(r["account_id"]), int(r["instrument_id"]))
+        st = state.setdefault(key, {"qty": 0.0, "cost": 0.0})
+        q = float(r["quantity"] or 0)
+        price = float(r["price"] or 0)
+        tx_type = r["tx_type"]
+        if tx_type in ("buy", "dividend_reinvest"):
+            st["qty"] += q
+            st["cost"] += q * price if price else float(r["amount"] or 0)
+        elif tx_type == "sell" and q > 0:
+            avg = st["cost"] / st["qty"] if st["qty"] else 0.0
+            sell_px = price if price else (float(r["amount"] or 0) / q)
+            realized += (sell_px - avg) * min(q, st["qty"] if st["qty"] else q)
+            if st["qty"] > 0:
+                st["qty"] -= q
+                st["cost"] -= avg * q
+                if st["qty"] <= 1e-9:
+                    st["qty"] = 0.0
+                    st["cost"] = 0.0
+    return realized
+
+
 def enrich_with_prices(
     positions: list[PositionRow],
     prices: dict[str, float],
+    quote_on: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
+    from portfolio.asset_classify import classify_asset
+
+    quote_on = quote_on or {}
     rows: list[dict[str, Any]] = []
     for p in positions:
         last = prices.get(p.ticker)
+        if last is None:
+            t = p.ticker
+            stripped = t.rstrip("@")
+            last = prices.get(stripped)
+            needs_lookup = (
+                t.endswith("@")
+                or t.startswith("RU")
+                or any("А" <= ch <= "Я" for ch in t)
+            )
+            if last is None and needs_lookup:
+                from portfolio.importers.isin_ticker import query_to_ticker
+
+                mapped = query_to_ticker(t)
+                if mapped:
+                    last = prices.get(mapped)
         market_value = (last * p.quantity) if last is not None else None
         cost = (p.avg_price * p.quantity) if p.avg_price is not None else None
         pnl = (market_value - cost) if market_value is not None and cost is not None else None
         pnl_pct = ((pnl / cost) * 100) if pnl is not None and cost and cost > 0 else None
+        live_class, is_liq = classify_asset(p.ticker, name=p.instrument_name)
         rows.append(
             {
                 "broker": p.broker_name,
@@ -160,11 +214,12 @@ def enrich_with_prices(
                 "broker_mode": p.broker_mode,
                 "ticker": p.ticker,
                 "name": p.instrument_name or p.ticker,
-                "asset_class": p.asset_class,
-                "liquidity_fund": p.is_liquidity_fund,
+                "asset_class": live_class or p.asset_class,
+                "liquidity_fund": is_liq or p.is_liquidity_fund,
                 "quantity": p.quantity,
                 "avg_price": p.avg_price,
                 "last_price": last,
+                "price_date": quote_on.get(p.ticker),
                 "market_value": market_value,
                 "cost_basis": cost,
                 "pnl": pnl,

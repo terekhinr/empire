@@ -49,7 +49,9 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; padding: 0;
-  background: var(--bg); color: var(--text);
+  /* !important: перебить старый boot color:#111 !important из кэша index.html */
+  background: var(--bg) !important;
+  color: var(--text) !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: calc(16px * var(--font-scale, 1));
   height: 100%; overflow: hidden;
@@ -1294,8 +1296,10 @@ main {
 .check.large { width: 28px; height: 28px; margin-top: 6px; }
 .check.done { background: var(--success); border-color: var(--success); color: #fff; font-size: 0.85rem; }
 
-.task-body { flex: 1; min-width: 0; }
-.task-title { font-size: 1rem; line-height: 1.35; word-break: break-word; }
+.task-body { flex: 1; min-width: 0; color: var(--text); }
+.task-title { font-size: 1rem; line-height: 1.35; word-break: break-word; color: var(--text); }
+.list-row, .check-item, .project-row { color: var(--text); }
+.empty { color: var(--muted); }
 .nav-block { margin-bottom: 16px; }
 .nav-block-title {
   font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
@@ -1876,17 +1880,19 @@ body.health-timers-on .fab-ai {
   font-weight: 600;
 }
 .program-range { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
-.program-session h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.program-session { color: var(--text); }
+.program-session h3 { margin: 0 0 4px; font-size: 1.05rem; color: var(--text); }
 .program-sub { color: var(--muted); font-size: 0.9rem; }
-.program-ex { margin-bottom: 8px; padding: 0; overflow: visible; }
+.program-ex { margin-bottom: 8px; padding: 0; overflow: visible; color: var(--text); }
 .card.program-ex { overflow: visible; }
 .program-ex[open] { margin-bottom: 12px; }
 .program-ex-summary {
   display: flex; align-items: center; gap: 8px; padding: 12px;
   cursor: pointer; list-style: none; flex-wrap: wrap;
+  color: var(--text);
 }
 .program-ex-summary::-webkit-details-marker { display: none; }
-.program-ex-title { font-weight: 600; flex: 1; min-width: 0; }
+.program-ex-title { font-weight: 600; flex: 1; min-width: 0; color: var(--text); }
 .program-plan { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
 .program-hold-quick {
   white-space: nowrap;
@@ -2361,3 +2367,42 @@ body.health-timers-on .fab-ai {
 .fm-sn-kill-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin-bottom: 6px; }
 .fm-sn-kill p { margin: 0; font-size: 0.88rem; line-height: 1.5; color: #dce3ec; }
 .fm-sn-verdict { border-left-color: #22c55e; }
+
+html.gym-app .icon-rail-btn[data-view="search"],
+html.gym-app .icon-rail-btn[data-view="today"],
+html.gym-app .icon-rail-btn[data-view="calendar"],
+html.gym-app .nav-projects-block,
+html.gym-app .nav-tags-block,
+html.gym-app .nav-calendar-block,
+html.gym-app .nav-row-finance,
+html.gym-app .nav-row[data-view="insights"],
+html.gym-app .nav-row[data-view="task-stats"],
+html.gym-app .nav-row[data-view="lists"],
+html.gym-app .nav-row[data-view="done"],
+html.gym-app #fab-ai,
+html.gym-app .mobile-import {
+  display: none !important;
+}
+
+.program-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.program-upload-btn { cursor: pointer; }
+.line-chart-card { margin: 10px 0; }
+.line-chart {
+  width: 100%;
+  height: 148px;
+  color: #38bdf8;
+  display: block;
+}
+.line-chart-axis {
+  fill: var(--muted, #94a3b8);
+  font-size: 10px;
+}
+.line-chart-now {
+  float: right;
+  font-weight: 600;
+}

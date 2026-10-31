@@ -1,0 +1,366 @@
+{
+  "version": 3,
+  "mode": "test",
+  "slots": [
+    {
+      "id": "slot-001",
+      "project_id": "tg:lenin",
+      "weekday": 0,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-002",
+      "project_id": "tg:lenin",
+      "weekday": 1,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-003",
+      "project_id": "tg:lenin",
+      "weekday": 2,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-004",
+      "project_id": "tg:lenin",
+      "weekday": 3,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-005",
+      "project_id": "tg:lenin",
+      "weekday": 4,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-006",
+      "project_id": "tg:lenin",
+      "weekday": 5,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-007",
+      "project_id": "tg:lenin",
+      "weekday": 6,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-008",
+      "project_id": "tg:stern",
+      "weekday": 1,
+      "time": "10:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-009",
+      "project_id": "tg:stern",
+      "weekday": 3,
+      "time": "10:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-010",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-011",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-012",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-013",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-014",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-015",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-016",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-017",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-018",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-019",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-020",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-021",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-022",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-023",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-024",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-025",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-026",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-027",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-028",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-029",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-030",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-031",
+      "project_id": "site:gdepar",
+      "weekday": 0,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-032",
+      "project_id": "site:gdepar",
+      "weekday": 2,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-033",
+      "project_id": "site:gdepar",
+      "weekday": 4,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-034",
+      "project_id": "site:neverretire",
+      "weekday": 1,
+      "time": "10:00",
+      "label": "Статья",
+      "enabled": true
+    },
+    {
+      "id": "slot-035",
+      "project_id": "site:neverretire",
+      "weekday": 3,
+      "time": "10:00",
+      "label": "Статья",
+      "enabled": true
+    },
+    {
+      "id": "slot-garden-tue-12",
+      "project_id": "tg:garden",
+      "weekday": 1,
+      "time": "12:00",
+      "label": "stepanych",
+      "rubric_id": "stepanych",
+      "enabled": true
+    },
+    {
+      "id": "slot-garden-wed-20",
+      "project_id": "tg:garden",
+      "weekday": 2,
+      "time": "20:00",
+      "label": "lunar",
+      "rubric_id": "lunar",
+      "enabled": true
+    },
+    {
+      "id": "slot-garden-sat-12",
+      "project_id": "tg:garden",
+      "weekday": 5,
+      "time": "12:00",
+      "label": "stepanych",
+      "rubric_id": "stepanych",
+      "enabled": true
+    },
+    {
+      "id": "slot-garden-sat-20",
+      "project_id": "tg:garden",
+      "weekday": 5,
+      "time": "20:00",
+      "label": "lunar",
+      "rubric_id": "lunar",
+      "enabled": true
+    }
+  ],
+  "posts": [],
+  "outbox": [],
+  "bank_posts": [],
+  "ai_drafts": [],
+  "rubrics": [
+    {
+      "id": "stepanych",
+      "project_id": "tg:garden",
+      "label": "Степаныч",
+      "image_mode": "generate",
+      "on_missing": "stub",
+      "image_provider": "gemini",
+      "archive_dir": "media/garden/stepanych",
+      "fixed_image_path": null,
+      "default_prompt_en": "Central Russia dacha garden, practical gardener aesthetic, soil and plants, documentary photo, no faces, soft natural light",
+      "enabled": true
+    },
+    {
+      "id": "lunar",
+      "project_id": "tg:garden",
+      "label": "Луна",
+      "image_mode": "generate",
+      "on_missing": "stub",
+      "image_provider": "gemini",
+      "archive_dir": "media/garden/lunar",
+      "fixed_image_path": null,
+      "default_prompt_en": "moon calendar gardening theme, night garden Central Russia, soft moonlight, documentary still life, no faces, no text overlay",
+      "enabled": true
+    }
+  ],
+  "bot_settings": {
+    "admin_chat_id": "",
+    "notify_on": [
+      "published",
+      "skipped",
+      "failed"
+    ],
+    "digest": "daily",
+    "last_digest_at": null,
+    "min_body_chars": 80,
+    "require_image": true,
+    "dedupe_days": 30,
+    "dedupe_threshold": 0.9
+  }
+}

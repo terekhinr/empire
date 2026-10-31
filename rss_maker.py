@@ -11,6 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select, desc
 
 from empire_db import PostDraft
+from pension_site_feed import dedupe_pension_posts
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///empire.db")
 engine = create_async_engine(DATABASE_URL, echo=False)
@@ -232,9 +233,12 @@ async def generate_pension_zen_rss() -> bool:
                 select(PostDraft)
                 .where(PostDraft.status == "published", PostDraft.persona_key == "pension")
                 .order_by(desc(PostDraft.created_at))
-                .limit(RSS_LIMIT)
+                .limit(max(RSS_LIMIT * 4, 40))
             )
             posts = list((await session.execute(stmt)).scalars().all())
+        # Уникальные по заголовку (как на /articles); предпочитаем меньший id
+        posts = dedupe_pension_posts(sorted(posts, key=lambda p: p.id or 0))
+        posts = sorted(posts, key=lambda p: p.created_at or p.id, reverse=True)[:RSS_LIMIT]
 
         book_items = _book_rss_items(limit=8)
         post_items: list[list[str]] = []

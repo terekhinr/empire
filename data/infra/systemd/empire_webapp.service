@@ -8,12 +8,12 @@ User=root
 WorkingDirectory=/root/projects/empire
 Environment=PATH=/root/projects/empire/venv/bin
 Environment=PYTHONUNBUFFERED=1
+Environment=EMPIRE_SKIP_EMBEDDINGS=1
 EnvironmentFile=-/root/projects/empire/.env
-ExecStart=/root/projects/empire/venv/bin/uvicorn web_app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1
+ExecStart=/root/projects/empire/venv/bin/uvicorn web_app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1 --workers 1 --timeout-keep-alive 75 --limit-concurrency 80
 Restart=always
 RestartSec=5
-MemoryMax=512M
-CPUQuota=50%
+MemoryMax=1536M
 
 [Install]
 WantedBy=multi-user.target

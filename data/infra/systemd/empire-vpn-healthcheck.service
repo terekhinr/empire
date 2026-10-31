@@ -1,0 +1,8 @@
+[Unit]
+Description=Empire VPN quad healthcheck (vds+aeza+sto1+cdn)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/empire-vpn-healthcheck.sh
+# optional: EnvironmentFile=-/root/empire-secrets/telegram.env

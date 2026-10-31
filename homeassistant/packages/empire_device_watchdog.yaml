@@ -1,0 +1,182 @@
+# Empire device watchdog — без спама в Telegram.
+# Soft reload ZHA/LocalTuya молча. Сводка дома — в VPS digest 2×/день
+# (empire-status-digest) и по запросу: script.empire_watch_diagnose_now
+
+input_datetime:
+  empire_watch_last_zha_reload:
+    name: "Watchdog — последний ZHA reload"
+    has_date: true
+    has_time: true
+  empire_watch_last_tuya_reload:
+    name: "Watchdog — последний LocalTuya reload"
+    has_date: true
+    has_time: true
+  empire_watch_last_mqtt_restart:
+    name: "Watchdog — последний Mosquitto restart"
+    has_date: true
+    has_time: true
+
+script:
+  empire_soft_reload_zha:
+    alias: "Watchdog — soft reload ZHA"
+    mode: single
+    sequence:
+      - condition: template
+        value_template: >-
+          {% set last = states('input_datetime.empire_watch_last_zha_reload') %}
+          {{ last in ['unknown','unavailable','']
+             or (as_timestamp(now()) - as_timestamp(last)) > 3600 }}
+      - service: homeassistant.reload_config_entry
+        target:
+          entity_id: light.tz3000_mgusv51k_ts0052
+        continue_on_error: true
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.empire_watch_last_zha_reload
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: system_log.write
+        data:
+          message: "empire_watchdog: soft reload ZHA"
+          level: warning
+
+  empire_soft_reload_localtuya:
+    alias: "Watchdog — soft reload LocalTuya"
+    mode: single
+    sequence:
+      - condition: template
+        value_template: >-
+          {% set last = states('input_datetime.empire_watch_last_tuya_reload') %}
+          {{ last in ['unknown','unavailable','']
+             or (as_timestamp(now()) - as_timestamp(last)) > 3600 }}
+      - service: homeassistant.reload_config_entry
+        target:
+          entity_id: switch.kuhnya_chainik
+        continue_on_error: true
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.empire_watch_last_tuya_reload
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: system_log.write
+        data:
+          message: "empire_watchdog: soft reload LocalTuya"
+          level: warning
+
+  empire_restart_mosquitto:
+    alias: "Watchdog — restart Mosquitto"
+    mode: single
+    sequence:
+      - condition: template
+        value_template: >-
+          {% set last = states('input_datetime.empire_watch_last_mqtt_restart') %}
+          {{ last in ['unknown','unavailable','']
+             or (as_timestamp(now()) - as_timestamp(last)) > 1800 }}
+      - service: hassio.addon_restart
+        data:
+          addon: core_mosquitto
+        continue_on_error: true
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.empire_watch_last_mqtt_restart
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: system_log.write
+        data:
+          message: "empire_watchdog: restart Mosquitto"
+          level: warning
+
+  empire_watch_diagnose_now:
+    alias: "Watchdog — диагностика в Telegram (по запросу)"
+    mode: single
+    sequence:
+      - variables:
+          offline: >-
+            {% set ids = [
+              'binary_sensor.sonoff_snzb_06p','binary_sensor.sonoff_snzb_06p_2','binary_sensor.sonoff_snzb_06p_3',
+              'light.tz3000_mgusv51k_ts0052','light.tz3000_mgusv51k_ts0052_2','light.empire_prihozhaya_svet',
+              'light.hobeian_zg_301z','sensor.srw_th01_balkon_balkon_tdeg_raw','switch.kuhnya_chainik',
+              'binary_sensor.smartintercom_detektor_vyzova','switch.smartintercom_otkryt_dver'
+            ] %}
+            {% set ns = namespace(rows=[]) %}
+            {% for e in ids %}
+              {% if states(e) in ['unavailable','unknown'] %}
+                {% set ns.rows = ns.rows + [ (state_attr(e,'friendly_name') or e) ] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.rows }}
+      - service: rest_command.empire_telegram
+        data:
+          message: >-
+            🔎 HA диагностика (по запросу)
+            {% if offline | length == 0 %}
+            Critical: всё online.
+            {% else %}
+            Offline ({{ offline | length }}): {{ offline | join('; ') }}
+            {% endif %}
+            Ванная свет={{ states('light.empire_vannaya_svet') }},
+            присутствие={{ states('binary_sensor.sonoff_snzb_06p') }},
+            домофон={{ states('sensor.smartintercom_status_linii') }}.
+
+automation:
+  - id: empire_watch_quiet_heal_unavailable
+    alias: "Watchdog — quiet soft heal"
+    mode: queued
+    max: 6
+    triggers:
+      - trigger: state
+        entity_id:
+          - binary_sensor.sonoff_snzb_06p
+          - light.tz3000_mgusv51k_ts0052
+          - light.tz3000_mgusv51k_ts0052_2
+          - switch.kuhnya_chainik
+        to:
+          - unavailable
+          - unknown
+        for:
+          minutes: 8
+    actions:
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: >-
+                  {{ trigger.entity_id.startswith(('binary_sensor.sonoff','light.tz3000','light.empire')) }}
+            sequence:
+              - service: script.empire_soft_reload_zha
+          - conditions:
+              - condition: template
+                value_template: "{{ 'chainik' in trigger.entity_id }}"
+            sequence:
+              - service: script.empire_soft_reload_localtuya
+
+  # После рестарта HA / отвала MQTT домофон часто мёртв, пока Mosquitto не поднят.
+  - id: empire_watch_mosquitto_on_ha_start
+    alias: "Watchdog — Mosquitto после старта HA"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      - delay:
+          minutes: 2
+      - condition: template
+        value_template: >-
+          {{ states('switch.smartintercom_otkryt_dver') in ['unavailable', 'unknown', '']
+             or states('binary_sensor.smartintercom_detektor_vyzova') in ['unavailable', 'unknown', ''] }}
+      - service: script.empire_restart_mosquitto
+
+  - id: empire_watch_mosquitto_intercom_down
+    alias: "Watchdog — Mosquitto если домофон MQTT мёртв"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id:
+          - switch.smartintercom_otkryt_dver
+          - binary_sensor.smartintercom_detektor_vyzova
+        to:
+          - unavailable
+          - unknown
+        for:
+          minutes: 3
+    actions:
+      - service: script.empire_restart_mosquitto

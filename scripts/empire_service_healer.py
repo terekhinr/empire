@@ -6,8 +6,8 @@
 ENV:
   EMPIRE_HEAL_DRY_RUN=1   — только отчёт
   EMPIRE_HEAL_NO_FIX=1    — без починки
-  EMPIRE_HEAL_NO_TG=1     — без Telegram
-  EMPIRE_HEAL_FORCE_TG=1  — всегда слать summary
+  EMPIRE_HEAL_NO_TG=1     — без Telegram (по умолчанию хилер молчит в TG)
+  EMPIRE_HEAL_FORCE_TG=1  — разовый полный отчёт в TG (иначе только утро/вечер digest)
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -202,7 +203,14 @@ def build_checks() -> list[Check]:
         Check("nginx", unit="nginx.service"),
         Check("xray_8443", unit="xray-8443.service"),
         # Docker
-        Check("docker_db", docker="empire-db-1"),
+        # Postgres-контейнер только если явно включён (EMPIRE_USE_DOCKER_DB=1).
+        # На NEW/SQLite empire-db-1 нет — не рестартим и не шумим.
+        Check(
+            "docker_db",
+            docker="empire-db-1",
+            optional=os.getenv("EMPIRE_USE_DOCKER_DB", "").lower()
+            not in ("1", "true", "yes"),
+        ),
         Check("docker_amnezia", docker="amnezia-awg2"),
         # Опциональные боты
         Check("stern_bot", unit="empire_stern_bot.service", optional=True, env_token="STERN_BOT_TOKEN"),
@@ -265,14 +273,26 @@ def handshake_age_seconds(line: str) -> int | None:
 
 
 def check_amnezia_flint_peer(*, dry: bool, no_fix: bool, st: dict[str, Any]) -> Result:
-    """VPS-side: peer Flint (10.8.1.13) на amnezia-awg2 — свежий handshake.
+    """VPS-side: peer Flint на amnezia-awg2 — свежий handshake.
 
-    Контейнер UP ≠ туннель жив. Если handshake протух — kick router-watchdog
-    (не рестартим docker: там другие peers).
+    Контейнер UP ≠ туннель жив. IP: EMPIRE_FLINT_AWG_IP (csv).
+    Среди configured peers берём самый свежий handshake.
+
+    EMPIRE_SKIP_AMNEZIA_PEER=1 — RKN/блок IP: не пинать peer до смены VPS.
     """
+    if os.getenv("EMPIRE_SKIP_AMNEZIA_PEER", "").strip().lower() in ("1", "true", "yes", "on"):
+        return Result(
+            "amnezia_peer",
+            True,
+            "skip: EMPIRE_SKIP_AMNEZIA_PEER (ждём новый VPS)",
+            skipped=True,
+        )
+
     container = os.getenv("EMPIRE_AMNEZIA_CONTAINER", "amnezia-awg2")
-    peer_ip = os.getenv("EMPIRE_FLINT_AWG_IP", "10.8.1.13")
-    max_age = int(os.getenv("EMPIRE_AWG_MAX_AGE", "180"))
+    # .10 — актуальный Flint (docs); .13/.3 — legacy
+    raw_ips = os.getenv("EMPIRE_FLINT_AWG_IP", "10.8.1.10,10.8.1.13,10.8.1.3")
+    peer_ips = [x.strip() for x in raw_ips.split(",") if x.strip()]
+    max_age = int(os.getenv("EMPIRE_AWG_MAX_AGE", "900"))
 
     if not docker_running(container):
         fixed = False
@@ -289,54 +309,79 @@ def check_amnezia_flint_peer(*, dry: bool, no_fix: bool, st: dict[str, Any]) -> 
     if code != 0 or not out.strip():
         return Result("amnezia_peer", False, f"{container}: awg/wg show fail")
 
-    # Разбираем блоки peer: ищем allowed ips с peer_ip
-    blocks = out.split("peer:")
-    target = None
-    for block in blocks[1:]:
-        if peer_ip in block:
-            target = block
-            break
-    if not target:
-        return Result("amnezia_peer", False, f"peer {peer_ip} не найден на {container}")
+    def _peer_meta(block: str) -> tuple[int | None, str | None, str]:
+        age = None
+        ip = None
+        hs_line = ""
+        for line in block.splitlines():
+            low = line.lower()
+            if "handshake" in low:
+                age = handshake_age_seconds(line)
+                hs_line = line.strip()
+            if "allowed ips" in low:
+                ip = line.split(":")[-1].strip().split("/")[0].strip()
+        return age, ip, hs_line
 
-    hs_line = ""
-    for line in target.splitlines():
-        if "handshake" in line.lower():
-            hs_line = line.strip()
-            break
+    candidates: list[tuple[int, str, str]] = []  # age, ip, hs
+    for block in out.split("peer:")[1:]:
+        age, ip, hs_line = _peer_meta(block)
+        if age is None or ip is None:
+            continue
+        if peer_ips and ip not in peer_ips:
+            continue
+        candidates.append((age, ip, hs_line))
+
+    if not candidates:
+        for block in out.split("peer:")[1:]:
+            age, ip, hs_line = _peer_meta(block)
+            if age is None:
+                continue
+            candidates.append((age, ip or "auto", hs_line))
+
+    if not candidates:
+        return Result(
+            "amnezia_peer",
+            False,
+            f"peer {','.join(peer_ips) or '?'} не найден на {container}",
+        )
+
+    candidates.sort(key=lambda x: x[0])
+    age, peer_ip, hs_line = candidates[0]
     if not hs_line:
         return Result("amnezia_peer", False, f"peer {peer_ip}: нет handshake")
 
-    age = handshake_age_seconds(hs_line)
-    if age is None:
-        return Result("amnezia_peer", False, f"peer {peer_ip}: {hs_line}")
     if age > max_age:
         detail = f"peer {peer_ip} STALE age={age}s ({hs_line})"
         if not (dry or no_fix):
-            # Клиентский туннель чинит router-watchdog / Flint
             log("KICK empire_router_watchdog.py (amnezia peer stale)")
             py = ROOT / "venv/bin/python"
             rc, _ = run([str(py), str(ROOT / "scripts/empire_router_watchdog.py")], timeout=240)
-            # re-check
             code2, out2 = run(["docker", "exec", container, "awg", "show"], timeout=30, full=True)
             age2 = None
-            if code2 == 0 and peer_ip in out2:
+            peer2 = peer_ip
+            if code2 == 0 and out2.strip():
+                c2: list[tuple[int, str]] = []
                 for block in out2.split("peer:")[1:]:
-                    if peer_ip in block:
-                        for line in block.splitlines():
-                            if "handshake" in line.lower():
-                                age2 = handshake_age_seconds(line)
-                                break
+                    a2, ip2, _ = _peer_meta(block)
+                    if a2 is None or ip2 is None:
+                        continue
+                    if peer_ips and ip2 not in peer_ips:
+                        continue
+                    c2.append((a2, ip2))
+                if c2:
+                    c2.sort(key=lambda x: x[0])
+                    age2, peer2 = c2[0]
             ok2 = age2 is not None and age2 <= max_age
             return Result(
                 "amnezia_peer",
                 ok2,
-                f"{detail} → after kick(exit={rc}) age={age2}",
+                f"{detail} → after kick(exit={rc}) peer {peer2} age={age2}",
                 fixed=ok2,
             )
         return Result("amnezia_peer", False, detail)
 
     return Result("amnezia_peer", True, f"peer {peer_ip} ok age={age}s")
+
 
 
 def restart_docker(name: str, *, dry: bool, no_fix: bool, st: dict[str, Any]) -> tuple[bool, str]:
@@ -371,6 +416,10 @@ def check_one(c: Check, *, dry: bool, no_fix: bool, st: dict[str, Any]) -> Resul
         running = docker_running(c.docker)
         parts.append(f"docker={'up' if running else 'DOWN'}")
         if not running:
+            if c.optional:
+                return Result(
+                    c.name, True, "; ".join(parts) + " (optional skip)", skipped=True
+                )
             fixed, detail = restart_docker(c.docker, dry=dry, no_fix=no_fix, st=st)
             parts.append(detail)
             if fixed:
@@ -512,10 +561,56 @@ def check_flint_usb(*, dry: bool, no_fix: bool, no_tg: bool, st: dict[str, Any])
         return Result("flint_usb", False, f"exception: {exc}"[:160])
 
 
+def _home_ops_ha_ok() -> tuple[bool | None, str]:
+    """True/False если empire-home-ops ответил; None если proxy недоступен."""
+    token = _read_flint_token()
+    if not token:
+        return None, "no flint token"
+    try:
+        import httpx
+
+        r = httpx.get(
+            f"{HOME_OPS_API}",
+            params={"action": "status", "token": token},
+            timeout=15.0,
+            headers={"Authorization": f"Bearer {token}", "X-Empire-Token": token},
+        )
+        body = r.json() if r.content else {}
+        if not isinstance(body, dict) or body.get("ok") is not True:
+            return None, f"home-ops HTTP {r.status_code}"
+        ha = (body.get("checks") or {}).get("ha")
+        if ha is True:
+            return True, "home-ops checks.ha=true"
+        if ha is False:
+            return False, "home-ops checks.ha=false"
+        return None, "home-ops: no ha field"
+    except Exception as exc:
+        return None, str(exc)[:100]
+
+
+def check_ha_watcher(*, dry: bool, no_fix: bool) -> Result:
+    """Глубокий HA-watcher (API + critical entities + Flint healer + HC ping)."""
+    try:
+        import empire_ha_watcher as haw
+    except Exception as exc:
+        return Result("homeassistant", False, f"watcher import: {exc}"[:120])
+    try:
+        report = haw.run_watch(dry=dry, no_fix=no_fix)
+    except Exception as exc:
+        return Result("homeassistant", False, f"watcher crash: {exc}"[:180])
+    parts = [f"{r.name}={'ok' if r.ok else 'bad'}" for r in report.results if not r.skipped]
+    detail = "; ".join(parts) if parts else "no checks"
+    if report.problems:
+        detail = f"{detail} · " + "; ".join(report.problems[:3])
+    fixed = any(r.fixed for r in report.results)
+    skipped = all(r.skipped for r in report.results) if report.results else False
+    return Result("homeassistant", report.ok or skipped, detail[:220], fixed=fixed, skipped=skipped)
+
+
 def check_ha(*, dry: bool, no_fix: bool, st: dict[str, Any]) -> Result:
-    """Home Assistant по Tailscale API; при падении — попытка ha core restart по SSH."""
+    """Home Assistant API (Tailscale/tunnel); fallback — Flint home-ops checks.ha."""
     _load_dotenv()
-    base = (os.getenv("HA_URL") or "http://100.80.133.85:8123").rstrip("/")
+    base = (os.getenv("HA_URL") or "http://127.0.0.1:18123").rstrip("/")
     token = (os.getenv("HA_TOKEN") or "").strip()
     if not token:
         return Result("homeassistant", True, "skip: нет HA_TOKEN", skipped=True)
@@ -532,6 +627,19 @@ def check_ha(*, dry: bool, no_fix: bool, st: dict[str, Any]) -> Result:
         detail = f"API HTTP {r.status_code}"
     except Exception as exc:
         detail = str(exc)[:140]
+
+    # Fallback: Tailscale может быть logged out после миграции VPS —
+    # Flint watchdog уже знает статус HA через LAN.
+    hop_ok, hop_detail = _home_ops_ha_ok()
+    if hop_ok is True:
+        return Result(
+            "homeassistant",
+            True,
+            f"{detail}; fallback OK ({hop_detail})",
+            skipped=False,
+        )
+    if hop_ok is False:
+        detail = f"{detail}; {hop_detail}"
 
     # починка
     if dry or no_fix:
@@ -571,8 +679,25 @@ def check_ha(*, dry: bool, no_fix: bool, st: dict[str, Any]) -> Result:
                 f"{detail}; SSH restart exit={code} → OK",
                 fixed=True,
             )
+        # after restart still no API — trust home-ops if it recovers
+        hop2, hop2d = _home_ops_ha_ok()
+        if hop2 is True:
+            return Result(
+                "homeassistant",
+                True,
+                f"{detail}; after SSH home-ops OK ({hop2d})",
+                fixed=True,
+            )
         return Result("homeassistant", False, f"{detail}; after restart HTTP {r2.status_code}")
     except Exception as exc:
+        hop2, hop2d = _home_ops_ha_ok()
+        if hop2 is True:
+            return Result(
+                "homeassistant",
+                True,
+                f"{detail}; after={exc!s:.60}; home-ops OK ({hop2d})",
+                fixed=True,
+            )
         return Result("homeassistant", False, f"{detail}; after: {exc}"[:180])
 
 
@@ -590,6 +715,50 @@ def ensure_timers(*, dry: bool, no_fix: bool) -> list[str]:
         actions.append(f"enable --now {t}")
         if not unit_active(t):
             actions.append(f"FAIL still down: {msg}")
+    return actions
+
+
+def ensure_nginx_static_readable(*, dry: bool, no_fix: bool) -> list[str]:
+    """Статика для nginx: зеркало /var/www/empire-static (не зависит от chmod /root)."""
+    actions: list[str] = []
+    src = ROOT / "static"
+    dst = Path("/var/www/empire-static")
+    if not src.is_dir():
+        return actions
+    # /root 755 — запасной путь, если alias ещё указывает в дерево проекта
+    if os.path.isdir("/root"):
+        root_mode = stat.S_IMODE(os.stat("/root").st_mode)
+        if root_mode & 0o005 != 0o005:
+            if dry or no_fix:
+                actions.append(f"need chmod 755 /root (mode={oct(root_mode)})")
+            else:
+                os.chmod("/root", 0o755)
+                actions.append("chmod 755 /root")
+                log(actions[-1])
+    need_sync = (not dst.is_dir()) or (
+        (src / "site.css").is_file()
+        and (
+            not (dst / "site.css").is_file()
+            or (src / "site.css").stat().st_mtime > (dst / "site.css").stat().st_mtime + 1
+        )
+    )
+    if not need_sync and dst.is_dir():
+        return actions
+    if dry or no_fix:
+        actions.append("need rsync static → /var/www/empire-static")
+        return actions
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    code, out = run(
+        ["rsync", "-a", "--delete", f"{src}/", f"{dst}/"],
+        timeout=120,
+    )
+    if code != 0:
+        actions.append(f"FAIL rsync static: {out[:200]}")
+        return actions
+    run(["chown", "-R", "root:www-data", str(dst)], timeout=30)
+    run(["chmod", "-R", "u=rwX,g=rX,o=rX", str(dst)], timeout=30)
+    actions.append("rsync static → /var/www/empire-static")
+    log(actions[-1])
     return actions
 
 
@@ -714,51 +883,32 @@ def fingerprint(report: RunReport) -> str:
 
 
 def notify(report: RunReport, *, dry: bool, no_tg: bool, force: bool) -> None:
-    if dry or no_tg:
+    """Хилер чинит молча. В TG — только EMPIRE_HEAL_FORCE_TG=1.
+    Сводка пишется в state → утро/вечер empire-status-digest."""
+    text = build_summary(report)
+    st = load_state()
+    st["last_fp"] = fingerprint(report)
+    st["last_summary"] = text[:2500]
+    st["last_problems"] = list(report.problems)[:20]
+    st["last_actions"] = list(report.actions)[:20]
+    save_state(st)
+
+    if dry or no_tg or not force:
+        log("TG silent (digest morning/evening only)" if not force else "TG skipped")
         return
     try:
         import empire_notify as notify_mod
     except Exception as exc:
         log(f"notify import fail: {exc}")
         return
-
-    text = build_summary(report)
-    has_problem = bool(report.problems) or any(not r.ok and not r.skipped for r in report.results)
-    recovered = any(r.fixed for r in report.results)
-
-    if force:
-        notify_mod.send(text)
-        return
-    if has_problem or recovered:
-        notify_mod.send_if_changed("service_healer", text, min_interval_sec=900)
-    else:
-        st = load_state()
-        prev = st.get("last_fp")
-        fp = fingerprint(report)
-        if prev and prev != fp:
-            notify_mod.send_if_changed("service_healer_recovered", text, min_interval_sec=300)
-        st["last_fp"] = fp
-        save_state(st)
-
-    # Отдельное сообщение про доступность USB-диска роутера (если было).
-    usb_res = None
-    for r in report.results:
-        if r.name == "flint_usb":
-            usb_res = r
-            break
-    if usb_res and (not usb_res.ok or usb_res.fixed):
-        usb_text = f"📦 USB-диск роутера: {'OK' if usb_res.ok else 'НЕ ДОСТУПЕН'} · {usb_res.detail}"
-        try:
-            notify_mod.send_if_changed("flint_usb", usb_text, min_interval_sec=600)
-        except Exception:
-            pass
+    notify_mod.send(text)
 
 
 def main() -> int:
     dry = env_flag("EMPIRE_HEAL_DRY_RUN")
     no_fix = env_flag("EMPIRE_HEAL_NO_FIX")
-    no_tg = env_flag("EMPIRE_HEAL_NO_TG")
     force_tg = env_flag("EMPIRE_HEAL_FORCE_TG")
+    no_tg = not force_tg  # хилер молчит в TG; FORCE — разовый отчёт
 
     st = load_state()
     report = RunReport()
@@ -773,8 +923,8 @@ def main() -> int:
             report.problems.append(f"{r.name}: {r.detail}")
         log(f"  {r.name}: ok={r.ok} skip={r.skipped} fix={r.fixed} {r.detail}")
 
-    # Home Assistant
-    ha = check_ha(dry=dry, no_fix=no_fix, st=st)
+    # Home Assistant: deep watcher (API + critical entities + HC ping + Flint healer)
+    ha = check_ha_watcher(dry=dry, no_fix=no_fix)
     report.results.append(ha)
     if ha.fixed:
         report.actions.append(f"ha: {ha.detail}")
@@ -825,6 +975,11 @@ def main() -> int:
         if a.startswith("FAIL"):
             report.problems.append(a)
 
+    for a in ensure_nginx_static_readable(dry=dry, no_fix=no_fix):
+        report.actions.append(a)
+        if a.startswith("need "):
+            report.problems.append(a)
+
     tg_ok, tg_detail = telegram_bot_ok()
     report.extras.append(f"{'✅' if tg_ok else '❌'} telegram getMe: {tg_detail}")
     if not tg_ok:
@@ -845,7 +1000,9 @@ def main() -> int:
     print(summary)
     notify(report, dry=dry, no_tg=no_tg, force=force_tg)
     log(f"DONE problems={len(report.problems)} actions={len(report.actions)}")
-    return 1 if report.problems else 0
+    # Не валим systemd oneshot: проблемы пишутся в state/digest.
+    # Иначе timer+failed выглядят как авария, а ensure_timers не успевает жить.
+    return 0
 
 
 if __name__ == "__main__":

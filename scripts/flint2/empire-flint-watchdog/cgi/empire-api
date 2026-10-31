@@ -8,6 +8,9 @@ TOKEN_FILE=/etc/empire-flint-ui.token
 ENV_FILE=/etc/empire-flint-ui.env
 STATE=/tmp/empire-flint-watchdog.state
 LOG=/tmp/empire-flint-watchdog.log
+HA_HEAL_STATE=/tmp/empire-ha-healer.state
+HA_HEAL_LOG=/tmp/empire-ha-healer.log
+HA_HEAL_STATUS=/tmp/empire-ha-healer-status.json
 
 json_escape() {
   printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' '
@@ -91,7 +94,7 @@ flag_json() {
 }
 
 do_status() {
-  podkop=false; zapret=false; youtube=false; telegram=false; torrents=false; routes=false; awg=false; usb=false; tunnel=false; ha=false
+  podkop=false; zapret=false; youtube=false; telegram=false; torrents=false; routes=false; awg=false; usb=false; samba=false; tunnel=false; ha=false
   ok_proc 'sing-box|singbox' && podkop=true
   ok_proc 'nfqws2|nfqws' && zapret=true
 
@@ -109,7 +112,9 @@ do_status() {
     echo "$usb_line" | grep -q ' ext3 ' && usb_line=""
   fi
   if [ -n "$usb_line" ] && [ -d /mnt/usb/download ]; then
-    usb=true
+    if touch /mnt/usb/download/.empire_usb_ok 2>/dev/null; then
+      usb=true
+    fi
   fi
   usb_detail="not mounted"
   if [ "$usb" = true ]; then
@@ -118,6 +123,12 @@ do_status() {
   elif [ -n "$usb_line" ]; then
     usb_detail="wrong mount layer (not NTFS UUID)"
   fi
+
+  if ok_proc 'smbd|samba'; then
+    sp=$(uci -q get samba4.download.path 2>/dev/null || true)
+    [ "$sp" = "/mnt/usb/download" ] && [ "$usb" = true ] && samba=true
+  fi
+  [ "$samba" = true ] || usb_detail="${usb_detail}; samba=down"
 
   (awg show awg0 >/dev/null 2>&1 || wg show awg0 >/dev/null 2>&1) && awg=true
   pgrep -f "ssh.*-R 127.0.0.1:6223" >/dev/null 2>&1 && tunnel=true
@@ -157,6 +168,9 @@ do_status() {
   fi
 
   last_run=""; last_report=""; last_problems=""; last_fixed=""
+  mode="vps"; mode_state="vps"
+  [ -f /etc/empire/bypass-mode ] && mode=$(tr -d '\r\n' </etc/empire/bypass-mode)
+  [ -f /etc/empire/bypass-state ] && mode_state=$(tr -d '\r\n' </etc/empire/bypass-state)
   if [ -f "$STATE" ]; then
     last_run=$(sed -n 's/^last_run=//p' "$STATE" | tail -1)
     last_report=$(sed -n 's/^last_report=//p' "$STATE" | tail -1)
@@ -166,9 +180,45 @@ do_status() {
   log_tail=""
   [ -f "$LOG" ] && log_tail=$(tail -12 "$LOG" | tr '\n' '|' | sed 's/|$//')
 
+  # HA healer block
+  ha_heal_installed=false
+  [ -x /usr/sbin/empire-ha-healer ] && ha_heal_installed=true
+  ha_heal_cron=false
+  grep -q 'empire-ha-healer' /etc/crontabs/root 2>/dev/null && ha_heal_cron=true
+  ha_heal_last=""; ha_heal_issues=""; ha_heal_intercom="none"
+  ha_heal_vage=0; ha_heal_tage=0; ha_heal_stuck_th=2700; ha_heal_desync_th=180
+  if [ -f "$HA_HEAL_STATUS" ]; then
+    if command -v jq >/dev/null 2>&1; then
+      ha_heal_last=$(jq -r '.last_run // empty' "$HA_HEAL_STATUS" 2>/dev/null || true)
+      ha_heal_issues=$(jq -r '.issues // empty' "$HA_HEAL_STATUS" 2>/dev/null || true)
+      ha_heal_intercom=$(jq -r '.intercom_ip // "none"' "$HA_HEAL_STATUS" 2>/dev/null || echo none)
+      ha_heal_vage=$(jq -r '.vannaya_stuck_age // 0' "$HA_HEAL_STATUS" 2>/dev/null || echo 0)
+      ha_heal_tage=$(jq -r '.tualet_stuck_age // 0' "$HA_HEAL_STATUS" 2>/dev/null || echo 0)
+      ha_heal_stuck_th=$(jq -r '.stuck_threshold // 2700' "$HA_HEAL_STATUS" 2>/dev/null || echo 2700)
+      ha_heal_desync_th=$(jq -r '.desync_threshold // 180' "$HA_HEAL_STATUS" 2>/dev/null || echo 180)
+    fi
+  elif [ -f "$HA_HEAL_STATE" ]; then
+    ha_heal_last=$(sed -n 's/^last_run=//p' "$HA_HEAL_STATE" | tail -1)
+    ha_heal_issues=$(sed -n 's/^last_issues=//p' "$HA_HEAL_STATE" | tail -1)
+  fi
+  ha_heal_log=""
+  [ -f "$HA_HEAL_LOG" ] && ha_heal_log=$(tail -20 "$HA_HEAL_LOG" | tr '\n' '|' | sed 's/|$//')
+  # live presence snapshot (best effort)
+  hv_p="?"; ht_p="?"; hv_l="?"; ht_l="?"
+  if [ "$ha" = true ] && [ -n "$HA_TOKEN" ]; then
+    stjson=$(curl -fsS --connect-timeout 4 --max-time 10 \
+      -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null || true)
+    if [ -n "$stjson" ] && command -v jq >/dev/null 2>&1; then
+      hv_p=$(echo "$stjson" | jq -r '[.[]|select(.entity_id=="binary_sensor.sonoff_snzb_06p")|.state]|.[0] // "?"')
+      ht_p=$(echo "$stjson" | jq -r '[.[]|select(.entity_id=="binary_sensor.sonoff_snzb_06p_3")|.state]|.[0] // "?"')
+      hv_l=$(echo "$stjson" | jq -r '[.[]|select(.entity_id=="light.empire_vannaya_svet")|.state]|.[0] // "?"')
+      ht_l=$(echo "$stjson" | jq -r '[.[]|select(.entity_id=="light.empire_tualet_svet")|.state]|.[0] // "?"')
+    fi
+  fi
+
   cors
   cat <<EOF
-{"ok":true,"checks":{"podkop":$podkop,"zapret":$zapret,"youtube":$youtube,"telegram":$telegram,"torrents":$torrents,"routes":$routes,"awg":$awg,"usb":$usb,"tunnel":$tunnel,"ha":$ha},"usb_detail":"$(json_escape "$usb_detail")","watchdog":{"last_run":"$(json_escape "$last_run")","last_report":"$(json_escape "$last_report")","last_problems":"$(json_escape "$last_problems")","last_fixed":"$(json_escape "$last_fixed")"},"log_tail":"$(json_escape "$log_tail")","links":{"luci":"http://192.168.1.1/","ha":"http://192.168.1.41:8123","pwa":"http://192.168.1.1/empire/","transmission":"http://192.168.1.1:9091"}}
+{"ok":true,"mode":"$(json_escape "$mode")","mode_state":"$(json_escape "$mode_state")","checks":{"podkop":$podkop,"zapret":$zapret,"youtube":$youtube,"telegram":$telegram,"torrents":$torrents,"routes":$routes,"awg":$awg,"usb":$usb,"samba":$samba,"tunnel":$tunnel,"ha":$ha,"ha_healer":$ha_heal_installed},"usb_detail":"$(json_escape "$usb_detail")","watchdog":{"last_run":"$(json_escape "$last_run")","last_report":"$(json_escape "$last_report")","last_problems":"$(json_escape "$last_problems")","last_fixed":"$(json_escape "$last_fixed")"},"ha_healer":{"installed":$ha_heal_installed,"cron":$ha_heal_cron,"last_run":"$(json_escape "$ha_heal_last")","issues":"$(json_escape "$ha_heal_issues")","intercom_ip":"$(json_escape "$ha_heal_intercom")","vannaya_stuck_age":$ha_heal_vage,"tualet_stuck_age":$ha_heal_tage,"stuck_threshold":$ha_heal_stuck_th,"desync_threshold":$ha_heal_desync_th,"vannaya_presence":"$(json_escape "$hv_p")","tualet_presence":"$(json_escape "$ht_p")","vannaya_light":"$(json_escape "$hv_l")","tualet_light":"$(json_escape "$ht_l")","log_tail":"$(json_escape "$ha_heal_log")"},"log_tail":"$(json_escape "$log_tail")","links":{"luci":"http://192.168.1.1/","ha":"http://192.168.1.41:8123","pwa":"http://192.168.1.1/empire/","transmission":"http://192.168.1.1:9091","share":"\\\\\\\\192.168.1.1\\\\download"}}
 EOF
 }
 
@@ -226,11 +276,29 @@ do_ha_restart() {
   echo "{\"ok\":true,\"action\":\"ha_restart\",\"http\":$code,\"body\":\"$(json_escape "$body")\"}"
 }
 
+do_ha_heal() {
+  if [ ! -x /usr/sbin/empire-ha-healer ]; then
+    cors
+    echo '{"ok":false,"error":"empire-ha-healer not installed"}'
+    return 0
+  fi
+  force_json=false
+  args=""
+  if [ "$SVC" = "force" ]; then
+    args="--force"
+    force_json=true
+  fi
+  out=$(EMPIRE_HA_HEAL_VERBOSE=1 /usr/sbin/empire-ha-healer $args 2>&1 | tail -40 | tr '\n' '|' | sed 's/|$//')
+  cors
+  echo "{\"ok\":true,\"action\":\"ha_heal\",\"force\":$force_json,\"out\":\"$(json_escape "$out")\"}"
+}
+
 case "$ACTION" in
   status) do_status ;;
   fix) do_fix ;;
   restart) do_restart ;;
   ha_restart) do_ha_restart ;;
+  ha_heal) do_ha_heal ;;
   *)
     cors
     echo '{"ok":false,"error":"unknown action"}'

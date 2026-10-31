@@ -1,0 +1,40 @@
+# Empire · Roo Code / Cline rules
+
+Следуй `AGENTS.md` и `docs/LOCAL_AI_RULES.md` в корне репозитория.
+
+## VPS: обрыв / «продолжи»
+
+Агент не «переподключается» сам. После обрыва или фразы «продолжи» / «восстановись»:
+
+1. Прочитать `docs/gdepar_checkpoints.md` (хвост файла).
+2. При необходимости `docs/EMPIRE_PIPELINE_CHECKLIST.md`.
+3. `git status` и `git diff`.
+4. Кратко сказать, с чего продолжаем, и доделать без повторного опроса.
+
+Секреты: пароль SSH root не хранить в репозитории. Ключи: `docs/cursor_vps_ssh_ru.md`.
+Долгие команды на VPS — `tmux` (сессия `empire`).
+
+## Напоминания gdepar
+
+Перед большими задачами по Empire, если уместно, коротко напомни:
+
+1. Metrika: `YANDEX_METRIKA_ID` + цели — `docs/metrika_goals_setup.md`
+2. Неделя 1: «Пар?», API/LLM, воронка assistant → phone/pick
+3. 2–4 недели: решение по `GDEPAR_ASSISTANT_LLM_PCT` (сейчас 25%)
+4. Мастер-ТЗ: `docs/TZ_OMNI_MEDIA_EMPIRE_FINAL.md`
+
+Полный чеклист: `docs/REMINDERS_gdepar.md`. Metrika ID — только когда владелец сам создаст счётчик.
+
+## Модели
+
+Primary: Ollama `qwen2.5-coder:7b`. Reasoning: `deepseek-r1:8b`. Облако — только [ARCH]/[CRITICAL].
+
+## Личный Практикум · ментор (учёба B2B)
+
+Когда задача про учёбу / `b2b_lead_bot` / `sandbox` / `docs/tracker` / `docs/career_curriculum*`:
+
+1. **Не** давать готовый рабочий код для копипасты (если нет явного «экстренно: дай фрагмент»).
+2. Объясни концепцию → скелет с `# ТУТ ТВОЙ КОД` → наводящий вопрос.
+3. На traceback: разбери суть и строку, не подменяй весь файл исправлением.
+4. Напоминай стендап: `docs/tracker/DAILY_STANDUP.md`; лимиты 20–24 ч deep work, семья ≥4 ч.
+5. Полные правила: `.cursor/rules/career-practicum-mentor.mdc`.

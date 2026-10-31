@@ -1,28 +1,19 @@
-# Задачник — Android
+# Зал — Android
 
-Минимальный APK: WebView на `https://neverretire.ru/tasks/` + виджет «Следующие 7 дней».
+APK открывает `https://neverretire.ru/tasks/?app=gym&view=program` (учёт тренировок, замеры, графики).
+Виджет задач на рабочем столе остаётся отдельным («Задачник · 7 дней»).
 
-## Сборка (на ПК с Android Studio)
+Формат программ: `docs/health/WORKOUT_PROGRAM_FORMAT.md`.
 
-1. Открой папку `android/zadachnik` в Android Studio (Giraffe+).
-2. Дождись Gradle Sync (скачает SDK при необходимости).
-3. **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
-4. Установи APK на телефон (разрешить установку из неизвестных источников).
-
-Или из CLI (если есть Android SDK):
+## Сборка
 
 ```bash
-cd android/zadachnik
+cd /root/projects/empire/android/zadachnik
 ./gradlew assembleDebug
 # app/build/outputs/apk/debug/app-debug.apk
+# копия: android/zadachnik/zadachnik-debug.apk
 ```
 
-## Первый запуск
+Установка: разрешить неизвестные источники → открыть APK → токен `PLANNING_API_TOKEN`.
 
-1. Введи тот же **PLANNING_API_TOKEN**, что в веб-Задачнике.
-2. Долгое нажатие на рабочий стол → **Виджеты** → **Задачник · 7 дней**.
-3. Тап по ○ — отметить задачу; «+» — новая; ⋮ — обновить.
-
-## Дальше
-
-См. `docs/zadachnik_android_and_singularity.md`.
+Ярлыки (долгое нажатие на иконку): Тренировка, Замеры, Статистика, Дневник.

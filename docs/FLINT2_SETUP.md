@@ -4,6 +4,9 @@
 Прошивка: **vanilla OpenWrt 24.10.4** (sysupgrade)  
 Bootstrap VPS: `http://193.233.232.48:8789/`
 
+**YouTube / блокировки РФ — два режима (с VPS и без):** [`FLINT2_YOUTUBE_DUAL.md`](FLINT2_YOUTUBE_DUAL.md)  
+Без VPS: `00-bootstrap-novps.sh` (USB). С VPS: `00-bootstrap.sh`.
+
 ## Что делает автоматизация
 
 | Скрипт | Назначение |

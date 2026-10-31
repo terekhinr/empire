@@ -11,8 +11,9 @@ import tinytuya  # noqa: E402
 
 DEVICE_ID = "bf86f3c7f53b7bb055f6x2"
 # Кандидаты, если UDP-scan пустой (батарейный SRW часто спит).
-# 192.168.1.143 — закрепить DHCP в Keenetic (MAC на наклейке SRW).
-CANDIDATE_IPS = ("192.168.1.143", "192.168.1.51")
+# НЕ использовать 192.168.1.143 — это Wifi Plug Кухня (localtuya), конфликт IP ломал климат.
+# .51 — резерв DHCP под SRW; если DOWN — датчик спит (кнопка 1 сек) или сменил IP.
+CANDIDATE_IPS = ("192.168.1.51",)
 CREDS = Path(__file__).with_name(".tuya_cloud.json")
 LOCAL = Path(__file__).with_name(".srw_local.json")
 LOG = Path(__file__).with_name("tuya_last_error.txt")

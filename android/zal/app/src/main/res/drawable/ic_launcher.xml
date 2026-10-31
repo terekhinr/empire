@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fallback for API < 26 and aapt package icon -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M0,0h48v48h-48z" />
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M8,20h8v8h-8z" />
+    <path
+        android:fillColor="#3B82F6"
+        android:pathData="M32,20h8v8h-8z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M16,16h16v16h-16z" />
+</vector>

@@ -56,3 +56,32 @@ main.py.corrupt.*.bak
 
 # Крупные PDF в корне (книги Ленина — на диске, не в git)
 /*.pdf
+
+# --- github-clean (Devin 2026-10-31): тяжёлые бинарники и ключи — только VPS + бэкап
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.mp4
+*.apk
+*.pdf
+*.epub
+*.zip
+*.tar.gz
+*.key
+*.pem
+node_modules/
+data/audio/
+data/tmp_*/
+*.bak
+*.corrupt.*
+*.djvu
+*.docx
+*.apk
+**/.gradle/
+android/**/build/
+scripts/keenetic-xkeen/xray-mips32le
+telegram_emoji_pack/_preview/
+# конфиги с ключами (VPN/xray/amnezia) — только на VPS
+scripts/keenetic-xkeen/vps-xray*.json
+scripts/flint2/amnezia-awg0.conf

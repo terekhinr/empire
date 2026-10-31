@@ -1,0 +1,915 @@
+{
+  "schema": "empire-workout-program/v1",
+  "id": "gym_2026",
+  "title": "Программа 2026",
+  "short": "Зал",
+  "author": "",
+  "note_prefix": "подход",
+  "weekdays": [
+    0,
+    2,
+    4
+  ],
+  "start": null,
+  "rolling_sessions": null,
+  "phases": [
+    {
+      "id": 1,
+      "title": "Сушка и накопление базы",
+      "days": [
+        {
+          "id": "A",
+          "title": "Сила (Тяжелый жим + Средние ноги)",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 4,
+              "reps": 5,
+              "reps_min": 4,
+              "reps_max": 6,
+              "is_max": false,
+              "weight_kg": 107.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес ~105–110 кг | запас 1 повторение, отдых 3 мин",
+              "prescription": "4×4–6"
+            },
+            {
+              "key": "тяга_гантели_с_упором_на_скамью",
+              "name": "Тяга гантели с упором на скамью",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "тяжелый вес, упор грудью жесткий",
+              "prescription": "4×8–10"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес, таз плотно прижат",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "сведение_рук_в_тренажере",
+              "name": "Сведение рук в тренажёре",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "акцент на растяжение грудных",
+              "prescription": "3×12"
+            },
+            {
+              "key": "разведение_рук_в_тренажере_на_плечи",
+              "name": "Разведение рук в тренажёре на плечи",
+              "sets": 3,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "задняя дельта, вес легкий",
+              "prescription": "3×15"
+            },
+            {
+              "key": "трицепс_стоя_в_тренажере",
+              "name": "Трицепс стоя в тренажёре",
+              "sets": 2,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "до отказа",
+              "prescription": "2×12–15"
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "title": "Выносливость (Многоповторный жим + Тяжелые ноги)",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 3,
+              "reps": 21,
+              "reps_min": 20,
+              "reps_max": 22,
+              "is_max": false,
+              "weight_kg": 70.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 70 кг | не до отказа, отдых 3 мин",
+              "prescription": "3×20–22"
+            },
+            {
+              "key": "тяга_в_тренажере_сидя",
+              "name": "Тяга в тренажёре сидя",
+              "sets": 4,
+              "reps": 11,
+              "reps_min": 10,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес, без отклонения спины назад",
+              "prescription": "4×10–12"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "тяжелый вес, метод двойной прогрессии",
+              "prescription": "4×8–10"
+            },
+            {
+              "key": "сгибание_ног_в_тренажере",
+              "name": "Сгибание ног в тренажере",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "разведение_гантелей_на_наклонной_скамье",
+              "name": "Разведение гантелей на наклонной скамье",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": 12.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средняя дельта, 12 кг",
+              "prescription": "3×12"
+            },
+            {
+              "key": "бицепс_сидя_на_наклонной_скамье",
+              "name": "Бицепс сидя на наклонной скамье",
+              "sets": 2,
+              "reps": 11,
+              "reps_min": 10,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×10–12"
+            }
+          ]
+        },
+        {
+          "id": "C",
+          "title": "Скорость и Восстановление",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": 82.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 80–85 кг | взрывной подъем, отдых 2 мин",
+              "prescription": "3×8–10"
+            },
+            {
+              "key": "тяга_гантели_с_упором_на_скамью",
+              "name": "Тяга гантели с упором на скамью",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "легкий вес, акцент на сведение лопаток",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 3,
+              "reps": 11,
+              "reps_min": 10,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "3×10–12"
+            },
+            {
+              "key": "сведение_рук_в_тренажере",
+              "name": "Сведение рук в тренажёре",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×15"
+            },
+            {
+              "key": "сгибание_ног_в_тренажере",
+              "name": "Сгибание ног в тренажере",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×12"
+            },
+            {
+              "key": "трицепс_стоя_в_тренажере",
+              "name": "Трицепс стоя в тренажёре",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×15"
+            },
+            {
+              "key": "бицепс_сидя_на_наклонной_скамье",
+              "name": "Бицепс сидя на наклонной скамье",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×15"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Специфическая выносливость",
+      "days": [
+        {
+          "id": "A",
+          "title": "Поддержание силы",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 3,
+              "reps": 2,
+              "reps_min": 2,
+              "reps_max": 3,
+              "is_max": false,
+              "weight_kg": 117.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 115–120 кг | сохраняем тонус силы, не до отказа",
+              "prescription": "3×2–3"
+            },
+            {
+              "key": "тяга_гантели_с_упором_на_скамью",
+              "name": "Тяга гантели с упором на скамью",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "тяжелый вес",
+              "prescription": "4×8–10"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "разведение_рук_в_тренажере_на_плечи",
+              "name": "Разведение рук в тренажёре на плечи",
+              "sets": 3,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×15"
+            },
+            {
+              "key": "трицепс_стоя_в_тренажере",
+              "name": "Трицепс стоя в тренажёре",
+              "sets": 2,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×12"
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "title": "Целевая выносливость (Тест)",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 1,
+              "reps": null,
+              "reps_min": null,
+              "reps_max": null,
+              "is_max": true,
+              "weight_kg": 70.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 70 кг | один подход на максимум (цель 25–28 раз)",
+              "prescription": "1×МАКС"
+            },
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 60.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 60 кг | легкая закачка после основного подхода",
+              "prescription": "2×15"
+            },
+            {
+              "key": "тяга_в_тренажере_сидя",
+              "name": "Тяга в тренажёре сидя",
+              "sets": 4,
+              "reps": 11,
+              "reps_min": 10,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "4×10–12"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "тяжелый вес",
+              "prescription": "4×8–10"
+            },
+            {
+              "key": "сгибание_ног_в_тренажере",
+              "name": "Сгибание ног в тренажере",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "разведение_гантелей_на_наклонной_скамье",
+              "name": "Разведение гантелей на наклонной скамье",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×12"
+            },
+            {
+              "key": "бицепс_сидя_на_наклонной_скамье",
+              "name": "Бицепс сидя на наклонной скамье",
+              "sets": 2,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×12"
+            }
+          ]
+        },
+        {
+          "id": "C",
+          "title": "Восстановление",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": 82.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 80–85 кг | взрывная техника",
+              "prescription": "3×8–10"
+            },
+            {
+              "key": "тяга_гантели_с_упором_на_скамью",
+              "name": "Тяга гантели с упором на скамью",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "легкий вес",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 3,
+              "reps": 11,
+              "reps_min": 10,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "3×10–12"
+            },
+            {
+              "key": "сведение_рук_в_тренажере",
+              "name": "Сведение рук в тренажёре",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×15"
+            },
+            {
+              "key": "сгибание_ног_в_тренажере",
+              "name": "Сгибание ног в тренажере",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "3×12"
+            },
+            {
+              "key": "трицепс_стоя_в_тренажере",
+              "name": "Трицепс стоя в тренажёре",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×15"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Тейперинг (Подводка к старту)",
+      "days": [
+        {
+          "id": "A",
+          "title": "Последняя тяжелая (за 7 дней до старта)",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 3,
+              "reps": 3,
+              "reps_min": 3,
+              "reps_max": 3,
+              "is_max": false,
+              "weight_kg": 112.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 110–115 кг | уверенно, с запасом",
+              "prescription": "3×3"
+            },
+            {
+              "key": "тяга_гантели_с_упором_на_скамью",
+              "name": "Тяга гантели с упором на скамью",
+              "sets": 3,
+              "reps": 8,
+              "reps_min": 8,
+              "reps_max": 8,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "3×8"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 3,
+              "reps": 10,
+              "reps_min": 10,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "средний вес",
+              "prescription": "3×10"
+            },
+            {
+              "key": "трицепс_стоя_в_тренажере",
+              "name": "Трицепс стоя в тренажёре",
+              "sets": 2,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "",
+              "prescription": "2×12"
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "title": "Разминка / Тонус (за 4 дня до старта)",
+          "exercises": [
+            {
+              "key": "жим_штанги_лежа",
+              "name": "Жим штанги лёжа",
+              "sets": 2,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 65.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес 60–70 кг | легко, только разогнать кровь, без усталости",
+              "prescription": "2×12–15"
+            },
+            {
+              "key": "тяга_в_тренажере_сидя",
+              "name": "Тяга в тренажёре сидя",
+              "sets": 3,
+              "reps": 12,
+              "reps_min": 12,
+              "reps_max": 12,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "легкий вес",
+              "prescription": "3×12"
+            },
+            {
+              "key": "жим_ногами",
+              "name": "Жим ногами",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "легкий вес",
+              "prescription": "2×15"
+            },
+            {
+              "key": "разведение_гантелей_на_наклонной_скамье",
+              "name": "Разведение гантелей на наклонной скамье",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "легкий вес",
+              "prescription": "2×15"
+            }
+          ]
+        },
+        {
+          "id": "C",
+          "title": "Отдых (за 2–3 дня до старта)",
+          "exercises": [
+            {
+              "key": "отдых",
+              "name": "Отдых",
+              "sets": 0,
+              "reps": 0,
+              "reps_min": 0,
+              "reps_max": 0,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "Активное восстановление. Легкие прогулки. Никаких силовых нагрузок.",
+              "prescription": "0×0"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "calendar": [
+    {
+      "on": "2026-06-24",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-06-26",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-06-29",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-07-01",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-07-03",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-07-06",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-07-08",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-07-10",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-07-13",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-07-15",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-07-17",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-07-20",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-07-22",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-07-24",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-07-27",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-07-29",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-07-31",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-08-03",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-05",
+      "phase": 2,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-07",
+      "phase": 2,
+      "day": "B",
+      "note": "загрузка углеводами 06.08"
+    },
+    {
+      "on": "2026-08-10",
+      "phase": 2,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-12",
+      "phase": 2,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-14",
+      "phase": 2,
+      "day": "B",
+      "note": "загрузка углеводами 13.08"
+    },
+    {
+      "on": "2026-08-17",
+      "phase": 2,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-19",
+      "phase": 2,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-21",
+      "phase": 2,
+      "day": "B",
+      "note": "загрузка углеводами 20.08"
+    },
+    {
+      "on": "2026-08-24",
+      "phase": 2,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-26",
+      "phase": 3,
+      "day": "A",
+      "note": "последняя тяжелая"
+    },
+    {
+      "on": "2026-08-28",
+      "phase": 3,
+      "day": "B",
+      "note": "лёгкий тонус"
+    },
+    {
+      "on": "2026-08-31",
+      "phase": 3,
+      "day": "C",
+      "note": "отдых / прогулка"
+    }
+  ]
+}

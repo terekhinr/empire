@@ -5,9 +5,27 @@ START=19
 
 USB_UUID="01D63D133C7B6100"
 MNT="/mnt/usb"
+LOG="/tmp/empire-usb-mount.log"
+
+ulog() {
+  echo "$(date -Is 2>/dev/null || date) $*" >>"$LOG" 2>/dev/null || true
+}
 
 usb_dev() {
   blkid -U "$USB_UUID" 2>/dev/null || blkid -t "UUID=$USB_UUID" -o device 2>/dev/null | head -1
+}
+
+scsi_rescan() {
+  # После отвала USB ядро может не сразу отдать раздел — пинаем host.
+  for h in /sys/class/scsi_host/host*/scan; do
+    [ -w "$h" ] || continue
+    echo "- - -" >"$h" 2>/dev/null || true
+  done
+  # blockdev --rereadpt на родительском диске, если партиция уже есть
+  for d in /dev/sd[a-z]; do
+    [ -b "$d" ] || continue
+    blockdev --rereadpt "$d" 2>/dev/null || true
+  done
 }
 
 ensure_uci_fstab() {
@@ -23,31 +41,100 @@ ensure_uci_fstab() {
   uci commit fstab 2>/dev/null || true
 }
 
+drop_wrong_mounts() {
+  # ext3 «swap»-слайс иногда ложится поверх NTFS — Samba тогда пустая
+  n=0
+  while grep ' /mnt/usb ' /proc/mounts 2>/dev/null | grep -q ' ext3 '; do
+    ulog "umount wrong ext3 on $MNT"
+    umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || break
+    n=$((n + 1))
+    [ "$n" -ge 5 ] && break
+    sleep 1
+  done
+  # чужой UUID / не ntfs
+  CUR="$(awk '$2=="/mnt/usb"{print $1}' /proc/mounts | tail -1)"
+  [ -n "$CUR" ] || return 0
+  cuuid=$(blkid -s UUID -o value "$CUR" 2>/dev/null || true)
+  if [ "$cuuid" != "$USB_UUID" ]; then
+    ulog "umount wrong uuid=$cuuid on $MNT ($CUR)"
+    umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || true
+  fi
+}
+
+do_mount() {
+  DEV="$1"
+  # ntfs-3g не понимает UUID=... как путь — только реальный /dev/sdX
+  mount -t ntfs-3g -o rw,allow_other,big_writes "$DEV" "$MNT" 2>/dev/null && return 0
+  mount -t ntfs-3g -o rw,allow_other "$DEV" "$MNT" 2>/dev/null && return 0
+  mount -t ntfs3 -o rw "$DEV" "$MNT" 2>/dev/null && return 0
+  return 1
+}
+
+mounted_ok() {
+  line=$(grep ' /mnt/usb ' /proc/mounts 2>/dev/null | tail -1 || true)
+  [ -n "$line" ] || return 1
+  echo "$line" | grep -qE 'fuseblk|ntfs' || return 1
+  echo "$line" | grep -q ' ext3 ' && return 1
+  dev=$(echo "$line" | awk '{print $1}')
+  uuid=$(blkid -s UUID -o value "$dev" 2>/dev/null || true)
+  [ "$uuid" = "$USB_UUID" ] || return 1
+  [ -d "$MNT/download" ] || mkdir -p "$MNT/download" 2>/dev/null || return 1
+  # запись: если RO/ошибка I/O — считаем мёртвым
+  touch "$MNT/download/.empire_usb_ok" 2>/dev/null || return 1
+  return 0
+}
+
 start() {
   mkdir -p "$MNT"
   ensure_uci_fstab
+  drop_wrong_mounts
 
-  # ext3 «swap»-слайс иногда ложится поверх NTFS — Samba тогда пустая
-  while grep ' /mnt/usb ' /proc/mounts 2>/dev/null | grep -q ' ext3 '; do
-    umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || break
-    sleep 1
-  done
+  if mounted_ok; then
+    ulog "already OK"
+    return 0
+  fi
 
   DEV="$(usb_dev)"
-  [ -n "$DEV" ] && [ -b "$DEV" ] || return 1
+  if [ -z "$DEV" ] || [ ! -b "$DEV" ]; then
+    ulog "UUID $USB_UUID not found — scsi rescan"
+    scsi_rescan
+    sleep 2
+    DEV="$(usb_dev)"
+  fi
+
+  # ждём появления раздела до ~20с (hotplug/boot)
+  i=0
+  while [ -z "$DEV" ] || [ ! -b "$DEV" ]; do
+    i=$((i + 1))
+    [ "$i" -ge 10 ] && break
+    sleep 2
+    [ $((i % 3)) -eq 0 ] && scsi_rescan
+    DEV="$(usb_dev)"
+  done
+
+  if [ -z "$DEV" ] || [ ! -b "$DEV" ]; then
+    ulog "FAIL: no device for UUID $USB_UUID"
+    return 1
+  fi
 
   CUR="$(awk '$2=="/mnt/usb"{print $1}' /proc/mounts | tail -1)"
   if [ "$CUR" != "$DEV" ]; then
     if [ -n "$CUR" ]; then
+      ulog "remount $CUR → $DEV"
       umount "$MNT" 2>/dev/null || umount -l "$MNT" 2>/dev/null || true
+    else
+      ulog "mount $DEV → $MNT"
     fi
-    # ntfs-3g не понимает UUID=... как путь — только реальный /dev/sdX
-    mount -t ntfs-3g -o rw,allow_other "$DEV" "$MNT" 2>/dev/null || \
-      mount -t ntfs3 -o rw "$DEV" "$MNT" 2>/dev/null || \
+    if ! do_mount "$DEV"; then
+      ulog "FAIL mount $DEV"
       return 1
+    fi
   fi
 
-  if grep ' /mnt/usb ' /proc/mounts 2>/dev/null | grep -qE 'fuseblk|ntfs'; then
-    [ -d "$MNT/download" ] || mkdir -p "$MNT/download"
+  if mounted_ok; then
+    ulog "OK $DEV NTFS download ready"
+    return 0
   fi
+  ulog "FAIL mounted but not OK"
+  return 1
 }

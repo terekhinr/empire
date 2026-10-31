@@ -40,6 +40,10 @@ AI-домены получали FakeIP → уходили в VLESS (не в В�
 - `interface=awg0`
 - домены из `ai-domains.txt`
 
+**2026-09-05:** все ИИ без исключения (Cursor, OpenAI, Claude, Gemini AI, Windsurf, OpenRouter, …) → `awg0` Amnezia.  
+Скрипт: `36-ai-via-amnezia.sh`. YouTube/Telegram остаются в VLESS.  
+Не класть в `ai-domains.txt` целиком `google.com` / `gstatic.com` — ломает Search/CDN YouTube.
+
 ### 4. Где ТЗ и что делает агент
 
 | Документ | Содержание |

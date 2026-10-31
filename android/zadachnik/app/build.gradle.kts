@@ -11,11 +11,11 @@ android {
         applicationId = "ru.neverretire.zadachnik"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.3.1"
+        versionCode = 12
+        versionName = "0.4.1"
         buildConfigField("String", "BASE_URL", "\"https://neverretire.ru\"")
-        buildConfigField("String", "TASKS_PATH", "\"/tasks/\"")
-        buildConfigField("String", "API_PATH", "\"/tasks/api/planning\"")
+        buildConfigField("String", "TASKS_PATH", "\"/gym/\"")
+        buildConfigField("String", "API_PATH", "\"/gym/api\"")
     }
 
     buildFeatures {

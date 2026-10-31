@@ -12,6 +12,21 @@ def test_lenin_rubrics_json():
         assert len(data["rubrics"][key]["entries"]) >= 3
 
 
+def test_film_still_only_after_manual_mark():
+    film = {
+        "image_file": "October film Lenin.jpg",
+        "image_kind": "film_still",
+    }
+    assert lenin_content.resolved_lenin_image_file(film) == "Vladimir Lenin, 1917.jpg"
+    film["image_approved"] = True
+    assert lenin_content.resolved_lenin_image_file(film) == "October film Lenin.jpg"
+    monument = {
+        "image_file": "Monument to Lenin on Lenin Square in Volgograd.jpg",
+        "image_kind": "monument",
+    }
+    assert "Monument to Lenin" in lenin_content.resolved_lenin_image_file(monument)
+
+
 def test_rotation():
     assert lenin_content.rubric_key_for_weekday(0) == "literature"
     assert lenin_content.rubric_key_for_weekday(1) == "art"

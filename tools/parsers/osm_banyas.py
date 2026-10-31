@@ -257,6 +257,21 @@ def osm_to_spot(el: dict, fallback_city: str | None, region_code: str) -> dict |
     for pat in NEG_NAME_PATTERNS:
         if pat.search(name):
             return None
+    # Gdepar: общественные/достойные бани, не VIP-сауны и безымянный leisure=sauna.
+    # Оставляем public_bath / bath:type=banya и всё, где в имени есть «бан».
+    _is_public_bath = tags.get("amenity") == "public_bath" or tags.get("bath:type") == "banya"
+    _name_l = name.casefold()
+    _has_banya_word = "бан" in _name_l
+    _sauna_tag = (
+        tags.get("leisure") == "sauna"
+        or tags.get("amenity") == "sauna"
+        or tags.get("building") == "sauna"
+        or tags.get("bath:type") == "sauna"
+    )
+    if not _is_public_bath and not _has_banya_word and _sauna_tag:
+        return None
+    if re.fullmatch(r"саун[аы]?", _name_l):
+        return None
     # Координаты: для node — lat/lon, для way/relation — center.lat/lon
     lat = el.get("lat")
     lon = el.get("lon")

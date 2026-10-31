@@ -7,12 +7,11 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from portfolio.calc.positions import PositionRow, compute_positions, enrich_with_prices
+from portfolio.calc.positions import PositionRow, compute_positions, enrich_with_prices, realized_pnl
 from portfolio.asset_classify import ASSET_CLASS_LABELS, ASSET_CLASS_ORDER
 from portfolio.calc.xirr import compute_xirr
 from portfolio.calc.snapshots import load_snapshot_history
-from portfolio.prices.moex import get_cached_or_fetch
-from portfolio.db import get_setting
+from portfolio.prices.moex import get_cached_or_fetch, quote_dates
 
 _ACCOUNT_TARGET_PREFIX = "portfolio_target_value:"
 
@@ -102,6 +101,13 @@ class SnowballMetrics:
     ytd_change_pct: float | None = None
     positions_count: int = 0
     priced_count: int = 0
+    realized_pnl: float = 0.0
+    twr_pct: float | None = None
+    twr_annual_pct: float | None = None
+    yield_on_cost_pct: float | None = None
+    analyzed_at: str = ""
+    price_as_of: str = ""
+    unpriced: list[str] = field(default_factory=list)
     by_broker: list[dict[str, Any]] = field(default_factory=list)
     by_account: list[dict[str, Any]] = field(default_factory=list)
     by_class: list[dict[str, Any]] = field(default_factory=list)
@@ -206,11 +212,68 @@ def save_daily_snapshot(conn: sqlite3.Connection, total: float, payload: dict) -
     )
 
 
-def compute_metrics(conn: sqlite3.Connection) -> tuple[SnowballMetrics, list[dict[str, Any]]]:
+def _net_cf_between(conn: sqlite3.Connection, start: date, end: date) -> float:
+    rows = conn.execute(
+        """
+        SELECT flow_type, SUM(amount) AS s FROM cashflows
+        WHERE flow_date > ? AND flow_date <= ?
+        GROUP BY flow_type
+        """,
+        (start.isoformat(), end.isoformat()),
+    ).fetchall()
+    cf = 0.0
+    for r in rows:
+        s = float(r["s"] or 0)
+        if r["flow_type"] == "deposit":
+            cf += s
+        elif r["flow_type"] in ("withdrawal", "dividend_withdrawn"):
+            cf -= s
+    return cf
+
+
+def compute_twr(conn: sqlite3.Connection, current_value: float) -> tuple[float | None, float | None]:
+    """TWR по дневным снимкам + текущая стоимость. Доли (0.12 = 12%)."""
+    snaps = conn.execute(
+        "SELECT snap_date, total_value FROM daily_snapshots ORDER BY snap_date"
+    ).fetchall()
+    points: list[tuple[date, float]] = [
+        (date.fromisoformat(str(r["snap_date"])[:10]), float(r["total_value"])) for r in snaps
+    ]
+    today = date.today()
+    if not points or points[-1][0] != today:
+        points.append((today, current_value))
+    if len(points) < 2:
+        return None, None
+    product = 1.0
+    used = 0
+    for (d0, v0), (d1, v1) in zip(points, points[1:]):
+        if v0 <= 0:
+            continue
+        cf = _net_cf_between(conn, d0, d1)
+        product *= 1.0 + (v1 - v0 - cf) / v0
+        used += 1
+    if used == 0:
+        return None, None
+    twr = product - 1.0
+    days = (points[-1][0] - points[0][0]).days
+    ann = None
+    if days >= 30 and twr > -0.999:
+        ann = (1.0 + twr) ** (365.0 / days) - 1.0
+    return twr, ann
+
+
+def compute_metrics(
+    conn: sqlite3.Connection, *, force_prices: bool = False, live_prices: bool = True
+) -> tuple[SnowballMetrics, list[dict[str, Any]]]:
+    from datetime import datetime, timezone
+
     positions = compute_positions(conn)
     tickers = [p.ticker for p in positions]
-    prices = get_cached_or_fetch(conn, tickers)
-    rows = enrich_with_prices(positions, prices)
+    prices = get_cached_or_fetch(
+        conn, tickers, force=force_prices, network=live_prices or force_prices
+    )
+    qdates = quote_dates(conn, tickers)
+    rows = enrich_with_prices(positions, prices, qdates)
 
     # Подгонка к стоимости из приложения брокера: целевые суммы по счетам
     # (пересчитываются каждый раз, чтобы не устаревать при обновлении котировок).
@@ -241,6 +304,17 @@ def compute_metrics(conn: sqlite3.Connection) -> tuple[SnowballMetrics, list[dic
 
     m.xirr = compute_xirr(conn, total)
     m.dividends, m.coupons = _income_from_transactions(conn)
+    m.realized_pnl = realized_pnl(conn)
+    twr, twr_ann = compute_twr(conn, total)
+    m.twr_pct = twr * 100 if twr is not None else None
+    m.twr_annual_pct = twr_ann * 100 if twr_ann is not None else None
+    income = m.dividends + m.coupons
+    if cost > 0 and income:
+        m.yield_on_cost_pct = income / cost * 100
+    m.unpriced = [r["ticker"] for r in rows if r.get("last_price") is None]
+    m.analyzed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    dated = [r.get("price_date") for r in rows if r.get("price_date")]
+    m.price_as_of = max(dated) if dated else date.today().isoformat()
 
     yesterday = date.today() - timedelta(days=1)
     y_prices = _prices_on_date(conn, tickers, yesterday)

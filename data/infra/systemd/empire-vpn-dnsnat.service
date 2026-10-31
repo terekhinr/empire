@@ -1,0 +1,12 @@
+[Unit]
+Description=Redirect Hiddify fake-DNS 172.19.0.2 to 1.1.1.1
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/empire-vpn-dnsnat.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

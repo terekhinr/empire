@@ -147,6 +147,11 @@ def init_db() -> None:
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS custom_exercises (
+            exercise_key TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
         """
     )
     _ensure_health_settings_defaults(conn)
@@ -413,6 +418,45 @@ def add_measurement(
     return int(row_id)
 
 
+def list_custom_exercises() -> dict[str, str]:
+    init_db()
+    conn = get_connection()
+    rows = conn.execute("SELECT exercise_key, label FROM custom_exercises").fetchall()
+    conn.close()
+    return {str(r["exercise_key"]): str(r["label"]) for r in rows}
+
+
+def exercise_catalog() -> dict[str, str]:
+    catalog = dict(STRENGTH_EXERCISES)
+    catalog.update(list_custom_exercises())
+    return catalog
+
+
+def exercise_label(exercise_key: str) -> str:
+    return exercise_catalog().get(exercise_key, exercise_key.replace("_", " "))
+
+
+def ensure_exercise(exercise_key: str, label: str | None = None) -> str:
+    key = (exercise_key or "").strip()
+    if not key:
+        raise ValueError("empty_exercise_key")
+    if key in STRENGTH_EXERCISES:
+        return STRENGTH_EXERCISES[key]
+    pretty = (label or "").strip() or key.replace("_", " ")
+    init_db()
+    conn = get_connection()
+    conn.execute(
+        """
+        INSERT INTO custom_exercises (exercise_key, label) VALUES (?, ?)
+        ON CONFLICT(exercise_key) DO UPDATE SET label=excluded.label
+        """,
+        (key, pretty),
+    )
+    conn.commit()
+    conn.close()
+    return pretty
+
+
 def add_strength_log(
     logged_on: str,
     exercise_key: str,
@@ -421,8 +465,8 @@ def add_strength_log(
     sets: int = 1,
     note: str | None = None,
 ) -> int:
-    if exercise_key not in STRENGTH_EXERCISES:
-        raise ValueError(f"Unknown exercise: {exercise_key}")
+    if exercise_key not in exercise_catalog():
+        ensure_exercise(exercise_key)
     init_db()
     conn = get_connection()
     cur = conn.execute(
@@ -444,7 +488,7 @@ def _measurement_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 def _strength_dict(row: sqlite3.Row) -> dict[str, Any]:
     d = dict(row)
-    d["exercise_label"] = STRENGTH_EXERCISES.get(d.get("exercise_key", ""), d.get("exercise_key"))
+    d["exercise_label"] = exercise_label(d.get("exercise_key", ""))
     return d
 
 
@@ -548,8 +592,8 @@ def get_strength_log(workout_id: int) -> dict[str, Any] | None:
 def update_strength_log(workout_id: int, **fields: Any) -> None:
     allowed = {"logged_on", "exercise_key", "weight_kg", "reps", "sets", "note"}
     parts = {k: v for k, v in fields.items() if k in allowed and v is not None}
-    if "exercise_key" in parts and parts["exercise_key"] not in STRENGTH_EXERCISES:
-        raise ValueError(f"Unknown exercise: {parts['exercise_key']}")
+    if "exercise_key" in parts:
+        ensure_exercise(parts["exercise_key"])
     if not parts:
         return
     init_db()
@@ -621,7 +665,7 @@ def health_summary() -> dict[str, Any]:
     out = {
         "measurements_count": int(m_count),
         "workouts_count": int(w_count),
-        "exercises": STRENGTH_EXERCISES,
+        "exercises": exercise_catalog(),
         "latest": dict(latest) if latest else None,
         "summary": summary,
     }
@@ -652,8 +696,8 @@ def health_stats(period: str = "month") -> dict[str, Any]:
 
 
 def workout_exercise_progress(exercise_key: str, *, limit: int = 20) -> list[dict[str, Any]]:
-    if exercise_key not in STRENGTH_EXERCISES:
-        raise ValueError(f"Unknown exercise: {exercise_key}")
+    if not exercise_key:
+        raise ValueError("Unknown exercise")
     init_db()
     conn = get_connection()
     rows = conn.execute(
@@ -698,7 +742,7 @@ def load_strength_df() -> pd.DataFrame:
     if df.empty:
         return df
     df["logged_on"] = pd.to_datetime(df["logged_on"])
-    df["exercise_label"] = df["exercise_key"].map(STRENGTH_EXERCISES)
+    df["exercise_label"] = df["exercise_key"].map(lambda k: exercise_label(str(k)))
     return df
 
 

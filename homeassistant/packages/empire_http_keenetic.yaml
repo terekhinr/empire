@@ -1,13 +1,4 @@
-# Доступ к HA через Keenetic KeenDNS (reverse proxy роутера 192.168.1.1).
-# Внешний URL задаётся в Настройки → Система → Сеть после настройки роутера.
-# См. docs/HA_KEENETIC_REMOTE.md
-
-http:
-  use_x_forwarded_for: true
-  ip_ban_enabled: true
-  login_attempts_threshold: 5
-  trusted_proxies:
-    - 192.168.1.1
-    - 127.0.0.1
-    - ::1
-    - 172.30.32.0/23
+# HTTP больше не настраивается YAML (HA 2026.8+, сломается в 2027.2).
+# Trusted proxies / X-Forwarded-For: Настройки → Система → Сеть.
+# Нужны: 127.0.0.1, ::1, 192.168.1.1 (Keenetic), 100.64.0.0/10 (Tailscale), 172.30.32.0/23.
+# Внешний URL: https://ha.potertiy.keenetic.pro — docs/HA_KEENETIC_REMOTE.md

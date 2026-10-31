@@ -1,16 +1,17 @@
 {
-  "last_run": "2026-08-27T04:06:59.953142+00:00",
+  "last_run": "2026-10-31T04:05:08.503464+00:00",
   "remediation": {
-    "day": "2026-08-27",
-    "soft_n": 1,
+    "day": "2026-10-31",
+    "soft_n": 6,
     "fixall_n": 0,
     "last_fix_ts": {
-      "telegram": 1787792166.1950932
+      "podkop": 1793418945.7205894,
+      "selfheal": 1793418945.7205894
     },
     "fail_streak": {}
   },
   "last_channel": "reverse",
-  "last_summary": "🏠 Flint · reverse\n✅ podkop · ✅ sing-box · ✅ zapret · ✅ nfqws · ✅ awg0 · ✅ transmission · ✅ samba · ✅ usb\n✅ dns · ✅ telegram · ✅ torrents · ✅ youtube",
+  "last_summary": "🏠 Flint · reverse\n✅ podkop · ✅ sing-box · ✅ zapret · ✅ nfqws · ❌ awg0 · ✅ transmission · ✅ samba · ✅ usb\n✅ dns · ✅ telegram · ✅ torrents · ✅ youtube · ✅ youtube_dns · ✅ ai · ✅ urltest · ✅ selfheal · ✅ cron\nℹ awg0",
   "last_all_ok": true,
   "last_checks": {
     "podkop": {
@@ -19,7 +20,7 @@
     },
     "sing-box": {
       "ok": true,
-      "detail": "26316 /usr/bin/sing-box run -c /etc/sing-box/config.json -D /usr/share/sing-box"
+      "detail": "14670 /usr/bin/sing-box run -c /etc/sing-box/config.json -D /usr/share/sing-box"
     },
     "zapret": {
       "ok": true,
@@ -27,11 +28,11 @@
     },
     "nfqws": {
       "ok": true,
-      "detail": "14815 /opt/zapret2/nfq2/nfqws2 --user=daemon --fwmark=0x40000000 --lua-init=@/opt/zapret2/lua/zapret-lib.lua --lua-init=@/opt/zapret2/lua/zapret-antidpi.lua --lua-init=@/opt/zapret2/lua/zapret-auto.lu"
+      "detail": "10057 /opt/zapret2/nfq2/nfqws2 --user=daemon --fwmark=0x40000000 --lua-init=@/opt/zapret2/lua/zapret-lib.lua --lua-init=@/opt/zapret2/lua/zapret-antidpi.lua --lua-init=@/opt/zapret2/lua/zapret-auto.lu"
     },
     "awg0": {
-      "ok": true,
-      "detail": "awg0: OK age=7s probe=301"
+      "ok": false,
+      "detail": "awg0: DEAD_PROBE age=0s probe=000000"
     },
     "transmission": {
       "ok": true,
@@ -51,15 +52,35 @@
     },
     "telegram": {
       "ok": true,
-      "detail": "telegram: OK http=200"
+      "detail": "telegram: OK http=200 fakeip=198.18.0.5"
     },
     "torrents": {
       "ok": true,
-      "detail": "torrents: OK fakeip=198.18.0.25"
+      "detail": "torrents: OK fakeip=198.18.0.28"
     },
     "youtube": {
       "ok": true,
       "detail": "HTTP/2 204"
+    },
+    "youtube_dns": {
+      "ok": true,
+      "detail": "youtube_dns: OK fakeip=198.18.0.6"
+    },
+    "ai": {
+      "ok": true,
+      "detail": "ai: OK fakeip=198.18.0.7"
+    },
+    "urltest": {
+      "ok": true,
+      "detail": "urltest: links=4"
+    },
+    "selfheal": {
+      "ok": true,
+      "detail": "selfheal: OK"
+    },
+    "cron": {
+      "ok": true,
+      "detail": "cron: OK lines=11 lanwatch=1"
     }
   },
   "last_actions": [],

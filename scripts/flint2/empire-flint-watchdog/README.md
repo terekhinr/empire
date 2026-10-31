@@ -1,22 +1,40 @@
-# Empire Flint Watchdog + PWA
+# Empire Flint Watchdog
 
-Автопочинка на Flint: раз в минуту `empire-lan-watch`, раз в 5 мин полный `empire-flint-watchdog`.
+Локальный сторож на Flint (OpenWrt). VPS не обязателен.
 
-## Что само чинится
-- sing-box / redirect `:1602`
-- маршруты **Telegram + YouTube + торрент-трекеры** через VLESS (не затираются «slim»-фиксами)
-- CIDR Telegram DC в nft
-- zapret, DNS, USB, reverse SSH
-- **Amnezia awg0**: свежий handshake (≤180s) + HTTP probe через `awg0` (не только «интерфейс есть»)
-- снимок `/etc/podkop/sing-box.golden.json` — откат, если конфиг снова сломают
+## Поведение
 
-На VPS зеркало: `empire_router_watchdog` + `empire_service_healer` (peer `10.8.1.13` на `amnezia-awg2`).
+| Что | Как |
+|-----|-----|
+| **Автопочинка** | Каждые 5 мин: podkop/VLESS, маршруты, zapret, DNS, YouTube, Gemini, awg0, **USB NTFS, Samba `\\192.168.1.1\download`**, wsdd |
+| **USB keep-alive** | Каждую минуту в `empire-lan-watch.sh`: remount по UUID + start smbd |
+| **Тихий cron** | Лог только в `/tmp/empire-flint-watchdog.log`, stdout пустой |
+| **Telegram** | **Выкл** для починок. Сводка — утро/вечер `empire-status-digest` на VPS |
+| **Минута** | `empire-lan-watch.sh` — dedupe sing-box, fwmark, patch, USB/Samba (без TG) |
 
-## UI
-Открой **https://neverretire.ru/home-ops/?token=…** (или дома `http://192.168.1.1/empire/?token=…`)  
-Токен: `/etc/empire/flint-ui.token` на VPS.
+Настройка TG: `/etc/empire-flint-ui.env` — `HA_URL`, `HA_TOKEN`.
 
 ## Установка
+
+С VPS (reverse SSH `:6223`):
+
 ```bash
 bash scripts/flint2/empire-flint-watchdog/install.sh
 ```
+
+На Flint:
+
+```sh
+sh empire-flint-watchdog/install-local.sh
+```
+
+## Команды
+
+```sh
+/usr/sbin/empire-flint-watchdog          # cron: тихо + TG при починке
+/usr/sbin/empire-flint-watchdog --check  # только проверка, вывод в терминал
+/usr/sbin/empire-flint-watchdog --force  # игнор cooldown
+EMPIRE_FLINT_VERBOSE=1 empire-flint-watchdog  # лог в stdout
+```
+
+Состояние: `/tmp/empire-flint-watchdog.state`

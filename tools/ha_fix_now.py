@@ -25,7 +25,8 @@ except ImportError:
 
 EMPIRE_DIR = Path(__file__).resolve().parents[1]
 HOBEIAN_IEEE = "a4:c1:38:0f:14:db:5d:39"
-SEMYON_IEEE = "a4:c1:38:14:a6:45:ff:ff"
+DETSKAIA_IEEE = "a4:c1:38:14:a6:45:ff:ff"  # Детская T/H
+SEMYON_IEEE = "a4:c1:38:14:9a:b5:ff:ff"  # Семён T/H
 SRW_DEVICE_ID = "bf86f3c7f53b7bb055f6x2"
 PERMIT_SEC = 254
 
@@ -202,50 +203,62 @@ def scan_srw_on_ha() -> None:
 
 
 def fix_semyon(repair: bool = False) -> int:
-    print("==> Семён: CK-TLSR8656 (ZHA, detskaia_2)")
-    temp = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura")
-    hum = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost")
-    print(f"  temperatura: {temp}, vlazhnost: {hum}")
+    """Детская + Семён: оба CK-TLSR8656 по ZHA."""
+    print("==> Детская / Семён: CK-TLSR8656 (ZHA)")
+    pairs = (
+        ("Детская", DETSKAIA_IEEE, "sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura",
+         "sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost",
+         "sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia"),
+        ("Семён", SEMYON_IEEE, "sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2",
+         "sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost_2",
+         "sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia_2"),
+    )
+    rc = 0
+    offline = []
+    for label, ieee, temp_eid, hum_eid, bat_eid in pairs:
+        temp = entity_state(temp_eid)
+        print(f"  {label}: {temp_eid}={temp}")
+        if temp not in ("unavailable", "unknown", "missing"):
+            continue
+        offline.append((label, ieee, temp_eid, hum_eid, bat_eid))
 
-    if temp not in ("unavailable", "unknown", "missing"):
-        print("  Уже online — пропуск reconfigure")
+    if not offline:
+        print("  Оба online — пропуск")
         return 0
 
     if repair:
-        print("  remove + permit (нажмите кнопку на датчике 5–10 с)")
-        try:
-            ha_request("POST", "/api/services/zha/remove", {"ieee": SEMYON_IEEE})
-            print("  zha.remove отправлен")
-        except urllib.error.HTTPError as exc:
-            print(f"  zha.remove: {exc.code} (возможно уже удалён)")
+        print("  remove + permit (на каждом датчике кнопка 5–10 с)")
+        for label, ieee, *_ in offline:
+            try:
+                ha_request("POST", "/api/services/zha/remove", {"ieee": ieee})
+                print(f"  zha.remove {label}")
+            except urllib.error.HTTPError as exc:
+                print(f"  zha.remove {label}: {exc.code}")
         time.sleep(4)
         ok = asyncio.run(zha_permit(PERMIT_SEC))
         print(f"  permit {PERMIT_SEC} с ({'OK' if ok else 'FAIL'})")
         return 0
 
-    print("  ZHA reconfigure…")
-    asyncio.run(zha_reconfigure(SEMYON_IEEE))
-    for entity in (
-        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura",
-        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_vlazhnost",
-        "sensor.ewelink_ck_tlsr8656_ss5_01_7014_batareia",
-    ):
-        try:
-            ha_request("POST", "/api/services/homeassistant/update_entity", {"entity_id": entity})
-        except urllib.error.HTTPError:
-            pass
-    time.sleep(3)
-    temp2 = entity_state("sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura")
-    print(f"  после reconfigure: {temp2}")
-    if temp2 not in ("unavailable", "unknown", "missing"):
-        print("  OK")
-        return 0
+    for label, ieee, temp_eid, hum_eid, bat_eid in offline:
+        print(f"  ZHA reconfigure {label}…")
+        asyncio.run(zha_reconfigure(ieee))
+        for entity in (temp_eid, hum_eid, bat_eid):
+            try:
+                ha_request("POST", "/api/services/homeassistant/update_entity", {"entity_id": entity})
+            except urllib.error.HTTPError:
+                pass
+        time.sleep(2)
+        temp2 = entity_state(temp_eid)
+        print(f"  после reconfigure {label}: {temp2}")
+        if temp2 in ("unavailable", "unknown", "missing"):
+            rc = 1
 
-    print("  Всё ещё offline — датчик выпал из Zigbee-сети (на дисплее t° есть, в HA нет).")
-    print("  1) python3 tools/ha_fix_now.py --semyon-repair")
-    print("  2) Зажмите кнопку на датчике 5–10 с (permit 4 мин)")
-    print("  3) Если не помогло — поставьте Zigbee-роутер ближе к комнате Семёна")
-    return 1
+    if rc:
+        print("  Всё ещё offline (сеть ZHA жива — кухня/спальня online).")
+        print("  1) python3 tools/ha_fix_now.py --semyon-repair")
+        print("  2) Зажмите кнопку на каждом датчике 5–10 с (permit ~4 мин)")
+        print("  3) Проверьте батарейку (Семён offline с 23.09)")
+    return rc
 
 
 def fix_balkon() -> int:

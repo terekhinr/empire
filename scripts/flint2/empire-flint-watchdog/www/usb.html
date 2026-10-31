@@ -12,13 +12,17 @@
 </head>
 <body>
   <h1>USB-диск роутера</h1>
-  <p>В «Сеть» Flint не появляется — так и должно быть. Диск подключается по адресу, не через обзор.</p>
+  <p>В «Сеть» Flint не появляется — так и должно быть. Диск по адресу, не через обзор.</p>
   <div class="box">
-    <p><b>Total Commander:</b> клик по строке пути сверху (где сейчас <code>f:\YandexDisk\...</code>), вставь:</p>
-    <p><code>\\192.168.1.1\download</code></p>
-    <p>Enter. Если спросит логин: пользователь <code>home</code>, пароль <code>home</code>.</p>
+    <p><b>Один раз</b> скачай и запусти <a href="/usb-disk.bat">usb-disk.bat</a>:</p>
+    <ul>
+      <li>подключит <code>Z:</code> → <code>\\192.168.1.1\download</code></li>
+      <li>сохранит логин <code>home</code> / <code>home</code></li>
+      <li>поставит автопереподключение каждые 5 минут</li>
+    </ul>
+    <p>После отвала шары бат больше не нужен — Windows сама вернёт диск.</p>
   </div>
-  <p>Или скачай и запусти <a href="/usb-disk.bat">usb-disk.bat</a> — подключит диск Z:.</p>
-  <p>Amnezia / Tailscale на ПК выключи. Админка роутера: <a href="/">http://192.168.1.1/</a></p>
+  <p>Вручную в Total Commander: <code>\\192.168.1.1\download</code> (логин <code>home</code> / <code>home</code>).</p>
+  <p>Amnezia на ПК дома — выкл. Админка: <a href="/">http://192.168.1.1/</a></p>
 </body>
 </html>

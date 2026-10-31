@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Издательство · вход</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root{--bg:#16120e;--ink:#f4ead8;--muted:#9a8870;--card:#241c16;--line:#5a4330;--accent:#c39059;}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,Segoe UI,sans-serif;}
+  form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:28px 24px;width:min(360px,92vw);}
+  h1{margin:0 0 8px;font:600 20px/1.2 Georgia,serif;}
+  p{margin:0 0 16px;color:var(--muted);font-size:14px;}
+  input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--line);
+        background:#1b1510;color:var(--ink);font-size:15px;}
+  button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;background:var(--accent);
+         color:#1b1510;font-weight:700;cursor:pointer;}
+  .err{color:#e08a78;font-size:13px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<form method="post" action="/admin/studio/login" autocomplete="off">
+  <h1>Издательство</h1>
+  <p>Оболочка постов без ИИ. Тот же токен, что у модерации бань, либо EMPIRE_STUDIO_TOKEN.</p>
+  {% if error %}<div class="err">Неверный токен</div>{% endif %}
+  <input type="password" name="token" placeholder="Токен" autofocus required>
+  <button type="submit">Войти</button>
+</form>
+</body>
+</html>

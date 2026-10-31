@@ -1,18 +1,133 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" style="color-scheme:dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta http-equiv="Cache-Control" content="no-cache">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Задачник</title>
   <script>
-    /* Android app / deep link: one-shot token bootstrap */
+    // Сразу, до CSS/JS: снести SW (на ПК он жрёт соединения и «Загрузка…» висит минутами).
     (function () {
+      var p = location.pathname || "";
+      if (p === "/go-tasks/app" || p.indexOf("/go-tasks/app/") === 0) {
+        window.__TASKS_MOUNT__ = "/go-tasks/app";
+      } else if (p === "/x" || p.indexOf("/x/") === 0) {
+        window.__TASKS_MOUNT__ = "/x";
+      } else {
+        window.__TASKS_MOUNT__ = "/tasks";
+      }
       try {
+        if (navigator.serviceWorker) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            regs.forEach(function (r) { r.unregister(); });
+          }).catch(function () {});
+        }
+        if (window.caches) {
+          caches.keys().then(function (keys) {
+            keys.forEach(function (k) { caches.delete(k); });
+          }).catch(function () {});
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style id="critical-boot">
+    /* Только сплэш — НЕ красить html/body color:#111, иначе h3/заголовки без своего color становятся чёрными на тёмном UI. */
+    html { color-scheme: dark; }
+    html, body {
+      margin: 0; min-height: 100%;
+      background: #0f172a; color: #f8fafc;
+      font-family: system-ui, sans-serif;
+      forced-color-adjust: none;
+    }
+    .hidden { display: none !important; }
+    .auth-screen {
+      position: fixed; inset: 0; z-index: 600;
+      display: grid; place-items: center; padding: 24px;
+      background: #0f172a !important;
+    }
+    .auth-screen.hidden { display: none !important; }
+    .auth-card {
+      background: #1e293b !important; color: #fff !important;
+      border: 2px solid #38bdf8; border-radius: 16px; padding: 28px 24px;
+      width: min(420px, 100%); box-sizing: border-box;
+    }
+    .auth-card h2 { margin: 0 0 8px; color: #fff !important; font-size: 1.8rem; }
+    .auth-card p, .auth-card .auth-hint { color: #e2e8f0 !important; }
+    .auth-card input {
+      width: 100%; box-sizing: border-box; margin: 14px 0; padding: 14px;
+      border-radius: 10px; border: 2px solid #64748b;
+      background: #020617 !important; color: #fff !important; font-size: 1rem;
+    }
+    .auth-card .btn, .auth-card .btn.primary {
+      display: inline-block; padding: 12px 18px; border: 0; border-radius: 10px;
+      background: #2563eb !important; color: #fff !important;
+      cursor: pointer; font-size: 1rem; font-weight: 600;
+    }
+    #boot-error {
+      position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 700;
+      background: #b91c1c; color: #fff; padding: 12px 14px; border-radius: 10px;
+      font-size: 0.92rem; display: none; border: 1px solid #fecaca;
+    }
+    #boot-splash:not(.hidden) {
+      display: grid !important;
+      background: #ffe600 !important;
+      z-index: 2147483646 !important;
+    }
+    #pc-lifeline {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 2147483647;
+      background: #111; color: #ffe600; padding: 10px 14px; text-align: center;
+      font: 700 15px/1.35 system-ui, sans-serif;
+      border-bottom: 3px solid #ffe600;
+    }
+    #pc-lifeline a { color: #ffe600; margin: 0 8px; }
+    #pc-lifeline.ok { display: none !important; }
+  </style>
+  <script>
+    (function () {
+      function hasToken() {
+        try { return !!(localStorage.getItem("empire_planning_token") || "").trim(); }
+        catch (e) { return false; }
+      }
+      function showBootError(msg) {
+        var box = document.getElementById("boot-error");
+        if (!box) return;
+        box.style.display = "block";
+        box.textContent = msg;
+      }
+      try {
+        try { localStorage.setItem("empire_app_ver", "83"); } catch (e) {}
         var q = new URLSearchParams(location.search);
+        if (q.get("reset") === "1" || q.get("reset") === "full") {
+          try {
+            if (q.get("reset") === "full") localStorage.removeItem("empire_planning_token");
+            localStorage.removeItem("empire_offline_snapshot");
+            localStorage.setItem("empire_app_ver", "83");
+          } catch (e) {}
+          var resetDone = false;
+          var finishReset = function () {
+            if (resetDone) return;
+            resetDone = true;
+            q.delete("reset");
+            var qsReset = q.toString();
+            location.replace(location.pathname + (qsReset ? "?" + qsReset : "") + (location.hash || ""));
+          };
+          if (navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations()
+              .then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              })
+              .catch(function () {})
+              .then(finishReset);
+            setTimeout(finishReset, 1200);
+            return;
+          }
+          finishReset();
+          return;
+        }
         var nt = q.get("native_token");
         if (nt) {
           localStorage.setItem("empire_planning_token", nt);
@@ -28,14 +143,102 @@
         if (!isFinite(fs)) fs = 100;
         fs = Math.min(140, Math.max(85, Math.round(fs)));
         document.documentElement.style.setProperty("--font-scale", String(fs / 100));
-      } catch (e) {}
+        var isGym = q.get("app") === "gym" || (!q.get("app") && localStorage.getItem("empire_app_mode") === "gym");
+        if (q.get("app") === "tasks") {
+          localStorage.setItem("empire_app_mode", "tasks");
+          isGym = false;
+        }
+        if (isGym) {
+          localStorage.setItem("empire_app_mode", "gym");
+          document.documentElement.classList.add("gym-app");
+          document.title = "Зал";
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+          if (isGym) {
+            document.querySelectorAll(".sidebar-brand span, .mobile-drawer-brand span, #auth-screen h2").forEach(function (el) {
+              el.textContent = "Зал";
+            });
+            var authP = document.querySelector("#auth-screen .auth-card > p");
+            if (authP) authP.innerHTML = "Тренировки, замеры и статистика.<br>Токен <code>PLANNING_API_TOKEN</code>.";
+          }
+          if (!hasToken()) {
+            document.getElementById("auth-screen")?.classList.remove("hidden");
+          }
+        });
+        // 8с: не орём «скрипт не стартовал», если app.js уже в памяти (идёт loadAll).
+        setTimeout(function () {
+          if (window.__empireReady) return;
+          var msg = document.querySelector("[data-boot-msg]");
+          if (typeof APP_VER !== "undefined") {
+            if (msg && !window.__empireReady) {
+              msg.textContent = "Данные с сервера… Если висит — /go-tasks/ или Ctrl+F5.";
+            }
+            return;
+          }
+          if (msg) {
+            msg.textContent = "Скрипт не стартовал. Откройте /go-reset/ или Ctrl+F5.";
+          }
+          var m = window.__TASKS_MOUNT__ || "/x";
+          var s = document.createElement("script");
+          s.src = m + "/assets/app.js?v=91&r=" + Date.now();
+          document.head.appendChild(s);
+        }, 8000);
+      } catch (e) {
+        document.addEventListener("DOMContentLoaded", function () {
+          showBootError("Ошибка старта: " + (e && e.message ? e.message : e));
+          document.getElementById("auth-screen")?.classList.remove("hidden");
+        });
+      }
+      window.addEventListener("error", function (ev) {
+        showBootError("Ошибка скрипта: " + (ev && ev.message ? ev.message : "unknown"));
+      });
+      window.addEventListener("unhandledrejection", function (ev) {
+        var reason = ev && ev.reason;
+        showBootError("Сбой: " + (reason && reason.message ? reason.message : String(reason || "unknown")));
+      });
     })();
   </script>
-  <link rel="manifest" href="/tasks/assets/manifest.json">
-  <link rel="apple-touch-icon" href="/tasks/assets/icon-192.png">
-    <link rel="stylesheet" href="/tasks/assets/styles.css?v=55">
+  <script>
+    (function () {
+      var M = window.__TASKS_MOUNT__ || "/x";
+      var l = document.createElement("link");
+      l.rel = "stylesheet";
+      l.href = M + "/assets/styles.css?v=62";
+      document.head.appendChild(l);
+      var m = document.createElement("link");
+      m.rel = "manifest";
+      m.href = M + "/assets/manifest.json";
+      document.head.appendChild(m);
+      var ic = document.createElement("link");
+      ic.rel = "apple-touch-icon";
+      ic.href = M + "/assets/icon-192.png";
+      document.head.appendChild(ic);
+    })();
+  </script>
 </head>
 <body>
+  <div id="pc-lifeline">
+    ПК: рабочий вход —
+    <a href="/go-tasks/">neverretire.ru/go-tasks/</a> ·
+    <a href="/go-reset/">сброс</a> ·
+    <a href="/x/?reset=1" id="pc-lifeline-reload">обновить /x/</a>
+  </div>
+  <div id="boot-splash" style="position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:24px;padding-top:56px;background:#ffe600;color:#111;font-family:system-ui,sans-serif">
+    <div style="max-width:420px;width:100%;background:#111;border:4px solid #111;border-radius:16px;padding:28px 24px;text-align:center;box-sizing:border-box;color:#ffe600">
+      <h2 style="margin:0 0 8px;font-size:1.6rem;color:#ffe600">Задачник</h2>
+      <p data-boot-msg style="margin:0;color:#fff;font-size:1.1rem">Загрузка…</p>
+      <p style="margin:16px 0 0;color:#ccc;font-size:0.85rem;line-height:1.4">
+        На ПК закройте другие вкладки neverretire.ru, затем Ctrl+F5.<br>
+        Вход без SPA: <a href="/go-tasks/" style="color:#ffe600;font-weight:700">/go-tasks/</a>
+      </p>
+    </div>
+  </div>
+  <noscript>
+    <div style="padding:24px;background:#ffe600;color:#111;font-family:system-ui,sans-serif">
+      Включите JavaScript или откройте
+      <a href="/go-tasks/">neverretire.ru/go-tasks/</a>
+    </div>
+  </noscript>
   <div id="app">
     <nav class="icon-rail desktop-only" aria-label="Быстрая навигация">
       <button class="icon-rail-btn" data-view="search" type="button" title="Поиск"><span class="rail-icon rail-icon--search" data-icon="search"></span></button>
@@ -47,7 +250,7 @@
     </nav>
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-brand">
-        <img src="/tasks/assets/icon-192.png" alt="" width="32" height="32">
+        <img src="assets/icon-192.png" alt="" width="32" height="32">
         <span>Задачник</span>
       </div>
       <nav class="sidebar-nav">
@@ -185,7 +388,7 @@
         <div class="mobile-drawer-backdrop" data-action="close-mobile-drawer"></div>
         <aside class="mobile-drawer-panel">
           <div class="mobile-drawer-brand">
-            <img src="/tasks/assets/icon-192.png" alt="" width="28" height="28">
+            <img src="assets/icon-192.png" alt="" width="28" height="28">
             <span>Задачник</span>
           </div>
           <nav id="mobile-drawer-nav" class="mobile-drawer-nav"></nav>
@@ -515,9 +718,12 @@
     </div>
   </div>
 
+  <div id="boot-error" role="alert"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/tasks/assets/finance_model_content.js?v=3"></script>
-  <script src="/tasks/assets/nav-icons.js?v=3" defer></script>
-  <script src="/tasks/assets/app.js?v=65" defer></script>
+  <script>
+    document.write('<script src="' + (window.__TASKS_MOUNT__ || "/x") + '/assets/app.js?v=91"><\/script>');
+  </script>
+  <script src="assets/finance_model_content.js?v=7" defer></script>
+  <script src="assets/nav-icons.js?v=3" defer></script>
 </body>
 </html>

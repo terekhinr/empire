@@ -57,7 +57,7 @@ ART_FALSE = re.compile(
 )
 
 IMAGE_CINE: list[tuple[str, str, str]] = [
-    (r"Юткевич|Париж", "Utkevich.jpg", "film_still"),
+    (r"Юткевич|Париж", "Vladimir Lenin, 1917.jpg", "portrait"),
     (r"1918|покушен", "Lenin in October movie, 1937 final.jpg", "film_still"),
     (r"Смоктунов|кино|актёр", "October film Lenin.jpg", "film_still"),
     (r"Побег|Абдулов|Искра", "Vladimir Lenin giving a speech.jpg", "film_still"),

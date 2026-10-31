@@ -16,6 +16,9 @@
 
 ```env
 PDF_AUDIO_BOT_TOKEN=        # отдельный токен именно для этого бота
+PDF_AUDIO_PIPELINE=v1       # v2 = ru_tts (SSML + optional Whisper QA)
+PDF_AUDIO_QA=0              # 1 только с pipeline=v2 и faster-whisper
+PDF_AUDIO_WHISPER_MODEL=small
 ADMIN_ID=                   # твой Telegram user id
 GEMINI_API_KEY=             # ключ Google AI Studio / Gemini
 

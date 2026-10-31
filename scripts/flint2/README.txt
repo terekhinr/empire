@@ -1,24 +1,36 @@
 Flint 2 GL-MT6000 — bootstrap (Empire)
 ======================================
 
+Полный гайд (два режима, сторож, откуда схемы):
+  docs/FLINT2_YOUTUBE_DUAL.md
+
 VPS bootstrap: http://193.233.232.48:8789/
 
-БЫСТРЫЙ СТАРТ (на роутере после vanilla OWRT 24.10)
----------------------------------------------------
+РЕЖИМ A — с VPS (YouTube → VLESS)
+---------------------------------
   curl -fsSL http://193.233.232.48:8789/00-bootstrap.sh | sh
 
-ПОРЯДОК ВРУЧНУЮ
----------------
-  1. Прошить vanilla OpenWrt 24.10.4 sysupgrade (см. docs/FLINT2_SETUP.md)
-  2. curl .../00-bootstrap.sh | sh
-  3. LuCI → Zapret2 → пресет МТС → Restart
-  4. Переключить WAN с Keenetic на Flint 2
+РЕЖИМ B — без VPS (YouTube → zapret)
+------------------------------------
+  На ПК: sh scripts/flint2/pack-usb-novps.sh
+  На Flint: sh /mnt/usb/flint-novps-usb/00-bootstrap-novps.sh
+  Стратегия DPI: zms  (Zapret-Manager)
 
-VPS (агент)
+ПЕРЕКЛЮЧЕНИЕ
+------------
+  curl .../20-mode-vps.sh | sh
+  curl .../21-mode-novps.sh | sh
+
+СТОРОЖ
+------
+  С VPS:  bash scripts/flint2/empire-flint-watchdog/install.sh
+  На Flint / USB: sh empire-flint-watchdog/install-local.sh
+
+ОБЯЗАТЕЛЬНО
 -----------
-  python3 serve_bootstrap.py   # :8789
-  ssh -p 6223 root@127.0.0.1   # после туннеля с роутера
+  vanilla OpenWrt 24.10, flow offloading ВЫКЛ, IPv6 WAN ВЫКЛ
+  (делает 19-prereq-dpi.sh)
 
 VPN
 ---
-  VLESS Reality → 193.233.232.48:8443 (тот же VPS что XKeen)
+  VLESS Reality → 193.233.232.48:8443

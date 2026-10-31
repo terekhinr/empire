@@ -77,3 +77,24 @@ def test_build_post_html_pension_pin():
     assert "📌" in html_out
     assert "Заголовок" in html_out
     assert "Тело поста" in html_out
+
+
+def test_build_post_html_garden_leaf_without_obsidian_rubric():
+    seen = {}
+
+    def fix(t):
+        return t
+
+    def fin(text, p_key, rubric, is_video):
+        seen["rubric"] = rubric
+        seen["persona"] = p_key
+        return text
+
+    entry = {"persona": "garden", "title": "Морковь под зиму", "body_markdown": "Текст."}
+    html_out = oc.build_post_html(entry, fix_html_fn=fix, finalize_fn=fin)
+    assert html_out.startswith("🌿")
+    assert "📌" not in html_out
+    assert seen["rubric"] is None
+    assert seen["persona"] == "garden"
+    assert oc.entry_skips_image({"skip_image": "true"})
+    assert not oc.entry_skips_image({})

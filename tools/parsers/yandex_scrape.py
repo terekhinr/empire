@@ -6,19 +6,18 @@
   enrich  — для бани, у которой нет yandex_url, делаем поиск
             "name + city" в yandex.ru/maps и подбираем подходящую карточку
             (по близости к lat/lon); из неё забираем yandex_url, телефон, рейтинг.
+            По умолчанию только quality-регионы (MSK/MO/SPB/LO, аудит R7).
+            Низкий reviews_total / рейтинг → статус draft.
 
   reviews — для бани с yandex_url открываем вкладку «Отзывы»
             и снимаем N последних отзывов (автор, рейтинг, дата, текст).
-            Пишем в banya_reviews со status='pending', дедуп по source_id.
+            Пишем в banya_reviews со status='pending', дедуп по стабильному
+            source_id (sha1 текста) и по паре баня+текст.
+            Только свежие отзывы (BANYA_REVIEW_MAX_AGE_DAYS) и точки с
+            reviews_total >= BANYA_MIN_REVIEWS.
 
-  daily   — ночной лимитированный прогон: enrich (без yandex_url) + reviews
-            для published (нет яндекс-отзывов или последний fetch старше N дней).
-            Лимиты: env BANYA_DAILY_ENRICH_LIMIT (12), BANYA_DAILY_REVIEWS_SPOTS (4),
-            BANYA_DAILY_REVIEWS_MAX (6), BANYA_DAILY_REVIEWS_REFRESH_DAYS (7);
-            отключить фазу: BANYA_DAILY_SKIP_ENRICH=1 / BANYA_DAILY_SKIP_REVIEWS=1.
-            После reviews (если не --dry): при наличии OPENROUTER_API_KEY по умолчанию
-            запускается tools/banya_review_moderate_ai.py --apply; отключить: BANYA_DAILY_MODERATE_AI=0
-            (см. BANYA_DAILY_MODERATE_*; SOURCE=ALL — все pending).
+  daily   — ночной лимитированный прогон + quality gate (demote).
+            Лимиты: env BANYA_DAILY_*; пороги: BANYA_MIN_REVIEWS / BANYA_MIN_RATING.
 
 Запуск:
     python tools/parsers/yandex_scrape.py enrich  --id 12
@@ -28,11 +27,7 @@
     python tools/parsers/yandex_scrape.py daily
     python tools/parsers/yandex_scrape.py daily --dry
     python tools/parsers/yandex_scrape.py refresh --region MO --limit 80 --need-reviews
-
-Соблюдаем rate-limit: enrich/reviews — пауза WAIT_PER_REQ (4 с); refresh — случайная
-пауза между точками по умолчанию 8–15 с (env BANYA_REFRESH_WAIT_MIN / BANYA_REFRESH_WAIT_MAX).
-
-Внимание: скрап серый. Подбираем разумные паузы и не больше N запросов за запуск.
+    python tools/banya_quality.py --show|--apply
 """
 from __future__ import annotations
 
@@ -51,6 +46,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = ROOT / "empire.db"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.banya_review_dedupe import stable_review_source_id
+from tools.banya_quality import (
+    flagship_region_sql,
+    min_reviews,
+    parse_review_date,
+    quality_regions,
+    review_is_fresh,
+    title_is_sauna_only,
+    traffic_ok,
+)
 
 
 def _load_dotenv() -> None:
@@ -140,17 +148,31 @@ def _parse_sqlite_dt(val) -> datetime | None:
 def _select_review_candidates(
     con: sqlite3.Connection, limit: int, refresh_days: int
 ) -> list[tuple]:
-    """Опубликованные бани с yandex_url: без яндекс-отзывов или последний fetch старше refresh_days."""
+    """Published в quality-регионах с трафиком: без отзывов или fetch старше refresh_days.
+
+    Сортировка: больше reviews_total на Яндексе → раньше (R7: живые бани).
+    """
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=refresh_days)
+    min_rev = min_reviews()
+    reg_sql = flagship_region_sql("region")
     pub = con.execute(
-        "SELECT id, slug, title, city, yandex_url FROM banya_spots "
-        "WHERE status = 'published' "
+        "SELECT id, slug, title, city, yandex_url, region, "
+        "COALESCE(reviews_total, 0) AS rt, rating_avg FROM banya_spots "
+        f"WHERE status = 'published' "
+        f"AND {reg_sql} "
         "AND yandex_url IS NOT NULL AND TRIM(yandex_url) != '' "
-        "ORDER BY id"
+        "AND COALESCE(reviews_total, 0) >= ? "
+        "ORDER BY COALESCE(reviews_total, 0) DESC, id",
+        (min_rev,),
     ).fetchall()
     out: list[tuple] = []
     for row in pub:
         sid = row[0]
+        title = row[2]
+        if title_is_sauna_only(title):
+            continue
+        if not traffic_ok(row[6], row[7]):
+            continue
         mx = con.execute(
             "SELECT MAX(fetched_at) FROM banya_reviews "
             "WHERE spot_id = ? AND source = 'yandex'",
@@ -163,16 +185,17 @@ def _select_review_candidates(
             dt = _parse_sqlite_dt(mx)
             need = dt is None or dt < cutoff
         if need:
-            out.append(row)
+            out.append(row[:5])
         if len(out) >= limit:
             break
     return out
-
 
 # ─── запуск Playwright ───────────────────────────────────────────────────────
 
 
 def _new_browser(p):
+    # Ubuntu 26.04+ не в списке Playwright — fallback через override.
+    os.environ.setdefault("PLAYWRIGHT_HOST_PLATFORM_OVERRIDE", "ubuntu24.04-x64")
     return p.chromium.launch(
         headless=True,
         args=["--disable-blink-features=AutomationControlled"],
@@ -371,6 +394,10 @@ def run_enrich_rows(con: sqlite3.Connection, rows: list, dry: bool) -> tuple[int
         ctx = _new_context(browser)
         page = ctx.new_page()
         for sid, slug, title, city, lat, lon in rows:
+            if title_is_sauna_only(title):
+                print(f"  skip sauna-only #{sid} {title[:40]}")
+                fail += 1
+                continue
             print(f"  → #{sid:4d} {title[:40]:40s} {city or '?':20s}")
             try:
                 data = enrich_one(page, {
@@ -392,11 +419,21 @@ def run_enrich_rows(con: sqlite3.Connection, rows: list, dry: bool) -> tuple[int
                     tail.append(f"📞 {data['phone']}")
                 if data.get("rating_avg"):
                     tail.append(f"★ {data['rating_avg']}")
+                if data.get("reviews_total") is not None:
+                    tail.append(f"{data['reviews_total']} отз.")
                 if data.get("site_url"):
                     tail.append("сайт")
+                ok_traffic = True
+                if data.get("reviews_total") is not None:
+                    ok_traffic = traffic_ok(data.get("reviews_total"), data.get("rating_avg"))
+                if not ok_traffic:
+                    tail.append("low_traffic→skip_keep_draft")
                 print("     " + " · ".join(tail) if tail else "     (только URL)")
                 if not dry:
                     sets = {k: v for k, v in data.items() if v not in (None, "")}
+                    # низкий трафик: URL оставляем, статус draft
+                    if not ok_traffic:
+                        sets["status"] = "draft"
                     cols = ", ".join(f"{k} = ?" for k in sets)
                     con.execute(
                         f"UPDATE banya_spots SET {cols}, updated_at = ? WHERE id = ?",
@@ -445,13 +482,30 @@ def run_refresh_rows(con: sqlite3.Connection, rows: list, dry: bool) -> tuple[in
                 fail += 1
                 time.sleep(_refresh_cooldown_s())
                 continue
-            keep = {"rating_avg", "reviews_total", "site_url"}
+            keep = {"rating_avg", "reviews_total", "site_url", "phone"}
             sets = {k: v for k, v in data.items() if k in keep and v not in (None, "")}
+            # не затирать известный высокий reviews_total нулём/пустым scrape
+            if "reviews_total" in sets:
+                try:
+                    new_rt = int(sets["reviews_total"])
+                except (TypeError, ValueError):
+                    new_rt = 0
+                if new_rt <= 0:
+                    sets.pop("reviews_total", None)
             tail = []
             if "rating_avg" in sets:
                 tail.append(f"★ {sets['rating_avg']}")
             if "reviews_total" in sets:
                 tail.append(f"{sets['reviews_total']} отз.")
+            ok_traffic = True
+            if "reviews_total" in sets or data.get("reviews_total") is not None:
+                ok_traffic = traffic_ok(
+                    sets.get("reviews_total", data.get("reviews_total")),
+                    sets.get("rating_avg", data.get("rating_avg")),
+                )
+            if not ok_traffic:
+                sets["status"] = "draft"
+                tail.append("low_traffic→draft")
             print("     " + " · ".join(tail) if tail else "     (без изменений)")
             success += 1
             if sets and not dry:
@@ -511,26 +565,41 @@ def cmd_enrich(args) -> int:
     where = [
         "status != 'hidden'",
         "(yandex_url IS NULL OR TRIM(yandex_url) = '')",
+        flagship_region_sql("region") if not args.id else "1=1",
     ]
     params = []
     if args.id:
         where = ["id = ?"]
         params = [args.id]
     elif args.region:
-        where.append("region = ?")
-        params.append(args.region.upper())
+        where = [
+            "status != 'hidden'",
+            "(yandex_url IS NULL OR TRIM(yandex_url) = '')",
+            "region = ?",
+        ]
+        params = [args.region.upper()]
+    # приоритет: в названии «бан», потом остальные
     rows = con.execute(
         f"SELECT id, slug, title, city, lat, lon FROM banya_spots "
-        f"WHERE {' AND '.join(where)} ORDER BY id LIMIT ?",
+        f"WHERE {' AND '.join(where)} "
+        f"ORDER BY CASE WHEN LOWER(COALESCE(title,'')) LIKE '%бан%' THEN 0 ELSE 1 END, "
+        f"CASE status WHEN 'published' THEN 0 WHEN 'draft' THEN 1 ELSE 2 END, id "
+        f"LIMIT ?",
         params + [args.limit],
     ).fetchall()
+    # отсечь сауны до браузера
+    rows = [r for r in rows if not title_is_sauna_only(r[2])]
     if not rows:
-        print("Нечего обогащать (всё уже с yandex_url или фильтр пустой).")
+        print("Нечего обогащать (всё уже с yandex_url, не FLAGSHIP, или только сауны).")
+        print(f"quality regions={','.join(quality_regions())} min_reviews={min_reviews()}")
         con.close()
         return 0
 
-    print(f"Обогащаем {len(rows)} бань. Ожидаемая длительность ≈ "
-          f"{len(rows) * (WAIT_SETTLE + WAIT_PER_REQ + 3):.0f} сек.")
+    print(
+        f"Обогащаем {len(rows)} бань (regions={','.join(quality_regions())}, "
+        f"min_reviews={min_reviews()}). ≈ "
+        f"{len(rows) * (WAIT_SETTLE + WAIT_PER_REQ + 3):.0f} сек."
+    )
     success, fail = run_enrich_rows(con, rows, args.dry)
     con.close()
     print(f"--- enrich done. ok={success}, miss={fail}")
@@ -660,12 +729,23 @@ def parse_reviews_from_page(page, limit: int) -> list[dict]:
         except Exception:
             rating = None
         try:
-            date_txt = el.locator(
-                "span[class*='business-review-view__date'], meta[itemprop='datePublished']"
-            ).first.text_content(timeout=500) or ""
+            date_txt = ""
+            meta = el.locator("meta[itemprop='datePublished']").first
+            if meta.count() > 0:
+                date_txt = meta.get_attribute("content", timeout=500) or ""
+            if not date_txt:
+                date_txt = (
+                    el.locator("span[class*='business-review-view__date']")
+                    .first.text_content(timeout=500)
+                    or ""
+                )
         except Exception:
             date_txt = ""
+        published_at = parse_review_date(date_txt)
         if not text or len(text) < 8:
+            continue
+        if not review_is_fresh(published_at):
+            # без даты или слишком старый — не тащим в каталог
             continue
         # Чистим хвосты автора: «ИльдарЗнаток города 12 ур.» → «Ильдар».
         if author:
@@ -675,9 +755,9 @@ def parse_reviews_from_page(page, limit: int) -> list[dict]:
                 maxsplit=1,
             )[0].strip()
             author = author[:60] or None
-        # source_id для приватной дедупликации: только по тексту (без автора —
-        # он у вложенных контейнеров «прыгает»).
-        sid = str(abs(hash(text[:120])) % (10 ** 12))
+        # source_id: sha1 текста. Встроенный hash() Python меняется между запусками
+        # и из‑за этого ночной парсер записывал те же отзывы снова и снова.
+        sid = stable_review_source_id(text)
         if any(o["source_id"] == sid for o in out):
             continue
         out.append({
@@ -685,6 +765,7 @@ def parse_reviews_from_page(page, limit: int) -> list[dict]:
             "rating": rating,
             "text": text[:1500],
             "date_text": date_txt or None,
+            "published_at": published_at.isoformat(timespec="seconds") if published_at else None,
             "source_id": sid,
         })
         if len(out) >= limit:
@@ -741,11 +822,14 @@ def run_reviews_rows(
                     a = (rv.get("author") or "?")[:25]
                     r = rv.get("rating") or "-"
                     t = (rv.get("text") or "")[:70]
-                    print(f"   - {a:25s}  ★{r}  {t}")
+                    d = rv.get("published_at") or "?"
+                    print(f"   - {a:25s}  ★{r}  [{d}]  {t}")
                     continue
                 existing = con.execute(
-                    "SELECT 1 FROM banya_reviews WHERE source = 'yandex' AND source_id = ?",
-                    (rv["source_id"],),
+                    "SELECT 1 FROM banya_reviews WHERE source = 'yandex' AND ("
+                    "  source_id = ? OR (spot_id = ? AND TRIM(text) = TRIM(?))"
+                    ")",
+                    (rv["source_id"], sid, rv["text"]),
                 ).fetchone()
                 if existing:
                     dup += 1
@@ -754,18 +838,25 @@ def run_reviews_rows(
                     "INSERT INTO banya_reviews "
                     "(spot_id, source, source_id, author, rating, text, url, "
                     " published_at, fetched_at, status) "
-                    "VALUES (?, 'yandex', ?, ?, ?, ?, ?, NULL, ?, 'pending')",
-                    (sid, rv["source_id"], rv["author"], rv["rating"], rv["text"], yurl, _now_iso()),
+                    "VALUES (?, 'yandex', ?, ?, ?, ?, ?, ?, ?, 'pending')",
+                    (
+                        sid,
+                        rv["source_id"],
+                        rv["author"],
+                        rv["rating"],
+                        rv["text"],
+                        yurl,
+                        rv.get("published_at"),
+                        _now_iso(),
+                    ),
                 )
                 saved += 1
             if not dry:
-                cnt = con.execute(
-                    "SELECT COUNT(*) FROM banya_reviews WHERE spot_id = ? AND status = 'approved'",
-                    (sid,),
-                ).fetchone()[0]
+                # reviews_total = счётчик Яндекса (из enrich/refresh), не затираем
+                # локальным COUNT — иначе ломается quality gate по посещаемости.
                 con.execute(
-                    "UPDATE banya_spots SET reviews_total = ?, updated_at = ? WHERE id = ?",
-                    (cnt, _now_iso(), sid),
+                    "UPDATE banya_spots SET updated_at = ? WHERE id = ?",
+                    (_now_iso(), sid),
                 )
                 con.commit()
             time.sleep(WAIT_PER_REQ)
@@ -777,23 +868,35 @@ def run_reviews_rows(
 def cmd_reviews(args) -> int:
     con = _open_db()
     where = ["title IS NOT NULL", "title != ''"]
-    params = []
+    params: list = []
     if args.id:
         where = ["id = ?"]
         params = [args.id]
-    elif args.status:
-        where.append("status = ?")
-        params.append(args.status)
+    else:
+        if args.status:
+            where.append("status = ?")
+            params.append(args.status)
+        if getattr(args, "region", None):
+            where.append("region = ?")
+            params.append(str(args.region).upper())
+        else:
+            where.append(flagship_region_sql("region"))
+        where.append("yandex_url IS NOT NULL AND TRIM(yandex_url) != ''")
+        where.append("COALESCE(reviews_total, 0) >= ?")
+        params.append(min_reviews())
     rows = con.execute(
         f"SELECT id, slug, title, city, yandex_url FROM banya_spots "
-        f"WHERE {' AND '.join(where)} ORDER BY id LIMIT ?",
+        f"WHERE {' AND '.join(where)} "
+        f"ORDER BY COALESCE(reviews_total, 0) DESC, id LIMIT ?",
         params + [args.batch],
     ).fetchall()
+    rows = [r for r in rows if not title_is_sauna_only(r[2])]
     if not rows:
-        print("Нет бань для отзывов (проверьте фильтр / yandex_url).")
+        print("Нет бань для отзывов (проверьте фильтр / yandex_url / min_reviews).")
         con.close()
         return 0
 
+    print(f"Отзывы: {len(rows)} точек, max={args.max}, min_reviews={min_reviews()}")
     saved, dup, miss = run_reviews_rows(con, rows, args.max, args.dry)
     con.close()
     print(f"\n--- reviews done. saved={saved}, dup={dup}, miss={miss}")
@@ -871,16 +974,23 @@ def cmd_daily(args) -> int:
 
     if os.environ.get("BANYA_DAILY_SKIP_ENRICH", "").lower() not in ("1", "true", "yes"):
         lim_e = int(os.environ.get("BANYA_DAILY_ENRICH_LIMIT", "12"))
+        reg_sql = flagship_region_sql("region")
         rows_e = con.execute(
             "SELECT id, slug, title, city, lat, lon FROM banya_spots "
             "WHERE status != 'hidden' "
+            f"  AND {reg_sql} "
             "  AND (yandex_url IS NULL OR TRIM(yandex_url) = '') "
-            "ORDER BY id LIMIT ?",
-            (lim_e,),
+            "ORDER BY CASE WHEN LOWER(COALESCE(title,'')) LIKE '%бан%' THEN 0 ELSE 1 END, id "
+            "LIMIT ?",
+            (lim_e * 3,),  # с запасом под отсев саун
         ).fetchall()
+        rows_e = [r for r in rows_e if not title_is_sauna_only(r[2])][:lim_e]
         if rows_e:
             est = len(rows_e) * (WAIT_SETTLE + WAIT_PER_REQ + 3)
-            print(f"--- enrich phase: {len(rows_e)} spots (~{est:.0f}s)")
+            print(
+                f"--- enrich phase: {len(rows_e)} spots (~{est:.0f}s) "
+                f"regions={','.join(quality_regions())} min_rev={min_reviews()}"
+            )
             s, f = run_enrich_rows(con, rows_e, dry)
             print(f"--- enrich done ok={s} miss={f}")
         else:
@@ -895,13 +1005,29 @@ def cmd_daily(args) -> int:
         rows_r = _select_review_candidates(con, lim_r, days)
         if rows_r:
             est = len(rows_r) * (WAIT_SETTLE + WAIT_PER_REQ + 2) * max_rv / 6
-            print(f"--- reviews phase: {len(rows_r)} spots (~{est:.0f}s), refresh>{days}d")
+            print(
+                f"--- reviews phase: {len(rows_r)} spots (~{est:.0f}s), "
+                f"refresh>{days}d, only fresh reviews + min_rev={min_reviews()}"
+            )
             sv, dp, ms = run_reviews_rows(con, rows_r, max_rv, dry)
             print(f"--- reviews done saved={sv} dup={dp} miss={ms}")
         else:
             print("--- reviews phase: skip (no candidates)")
     else:
         print("--- reviews phase: skipped (BANYA_DAILY_SKIP_REVIEWS)")
+
+    if not dry:
+        try:
+            from tools.banya_quality import apply_demote, low_quality_published
+
+            low = low_quality_published(con)
+            if low:
+                n = apply_demote(con, low)
+                print(f"--- quality gate: demoted {n}/{len(low)} low-traffic published → draft")
+            else:
+                print("--- quality gate: ok")
+        except Exception as e:
+            print(f"--- quality gate: {e}")
 
     con.close()
     _run_post_daily_moderate_ai(dry)
@@ -924,6 +1050,7 @@ def main(argv: list[str]) -> int:
     pr = sub.add_parser("reviews", help="снять отзывы")
     pr.add_argument("--id", type=int)
     pr.add_argument("--status", help="published|draft|hidden")
+    pr.add_argument("--region", help="MSK|MO|SPB|LO|…")
     pr.add_argument("--batch", type=int, default=20, help="максимум бань за прогон")
     pr.add_argument("--max", type=int, default=10, help="отзывов на баню")
     pr.add_argument("--dry", action="store_true")

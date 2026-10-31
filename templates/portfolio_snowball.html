@@ -1,0 +1,347 @@
+<div class="top">
+        <span>Котировки на {{ m.price_as_of }} · анализ {{ m.analyzed_at }}</span>
+        <div class="actions">
+            <form method="post" action="{{ refresh_action }}" style="margin:0">
+                <button class="btn ghost" type="submit">Обновить котировки</button>
+            </form>
+            <a href="{{ logout_href }}">Выйти</a>
+        </div>
+    </div>
+    <h1>Портфель</h1>
+    <div class="ptabs">
+    <input type="radio" name="ptab" id="pt-dash" checked>
+    <input type="radio" name="ptab" id="pt-hold">
+    <input type="radio" name="ptab" id="pt-an">
+    <label class="tab" for="pt-dash">Сводка</label>
+    <label class="tab" for="pt-hold">Активы</label>
+    <label class="tab" for="pt-an">Аналитика</label>
+
+    <section class="dash panel">
+        <div class="hero">
+            <div class="hero-label">Стоимость портфеля</div>
+            <div class="hero-value">{{ fmt_rub(m.total_value) }}</div>
+            <div class="{% if m.day_change_abs is not none and m.day_change_abs >= 0 %}pos{% elif m.day_change_abs is not none %}neg{% endif %}">
+{% if m.day_change_abs is not none %}
+                    {{ fmt_rub(m.day_change_abs, True) }} · {{ fmt_pct(m.day_change_pct) }} за сегодня
+                {% else %}
+                    Нет вчерашних котировок
+                {% endif %}
+            </div>
+            <div class="pills">
+                <span class="pill">Позиций: {{ m.positions_count }}</span>
+                <span class="pill">С ценой: {{ m.priced_count }}</span>
+                <span class="pill">MOEX · 4 брокера</span>
+            </div>
+        </div>
+        {% if m.unpriced %}
+        <div class="warn">Нет котировки MOEX: {{ m.unpriced[:15]|join(", ") }}{% if m.unpriced|length > 15 %} и ещё {{ m.unpriced|length - 15 }}{% endif %}</div>
+        {% endif %}
+
+        <div class="sec">Ключевые показатели</div>
+        <div class="kpis">
+            <div class="kpi"><div class="l">Вложено</div><div class="v">{{ fmt_rub(m.net_invested or m.cost_basis) }}</div></div>
+            <div class="kpi"><div class="l">Прибыль</div><div class="v {% if m.profit_abs >= 0 %}pos{% else %}neg{% endif %}">{{ fmt_rub(m.profit_abs, True) }}</div><div class="d">{{ fmt_pct(m.profit_pct) }}</div></div>
+            <div class="kpi"><div class="l">Доходность</div><div class="v {% if m.profit_pct is not none and m.profit_pct >= 0 %}pos{% elif m.profit_pct is not none %}neg{% endif %}">{{ fmt_pct(m.profit_pct, False) }}</div></div>
+            <div class="kpi"><div class="l">XIRR</div><div class="v">{{ fmt_xirr(m.xirr) }}</div><div class="d">MWR · годовых</div></div>
+            <div class="kpi"><div class="l">TWR</div><div class="v {% if m.twr_pct is not none and m.twr_pct >= 0 %}pos{% elif m.twr_pct is not none %}neg{% endif %}">{{ fmt_pct(m.twr_pct, True) }}</div><div class="d">{% if m.twr_annual_pct is not none %}{{ fmt_pct(m.twr_annual_pct, True) }} год.{% else %}накопленный{% endif %}</div></div>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><div class="l">Себестоимость</div><div class="v">{{ fmt_rub(m.cost_basis) }}</div></div>
+            <div class="kpi"><div class="l">Нереализ. P&amp;L</div><div class="v {% if m.unrealized_pnl >= 0 %}pos{% else %}neg{% endif %}">{{ fmt_rub(m.unrealized_pnl, True) }}</div><div class="d">{{ fmt_pct(m.unrealized_pnl_pct) }}</div></div>
+            <div class="kpi"><div class="l">Дивиденды</div><div class="v">{{ fmt_rub(m.dividends) }}</div></div>
+            <div class="kpi"><div class="l">Купоны</div><div class="v">{{ fmt_rub(m.coupons) }}</div></div>
+            <div class="kpi"><div class="l">Реализ. P&amp;L</div><div class="v {% if m.realized_pnl >= 0 %}pos{% else %}neg{% endif %}">{{ fmt_rub(m.realized_pnl, True) }}</div></div>
+            <div class="kpi"><div class="l">Всего доход</div><div class="v">{{ fmt_rub(total_income, True) }}</div><div class="d">прибыль + выплаты</div></div>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><div class="l">За месяц</div><div class="v {% if m.month_change_abs is not none and m.month_change_abs >= 0 %}pos{% elif m.month_change_abs is not none %}neg{% endif %}">{{ fmt_rub(m.month_change_abs, True) }}</div><div class="d">{{ fmt_pct(m.month_change_pct) }}</div></div>
+            <div class="kpi"><div class="l">С начала года</div><div class="v {% if m.ytd_change_abs is not none and m.ytd_change_abs >= 0 %}pos{% elif m.ytd_change_abs is not none %}neg{% endif %}">{{ fmt_rub(m.ytd_change_abs, True) }}</div><div class="d">{{ fmt_pct(m.ytd_change_pct) }}</div></div>
+            <div class="kpi"><div class="l">Див. доходность</div><div class="v">{{ fmt_pct(div_yield, False) }}</div><div class="d">от стоимости портфеля</div></div>
+            <div class="kpi"><div class="l">YOC</div><div class="v">{{ fmt_pct(m.yield_on_cost_pct, False) }}</div><div class="d">выплаты / себестоимость</div></div>
+            <div class="kpi"><div class="l">Выплаты</div><div class="v">{{ fmt_rub(m.dividends + m.coupons) }}</div><div class="d">дивиденды + купоны</div></div>
+        </div>
+
+        <div class="sec">Структура портфеля</div>
+        <div class="split">
+            <div class="card">
+                <div class="legend">
+                    {% for c in m.by_class %}
+                    <div><span class="sw" style="background:{{ c.color }}"></span>{{ c.label }}: {{ fmt_rub(c.value) }} · {{ "%.1f"|format(c.share_pct) }} %</div>
+                    {% endfor %}
+                    {% if not m.by_class %}<div class="muted">Нет разбивки</div>{% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <div class="legend">
+                    {% for b in m.by_broker %}
+                    <div><span class="sw" style="background:{{ b.color }}"></span>{{ b.broker }}: {{ fmt_rub(b.value) }} · {{ "%.1f"|format(b.share_pct) }} %</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="sec">Финансовая подушка</div>
+        <div class="kpis">
+            <div class="kpi"><div class="l">В ликвидности</div><div class="v">{{ fmt_rub(liq_total) }}</div></div>
+            <div class="kpi"><div class="l">Цель</div><div class="v">{{ fmt_rub(cushion) }}</div></div>
+            <div class="kpi"><div class="l">Сверх цели</div><div class="v">{{ fmt_rub(excess) }}</div></div>
+            <div class="kpi"><div class="l">До цели</div><div class="v">{{ fmt_rub(shortfall) }}</div></div>
+        </div>
+        {% if excess > 0 %}
+        <div class="info">Сверх подушки {{ fmt_rub(excess) }} — кандидаты на продажу при снижении ставки.</div>
+        {% elif shortfall > 0 %}
+        <div class="warn">До цели подушки не хватает {{ fmt_rub(shortfall) }}.</div>
+        {% endif %}
+
+        {% if m.by_account %}
+        <div class="sec">По счетам</div>
+        <div class="scroll">
+        <table>
+            <tr>
+                <th>Брокер</th><th>Счёт</th>
+                <th class="num">Стоимость</th><th class="num">Доля %</th>
+                <th class="num">Себестоимость</th><th class="num">P&amp;L</th><th class="num">P&amp;L %</th>
+            </tr>
+            {% for a in m.by_account %}
+            <tr>
+                <td>{{ a.broker }}</td>
+                <td>{{ a.account }}</td>
+                <td class="num">{{ fmt_rub(a.value) }}</td>
+                <td class="num">{{ "%.1f"|format(a.share_pct) }}</td>
+                <td class="num">{{ fmt_rub(a.cost) }}</td>
+                <td class="num {% if a.pnl >= 0 %}pos{% else %}neg{% endif %}">{{ fmt_rub(a.pnl, True) }}</td>
+                <td class="num {% if a.pnl_pct is not none and a.pnl_pct >= 0 %}pos{% elif a.pnl_pct is not none %}neg{% endif %}">{{ fmt_pct(a.pnl_pct) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        </div>
+        {% endif %}
+
+        <div class="sec">По брокерам</div>
+        <div class="scroll">
+        <table>
+            <tr>
+                <th>Брокер</th>
+                <th class="num">Стоимость</th><th class="num">Доля %</th>
+                <th class="num">Себестоимость</th><th class="num">P&amp;L</th><th class="num">P&amp;L %</th>
+            </tr>
+            {% for b in m.by_broker %}
+            <tr>
+                <td>{{ b.broker }}</td>
+                <td class="num">{{ fmt_rub(b.value) }}</td>
+                <td class="num">{{ "%.1f"|format(b.share_pct) }}</td>
+                <td class="num">{{ fmt_rub(b.cost) }}</td>
+                <td class="num {% if b.pnl >= 0 %}pos{% else %}neg{% endif %}">{{ fmt_rub(b.pnl, True) }}</td>
+                <td class="num {% if b.pnl_pct is not none and b.pnl_pct >= 0 %}pos{% elif b.pnl_pct is not none %}neg{% endif %}">{{ fmt_pct(b.pnl_pct) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        </div>
+    </section>
+
+    <section class="hold panel">
+        <div class="sec">Активы</div>
+        <div class="filters">
+            <div class="fg">
+                <span class="l">Брокер</span>
+                <div class="chips" id="broker-chips">
+                    {% for b in brokers %}
+                    <button type="button" class="chip on" data-filter-broker="{{ b }}">{{ b }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="fg">
+                <span class="l">Тип актива</span>
+                <div class="chips" id="class-chips">
+                    {% for c in classes %}
+                    <button type="button" class="chip on" data-filter-class="{{ c }}">{{ c }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="fg">
+                <span class="l">Сортировка</span>
+                <select id="sort-by">
+                    <option value="value">Стоимость</option>
+                    <option value="pnlPct">Доходность %</option>
+                    <option value="day">Сегодня %</option>
+                    <option value="share">Доля %</option>
+                    <option value="ticker">Тикер</option>
+                </select>
+            </div>
+            <div class="fg">
+                <span class="l">Поиск</span>
+                <input id="hold-search" type="search" placeholder="тикер или название">
+            </div>
+        </div>
+        <div class="scroll">
+        <table id="holdings">
+            <thead>
+            <tr>
+                <th>Брокер</th><th>Счёт</th><th>Тикер</th><th>Название</th><th>Тип</th>
+                <th class="num">Кол-во</th><th class="num">Ср. цена</th><th class="num">Цена</th><th>Цена на</th>
+                <th class="num">Стоимость</th><th class="num">Доля %</th>
+                <th class="num">P&amp;L ₽</th><th class="num">Доходность %</th><th class="num">Сегодня %</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+            <tr
+                data-broker="{{ r.broker }}"
+                data-class="{{ r.class_label }}"
+                data-ticker="{{ r.ticker }}"
+                data-name="{{ r.name }}"
+                data-value="{{ r.market_value or 0 }}"
+                data-pnl-pct="{{ r.pnl_pct if r.pnl_pct is not none else '' }}"
+                data-day="{{ r.day_change_pct if r.day_change_pct is not none else '' }}"
+                data-share="{{ r.share_pct if r.share_pct is not none else 0 }}"
+            >
+                <td>{{ r.broker }}</td>
+                <td>{{ r.account_label }}</td>
+                <td>{{ r.ticker }}</td>
+                <td class="name">{{ r.name }}</td>
+                <td>{{ r.class_label }}</td>
+                <td class="num">{{ "%.2f"|format(r.quantity) }}</td>
+                <td class="num">{% if r.avg_price is not none %}{{ "%.2f"|format(r.avg_price) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.last_price is not none %}{{ "%.2f"|format(r.last_price) }}{% else %}—{% endif %}</td>
+                <td>{{ r.price_date or "—" }}</td>
+                <td class="num">{{ fmt_rub(r.market_value) }}</td>
+                <td class="num">{% if r.share_pct is not none %}{{ "%.2f"|format(r.share_pct) }}{% else %}—{% endif %}</td>
+                <td class="num {% if r.pnl is not none and r.pnl >= 0 %}pos{% elif r.pnl is not none %}neg{% endif %}">{{ fmt_rub(r.pnl, True) if r.pnl is not none else "—" }}</td>
+                <td class="num {% if r.pnl_pct is not none and r.pnl_pct >= 0 %}pos{% elif r.pnl_pct is not none %}neg{% endif %}">{{ fmt_pct(r.pnl_pct) }}</td>
+                <td class="num {% if r.day_change_pct is not none and r.day_change_pct >= 0 %}pos{% elif r.day_change_pct is not none %}neg{% endif %}">{{ fmt_pct(r.day_change_pct) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        <div class="foot" id="filter-sum">Отфильтровано: {{ fmt_rub(m.total_value) }} · {{ rows|length }}{% if rows_total and rows_total > rows|length %} из {{ rows_total }}{% endif %} позиций · портфель {{ fmt_rub(m.total_value) }} · прибыль {{ fmt_rub(m.profit_abs, True) }}</div>
+    </section>
+
+    <section class="an panel">
+        <div class="sec">Динамика стоимости</div>
+        {% if chart %}
+        <p class="foot">{{ chart.first }} → {{ chart.last }} · мин {{ fmt_rub(chart.min) }} · макс {{ fmt_rub(chart.max) }}</p>
+        {% else %}
+        <p class="foot">Нет истории — снимки накапливаются при ежедневном открытии вкладки.</p>
+        {% endif %}
+
+        <div class="sec">Крупнейшие позиции</div>
+        <div class="scroll">
+        <table>
+            <tr>
+                <th>Тикер</th><th>Название</th><th>Брокер</th>
+                <th class="num">Стоимость</th><th class="num">Доля %</th>
+                <th class="num">Доходность %</th><th class="num">Сегодня %</th>
+            </tr>
+            {% for r in rows|selectattr("market_value")|sort(attribute="market_value", reverse=True) %}
+            {% if loop.index <= 12 %}
+            <tr>
+                <td>{{ r.ticker }}</td>
+                <td class="name">{{ r.name }}</td>
+                <td>{{ r.broker }}</td>
+                <td class="num">{{ fmt_rub(r.market_value) }}</td>
+                <td class="num">{% if r.share_pct is not none %}{{ "%.2f"|format(r.share_pct) }}{% else %}—{% endif %}</td>
+                <td class="num {% if r.pnl_pct is not none and r.pnl_pct >= 0 %}pos{% elif r.pnl_pct is not none %}neg{% endif %}">{{ fmt_pct(r.pnl_pct) }}</td>
+                <td class="num {% if r.day_change_pct is not none and r.day_change_pct >= 0 %}pos{% elif r.day_change_pct is not none %}neg{% endif %}">{{ fmt_pct(r.day_change_pct) }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </table>
+        </div>
+
+        <div class="sec">Разбивка по типам</div>
+        <div class="scroll">
+        <table>
+            <tr><th>Тип</th><th class="num">Стоимость</th><th class="num">Доля %</th></tr>
+            {% for c in m.by_class %}
+            <tr>
+                <td>{{ c.label }}</td>
+                <td class="num">{{ fmt_rub(c.value) }}</td>
+                <td class="num">{{ "%.1f"|format(c.share_pct) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        </div>
+    </section>
+    </div>
+{% if m %}
+<script>
+(function () {
+  var table = document.getElementById("holdings");
+  if (!table) return;
+  var tbody = table.querySelector("tbody");
+  var allRows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+  var brokerBtns = document.querySelectorAll("[data-filter-broker]");
+  var classBtns = document.querySelectorAll("[data-filter-class]");
+  var sortSel = document.getElementById("sort-by");
+  var search = document.getElementById("hold-search");
+  var foot = document.getElementById("filter-sum");
+  var portfolioTotal = {{ m.total_value or 0 }};
+  var profitAbs = {{ m.profit_abs or 0 }};
+
+  function fmtRub(n) {
+    var s = Math.round(n).toLocaleString("ru-RU");
+    return s + " ₽";
+  }
+  function fmtSigned(n) {
+    var sign = n >= 0 ? "+" : "";
+    return sign + Math.round(n).toLocaleString("ru-RU") + " ₽";
+  }
+  function onVals(btns, attr) {
+    return Array.prototype.filter.call(btns, function (b) { return b.classList.contains("on"); })
+      .map(function (b) { return b.getAttribute(attr); });
+  }
+  function num(tr, key) {
+    var v = tr.getAttribute(key);
+    if (v === null || v === "") return NaN;
+    return parseFloat(v);
+  }
+  function apply() {
+    var brokers = onVals(brokerBtns, "data-filter-broker");
+    var classes = onVals(classBtns, "data-filter-class");
+    var q = ((search && search.value) || "").trim().toLowerCase();
+    var vis = [];
+    allRows.forEach(function (tr) {
+      var ok = true;
+      if (brokers.length && brokers.indexOf(tr.getAttribute("data-broker")) < 0) ok = false;
+      if (classes.length && classes.indexOf(tr.getAttribute("data-class")) < 0) ok = false;
+      if (q) {
+        var hay = ((tr.getAttribute("data-ticker") || "") + " " + (tr.getAttribute("data-name") || "")).toLowerCase();
+        if (hay.indexOf(q) < 0) ok = false;
+      }
+      tr.style.display = ok ? "" : "none";
+      if (ok) vis.push(tr);
+    });
+    var sort = (sortSel && sortSel.value) || "value";
+    vis.sort(function (a, b) {
+      if (sort === "ticker") {
+        return (a.getAttribute("data-ticker") || "").localeCompare(b.getAttribute("data-ticker") || "", "ru");
+      }
+      var key = { value: "data-value", pnlPct: "data-pnl-pct", day: "data-day", share: "data-share" }[sort];
+      var ka = num(a, key), kb = num(b, key);
+      if (isNaN(ka) && isNaN(kb)) return 0;
+      if (isNaN(ka)) return 1;
+      if (isNaN(kb)) return -1;
+      return kb - ka;
+    });
+    vis.forEach(function (tr) { tbody.appendChild(tr); });
+    allRows.filter(function (tr) { return tr.style.display === "none"; }).forEach(function (tr) { tbody.appendChild(tr); });
+    var sum = vis.reduce(function (s, tr) { return s + (num(tr, "data-value") || 0); }, 0);
+    if (foot) {
+      foot.textContent = "Отфильтровано: " + fmtRub(sum) + " · " + vis.length + " позиций · портфель " +
+        fmtRub(portfolioTotal) + " · прибыль " + fmtSigned(profitAbs);
+    }
+  }
+  function bind(btns) {
+    Array.prototype.forEach.call(btns, function (btn) {
+      btn.addEventListener("click", function () { btn.classList.toggle("on"); apply(); });
+    });
+  }
+  bind(brokerBtns);
+  bind(classBtns);
+  if (sortSel) sortSel.addEventListener("change", apply);
+  if (search) search.addEventListener("input", apply);
+  apply();
+})();
+</script>
+{% endif %}

@@ -93,9 +93,17 @@ script:
           entity_id:
             - input_boolean.rezhim_ushel
             - input_boolean.rezhim_otpusk
+      # двойной on — типичный фикс «мигнул и погас» на дешёвых Zigbee диммерах
       - service: light.turn_on
         target:
           entity_id: light.empire_vannaya_svet
+        data:
+          brightness_pct: 100
+      - delay:
+          milliseconds: 400
+      - service: light.turn_on
+        target:
+          entity_id: light.tz3000_mgusv51k_ts0052
         data:
           brightness_pct: 100
 
@@ -105,6 +113,11 @@ script:
       - service: light.turn_off
         target:
           entity_id: light.empire_vannaya_svet
+      - delay:
+          milliseconds: 300
+      - service: light.turn_off
+        target:
+          entity_id: light.tz3000_mgusv51k_ts0052
 
   rezhim_ushel_vklyuchit:
     alias: "Ушёл — включить"

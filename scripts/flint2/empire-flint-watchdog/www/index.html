@@ -24,9 +24,9 @@
     <a id="migrate-link" class="btn primary big" href="https://neverretire.ru/home-ops/">Открыть neverretire.ru/home-ops</a>
   </section>
 
-  <section id="auth-gate" class="card hidden">
+  <section id="auth-gate" class="card">
     <h2>Токен доступа</h2>
-    <p class="hint">Один раз введи токен. На HTTPS-зеркале это другой «сайт» — токен с 192.168.1.1 сюда сам не переносится.</p>
+    <p class="hint">Зеркало neverretire.ru — отдельный сайт: токен с Wi‑Fi (192.168.1.1) сюда сам не переносится. Один раз вставь токен с VPS: <code>cat /etc/empire/flint-ui.token</code></p>
     <input id="token-input" type="password" autocomplete="off" placeholder="токен">
     <button type="button" id="btn-save-token" class="btn primary">Сохранить</button>
   </section>
@@ -38,6 +38,20 @@
     </div>
     <div id="checks" class="checks"></div>
     <p id="watchdog-meta" class="meta"></p>
+  </section>
+
+  <section class="card" id="ha-healer-card">
+    <div class="row-between">
+      <h2>HA хилер</h2>
+      <span id="ha-healer-badge" class="badge">—</span>
+    </div>
+    <div id="ha-healer-checks" class="checks"></div>
+    <p id="ha-healer-meta" class="meta"></p>
+    <div class="actions">
+      <button type="button" class="btn primary" data-act="ha_heal">Прогнать HA хилер</button>
+      <button type="button" class="btn warn" data-act="ha_heal" data-svc="force">Принудительно</button>
+    </div>
+    <pre id="ha-healer-log" class="out log"></pre>
   </section>
 
   <section class="card">

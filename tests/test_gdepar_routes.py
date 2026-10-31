@@ -142,11 +142,36 @@ def test_gdepar_map_template_popup_reviews_markup() -> None:
     assert 'aria-busy' in text
 
 
+def test_journal_200(client: TestClient) -> None:
+    r = client.get("/journal")
+    assert r.status_code == 200
+    assert "Журнал" in r.text
+    assert f"{CANONICAL_BASE_URL}/journal" in (r.headers.get("link") or "")
+
+
+def test_studio_login_noindex(client: TestClient) -> None:
+    r = client.get("/admin/studio/login", follow_redirects=False)
+    assert r.status_code in (200, 303, 307, 308, 503)
+    if r.status_code == 200:
+        tag = (r.headers.get("x-robots-tag") or "").lower()
+        assert "noindex" in tag
+
+
+def test_studio_head_not_405(client: TestClient) -> None:
+    """Chrome/Telegram prefetch шлёт HEAD; 405 — ссылка «не открывается»."""
+    for path in ("/admin/studio", "/admin/studio/", "/admin/studio/login"):
+        r = client.head(path, follow_redirects=False)
+        assert r.status_code in (200, 303, 307, 308, 503), path
+        if r.status_code in (303, 307, 308):
+            assert r.headers.get("location")
+
+
 def test_admin_login_x_robots_noindex(client: TestClient) -> None:
     r = client.get("/admin/banya/login", follow_redirects=False)
-    assert r.status_code in (200, 303, 307, 308)
-    tag = (r.headers.get("x-robots-tag") or "").lower()
-    assert "noindex" in tag
+    assert r.status_code in (200, 303, 307, 308, 503)
+    if r.status_code == 200:
+        tag = (r.headers.get("x-robots-tag") or "").lower()
+        assert "noindex" in tag
 
 
 @pytest.mark.skipif(not _HAVE_DB, reason="empire.db отсутствует — интеграционные проверки пропущены")

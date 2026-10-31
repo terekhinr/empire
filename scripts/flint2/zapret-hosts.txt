@@ -1,0 +1,42 @@
+# Хостлист для zapret (режим БЕЗ VPS и failover, когда YouTube идёт напрямую в WAN).
+# В режиме С VPS эти домены уходят в VLESS через FakeIP — zapret их не трогает
+# (подсеть 198.18.0.0/15). Не держите ОДИН и тот же домен одновременно
+# в russia_inside podkop и в активной обработке nfqws: диагностика podkop
+# «Прокси-трафик через FakeIP» падает (podkop.net/docs/diagnostics).
+#
+# Формат: один домен на строку, без www. (zapret матчит suffix).
+youtube.com
+googlevideo.com
+ytimg.com
+ggpht.com
+youtu.be
+youtubei.googleapis.com
+yt3.ggpht.com
+jnn-pa.googleapis.com
+widevine.com
+instagram.com
+cdninstagram.com
+facebook.com
+fbcdn.net
+tiktok.com
+tiktokv.com
+tiktokcdn.com
+twitter.com
+x.com
+twimg.com
+discord.com
+discord.gg
+discordapp.com
+discord.media
+updates.discord.com
+telegram.org
+t.me
+tdesktop.com
+reddit.com
+rutracker.org
+rutracker.net
+rutor.info
+nnmclub.to
+flibusta.is
+windsurf.dev
+codeium.com

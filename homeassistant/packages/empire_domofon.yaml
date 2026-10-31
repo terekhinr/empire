@@ -1,41 +1,120 @@
-# SmartIntercom (ESPHome) — открытие и Telegram при звонке.
-# Сущности появятся после прошивки: docs/HA_SMARTINTERCOM_ESPHOME.md
+# SmartIntercom (BlueStreak MQTT) — TG + Алиса при звонке, открытие.
+# Брокер: Mosquitto addon на HA (локально, без оплаты).
+# IP модуля: 192.168.1.101 · docs/HA_SMARTINTERCOM_MQTT.md
+#
+# Важно для звонка трубки: «Открыть дверь» и «Курьер» должны быть off.
+# Иначе модуль сразу занимает линию — штатная трубка молчит.
+# «Рингтон» в веб-UI — только для COMMAX (mp3 на вызывной блок), не для аналоговой трубки.
 
 script:
   empire_domofon_otkryt:
     alias: "Домофон — открыть"
-    description: "Разовое открытие через SmartIntercom (ESPHome accept_call)"
+    description: "Разовое открытие через SmartIntercom MQTT (Открыть дверь)"
     mode: single
     sequence:
       - choose:
           - conditions:
               - condition: template
                 value_template: >-
-                  {{ states('switch.smartintercom_accept_call') not in
+                  {{ states('switch.smartintercom_otkryt_dver') not in
                      ['unknown', 'unavailable', 'none', ''] }}
             sequence:
               - service: switch.turn_on
                 target:
-                  entity_id: switch.smartintercom_accept_call
+                  entity_id: switch.smartintercom_otkryt_dver
         default:
           - service: persistent_notification.create
             data:
               title: "Домофон недоступен"
               message: >-
-                Модуль 192.168.1.65 не в сети. Проверьте питание и Wi‑Fi;
-                откройте http://192.168.1.65/ в браузере.
+                Модуль 192.168.1.101 не в MQTT. Проверьте питание и Wi‑Fi;
+                откройте http://192.168.1.101/ · сервер 192.168.1.41:1883.
+
+  empire_domofon_alice_announce:
+    alias: "Домофон — сказать на всех Алисах"
+    description: >-
+      TTS на все media_player Яндекс.Станций (интеграция Yandex Station).
+      Без колонок — persistent_notification с подсказкой про QR.
+    mode: single
+    sequence:
+      - variables:
+          speakers: >-
+            {{ states.media_player
+               | selectattr('entity_id', 'search', 'yandex')
+               | map(attribute='entity_id')
+               | list }}
+          # Яндекс: volume_level 0.0–1.0 → 6 из 10
+          vol_announce: 0.6
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ speakers | count > 0 }}"
+            sequence:
+              - service: media_player.volume_set
+                target:
+                  entity_id: "{{ speakers }}"
+                data:
+                  volume_level: "{{ vol_announce }}"
+              - delay:
+                  milliseconds: 300
+              - service: media_player.play_media
+                target:
+                  entity_id: "{{ speakers }}"
+                data:
+                  media_content_type: text
+                  media_content_id: "Звонок в домофон"
+        default:
+          - service: persistent_notification.create
+            data:
+              notification_id: empire_domofon_alice_missing
+              title: "Домофон → Алиса"
+              message: >-
+                Колонки не видны в HA. Настройки → Устройства → Добавить
+                интеграцию → Yandex Station → вход по QR. После появления
+                media_player.* повторный звонок озвучит все станции.
 
 automation:
-  - id: empire_domofon_telegram
-    alias: "Домофон — Telegram при звонке"
-    description: "line_detect on → уведомление в Telegram"
+  - id: empire_domofon_call_notify
+    alias: "Домофон — Telegram и Алиса при звонке"
+    description: >-
+      line_detect on → параллельно TG и TTS на все Алисы.
+      Трубка звонит сама по линии (если не заняты режимы Открыть/Курьер).
     mode: single
     trigger:
       - platform: state
-        entity_id: binary_sensor.smartintercom_line_detect
+        entity_id: binary_sensor.smartintercom_detektor_vyzova
         from: "off"
         to: "on"
     action:
-      - service: rest_command.empire_telegram
-        data:
-          message: "Звонок в домофон!"
+      - parallel:
+          - service: rest_command.empire_telegram_domofon
+            data:
+              message: "Звонок в домофон!"
+          - service: script.empire_domofon_alice_announce
+
+  # Защита: залипшие «Открыть» / «Курьер» глушат трубку на следующем вызове.
+  - id: empire_domofon_clear_stuck_open
+    alias: "Домофон — сброс залипшего Открыть"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.smartintercom_otkryt_dver
+        to: "on"
+        for: "00:15:00"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.smartintercom_otkryt_dver
+
+  - id: empire_domofon_clear_stuck_courier
+    alias: "Домофон — сброс залипшего Курьер"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.smartintercom_otkryt_kureru
+        to: "on"
+        for: "00:15:00"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.smartintercom_otkryt_kureru

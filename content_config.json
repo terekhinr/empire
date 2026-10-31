@@ -1,15 +1,20 @@
 {
   "garden": {
-    "_comment": "До 31.10.2026: Степаныч curated Вт+Сб 12:00 + луна Ср/Сб 20:00. Без План на день / LLM.",
+    "_comment": "2026-10-23: луна + promo как 17.10. Практические Степаныча — очередь Obsidian, не этот автопост.",
+    "_studio_pilot": false,
     "schedule": [
       "12:00",
       "20:00"
     ],
     "topics": {
-      "0": {},
-      "1": {
+      "0": {
         "12:00": {
-          "type": "garden_curated"
+          "type": "bot_promo"
+        }
+      },
+      "1": {
+        "20:00": {
+          "type": "kizima_lunar"
         }
       },
       "2": {
@@ -17,173 +22,101 @@
           "type": "kizima_lunar"
         }
       },
-      "3": {},
-      "4": {},
+      "3": {
+        "20:00": {
+          "type": "kizima_lunar"
+        }
+      },
+      "4": {
+        "20:00": {
+          "type": "kizima_lunar"
+        }
+      },
       "5": {
         "12:00": {
-          "type": "garden_curated"
+          "type": "bot_promo"
         },
         "20:00": {
           "type": "kizima_lunar"
         }
       },
-      "6": {}
+      "6": {
+        "20:00": {
+          "type": "kizima_lunar"
+        }
+      }
     }
   },
   "lenin": {
-    "_comment": "Календарь · рубрика · вечер ПСС/сказка. Сб 19:00 bedtime.",
+    "_comment": "2026-08-27 triage: 1 пост/день (12:00 рубрика). Календарь и вечер сняты — 3/день жгло базу.",
     "schedule": [
-      "08:30",
-      "12:00",
-      "19:00"
+      "12:00"
     ],
     "topics": {
       "0": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_pss"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "1": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_book"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "2": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_pss"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "3": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_book"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "4": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_pss"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "5": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "lenin_book",
-          "_comment": "Сб вечер: сказка/стих на ночь (bedtime)"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       },
       "6": {
         "12:00": {
           "type": "lenin_rubric"
-        },
-        "19:00": {
-          "type": "channel_support"
-        },
-        "08:30": {
-          "type": "lenin_calendar"
         }
       }
     }
   },
   "stern": {
-    "_comment": "Curated + gallery 2×/нед + техника сб. Без ежедневного LLM / weekly_plan.",
+    "_comment": "2026-08-27 triage: только athletic_legacy Вт/Чт 10:00. curated/technique сняты (media=0).",
     "schedule": [
-      "09:30",
-      "10:00",
-      "15:00",
-      "19:00"
+      "10:00"
     ],
     "topics": {
-      "0": {
-        "19:00": {
-          "type": "stern_curated",
-          "slot": "1900"
-        }
-      },
+      "0": {},
       "1": {
-        "09:30": {
-          "type": "stern_curated",
-          "slot": "0930"
-        },
         "10:00": {
           "type": "stern_rubric",
           "rubric": "athletic_legacy"
         }
       },
-      "2": {
-        "19:00": {
-          "type": "stern_curated",
-          "slot": "1900"
-        }
-      },
+      "2": {},
       "3": {
-        "09:30": {
-          "type": "stern_curated",
-          "slot": "0930"
-        },
         "10:00": {
           "type": "stern_rubric",
           "rubric": "athletic_legacy"
         }
       },
-      "4": {
-        "19:00": {
-          "type": "stern_curated",
-          "slot": "1900"
-        }
-      },
-      "5": {
-        "15:00": {
-          "type": "stern_technique"
-        },
-        "19:00": {
-          "type": "stern_curated",
-          "slot": "1900"
-        }
-      },
-      "6": {
-        "09:30": {
-          "type": "stern_curated",
-          "slot": "0930"
-        }
-      }
+      "4": {},
+      "5": {},
+      "6": {}
     }
   },
   "gdepar": {
-    "_comment": "3 поста/день curated. Монолог основной; дуэт ≤4/нед (стратегия 18.07). LLM свободных тем отключён.",
+    "_comment": "3/день. 11:00 Ср–Вс: duo_curated (fallback → mono, пока media/gdepar/topics пуст). Пн promo, Вт book.",
     "schedule": [
       "11:00",
       "15:00",
@@ -217,20 +150,20 @@
       },
       "2": {
         "11:00": {
-          "type": "mono_curated",
+          "type": "duo_curated",
           "pool": "practice"
         },
         "15:00": {
           "type": "classic_banya"
         },
         "21:00": {
-          "type": "duo_curated",
+          "type": "mono_curated",
           "pool": "evening"
         }
       },
       "3": {
         "11:00": {
-          "type": "mono_curated",
+          "type": "duo_curated",
           "pool": "practice"
         },
         "15:00": {
@@ -256,27 +189,27 @@
       },
       "5": {
         "11:00": {
-          "type": "mono_curated",
+          "type": "duo_curated",
           "pool": "practice"
         },
         "15:00": {
           "type": "classic_banya"
         },
         "21:00": {
-          "type": "duo_curated",
+          "type": "mono_curated",
           "pool": "evening"
         }
       },
       "6": {
         "11:00": {
-          "type": "mono_curated",
+          "type": "duo_curated",
           "pool": "practice"
         },
         "15:00": {
           "type": "classic_banya"
         },
         "21:00": {
-          "type": "duo_curated",
+          "type": "mono_curated",
           "pool": "evening"
         }
       }

@@ -10,7 +10,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent
 _DATA_PATH = _ROOT / "data" / "stern_curated.json"
 _HISTORY_PATH = _ROOT / "data" / "stern_curated_used.json"
-_COOLDOWN_DAYS = 28
+_COOLDOWN_DAYS = 30
 # Совпадает с data/auto_publish.json → rubrics.stern_matrix_curated.min_body_chars
 _MIN_BODY_CHARS = 220
 

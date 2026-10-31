@@ -32,6 +32,7 @@ def _render_hero(m: SnowballMetrics):
             fmt_rub(m.day_change_abs, signed=True) if m.day_change_abs is not None else "—",
             fmt_pct(m.day_change_pct) if m.day_change_pct is not None else "—",
             day_pos,
+            as_of=m.price_as_of,
         ),
         unsafe_allow_html=True,
     )
@@ -45,7 +46,6 @@ def _render_primary_kpis(m: SnowballMetrics):
     st.markdown('<div class="sb-section-title">Ключевые показатели</div>', unsafe_allow_html=True)
     r1 = st.columns(5)
     profit_cls = color_class(m.profit_abs)
-    day_cls = color_class(m.day_change_abs)
     _kpi_row(
         r1,
         [
@@ -62,19 +62,19 @@ def _render_primary_kpis(m: SnowballMetrics):
                 None,
                 profit_cls,
             ),
-            ("XIRR", fmt_xirr(m.xirr), "годовых", ""),
+            ("XIRR", fmt_xirr(m.xirr), "MWR · годовых", ""),
             (
-                "Сегодня",
-                fmt_rub(m.day_change_abs, signed=True) if m.day_change_abs is not None else "—",
-                fmt_pct(m.day_change_pct) if m.day_change_pct is not None else None,
-                day_cls,
+                "TWR",
+                fmt_pct(m.twr_pct, signed=True) if m.twr_pct is not None else "—",
+                fmt_pct(m.twr_annual_pct, signed=True) + " год." if m.twr_annual_pct is not None else "накопленный",
+                color_class(m.twr_pct),
             ),
         ],
     )
 
 
 def _render_secondary_kpis(m: SnowballMetrics):
-    r2 = st.columns(5)
+    r2 = st.columns(6)
     month_cls = color_class(m.month_change_abs)
     ytd_cls = color_class(m.ytd_change_abs)
     total_income = (m.profit_abs or 0) + m.dividends + m.coupons
@@ -90,10 +90,16 @@ def _render_secondary_kpis(m: SnowballMetrics):
             ),
             ("Дивиденды", fmt_rub(m.dividends), None, ""),
             ("Купоны", fmt_rub(m.coupons), None, ""),
+            (
+                "Реализ. P&L",
+                fmt_rub(m.realized_pnl, signed=True) if m.realized_pnl else "—",
+                None,
+                color_class(m.realized_pnl),
+            ),
             ("Всего доход", fmt_rub(total_income, signed=True), "прибыль + выплаты", ""),
         ],
     )
-    r3 = st.columns(4)
+    r3 = st.columns(5)
     _kpi_row(
         r3,
         [
@@ -117,6 +123,12 @@ def _render_secondary_kpis(m: SnowballMetrics):
                 "от стоимости портфеля",
                 "",
             ),
+            (
+                "YOC",
+                fmt_pct(m.yield_on_cost_pct, signed=False) if m.yield_on_cost_pct is not None else "—",
+                "выплаты / себестоимость",
+                "",
+            ),
             ("Выплаты", fmt_rub(m.dividends + m.coupons), "дивиденды + купоны", ""),
         ],
     )
@@ -125,7 +137,7 @@ def _render_secondary_kpis(m: SnowballMetrics):
 def _allocation_charts(m: SnowballMetrics):
     st.markdown('<div class="sb-section-title">Структура портфеля</div>', unsafe_allow_html=True)
     left, right = st.columns(2)
-    palette = ["#0d9488", "#2563eb", "#f59e0b", "#8b5cf6", "#64748b"]
+    palette = ["#0d9488", "#2563eb", "#f59e0b", "#8b5cf6", "#64748b", "#ef4444"]
 
     with left:
         if m.by_class:
@@ -276,6 +288,7 @@ def _performance_chart(conn):
 
 def _positions_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
+    price_on = df["price_date"] if "price_date" in df.columns else pd.Series([None] * len(df))
     return pd.DataFrame(
         {
             "Брокер": df["broker"],
@@ -286,6 +299,7 @@ def _positions_dataframe(rows: list[dict]) -> pd.DataFrame:
             "Кол-во": pd.to_numeric(df["quantity"], errors="coerce"),
             "Ср. цена": pd.to_numeric(df["avg_price"], errors="coerce"),
             "Цена": pd.to_numeric(df["last_price"], errors="coerce"),
+            "Цена на": price_on,
             "Стоимость": pd.to_numeric(df["market_value"], errors="coerce"),
             "Доля %": pd.to_numeric(df["share_pct"], errors="coerce"),
             "P&L ₽": pd.to_numeric(df["pnl"], errors="coerce"),
@@ -338,6 +352,10 @@ def _render_dashboard(m: SnowballMetrics, rows: list[dict], cushion: float, conn
                 st.rerun()
 
     _render_hero(m)
+    if m.unpriced:
+        shown = ", ".join(m.unpriced[:15])
+        extra = f" и ещё {len(m.unpriced) - 15}" if len(m.unpriced) > 15 else ""
+        st.warning(f"Нет котировки MOEX на момент анализа: {shown}{extra}")
     _render_primary_kpis(m)
     st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
     _render_secondary_kpis(m)
@@ -470,10 +488,14 @@ def _render_settings_snowball():
 **Ориентир UI:** [Snowball Analytics](https://snowball-analytics.com/) — лучшие отзывы среди
 IntelInvest / Snowball / BlackTerminal для сводки и метрик. Импорт брокеров — ваш DIY-контур Empire.
 
-1. `PORTFOLIO_TBANK_TOKEN` — Т-Инвестиции API  
-2. Отчёт Альфы (XLS) — новые покупки  
-3. ГПБ — ручной ввод  
-4. Пополнения — для XIRR  
+1. `PORTFOLIO_TBANK_TOKEN` — Т-Инвестиции API (все открытые счета)  
+2. Отчёт Альфы (XLS/XLSX) — сделки и остатки  
+3. Отчёт ВТБ (XLSX) — остатки и сделки  
+4. ГПБ / Ньютон — HTML-отчёт или ручной ввод  
+5. Пополнения — для XIRR / TWR  
+
+Котировки: MOEX на дату анализа. Облигации — грязная цена (номинал × % + НКД).
+Отдельное окно: `./venv/bin/streamlit run portfolio/app.py --server.port 8502`
         """
     )
 
@@ -482,7 +504,7 @@ def page_portfolio_snowball():
     inject_snowball_css()
     st.markdown(
         '<div class="sb-wrap"><span class="sb-pill">Snowball UI</span> '
-        '<span class="sb-note">4 брокера · MOEX · XIRR</span></div>',
+        '<span class="sb-note">Альфа · Т-Банк · ВТБ · ГПБ · MOEX на момент анализа</span></div>',
         unsafe_allow_html=True,
     )
 

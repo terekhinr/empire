@@ -2,20 +2,20 @@
   "name": "Задачник",
   "short_name": "Задачник",
   "description": "Задачи, замеры тела и тренировки — синхронизация между телефоном и ПК",
-  "start_url": "/tasks/",
-  "scope": "/tasks/",
+  "start_url": "/x/?src=pwa81",
+  "scope": "/x/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
   "icons": [
     {
-      "src": "/tasks/assets/icon-192.png",
+      "src": "/x/assets/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/tasks/assets/icon-512.png",
+      "src": "/x/assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -24,23 +24,23 @@
   "shortcuts": [
     {
       "name": "Новая задача",
-      "url": "/tasks/?action=new",
-      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+      "url": "/x/?action=new",
+      "icons": [{ "src": "/x/assets/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "ИИ-ассистент",
-      "url": "/tasks/?view=assistant",
-      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+      "url": "/x/?view=assistant",
+      "icons": [{ "src": "/x/assets/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Когда-нибудь",
-      "url": "/tasks/?view=someday",
-      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+      "url": "/x/?view=someday",
+      "icons": [{ "src": "/x/assets/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Замеры",
-      "url": "/tasks/?view=measurements",
-      "icons": [{ "src": "/tasks/assets/icon-192.png", "sizes": "192x192" }]
+      "url": "/x/?view=measurements",
+      "icons": [{ "src": "/x/assets/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

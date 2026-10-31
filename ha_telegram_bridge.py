@@ -48,31 +48,79 @@ def _auth_ok(request: web.Request) -> bool:
     return auth == f"Bearer {HA_NOTIFY_TOKEN}"
 
 
-async def _send_telegram_direct(message: str) -> tuple[bool, str]:
+def _domofon_keyboard() -> dict:
+    """Inline-кнопки для звонка в домофон (callback ловит empire_main)."""
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "🚪 Открыть", "callback_data": "domofon_open"},
+                {"text": "📦 Курьер", "callback_data": "domofon_delivery"},
+            ],
+            [
+                {"text": "📵 Сброс", "callback_data": "domofon_reject"},
+            ],
+        ]
+    }
+
+
+def _reply_markup_for(message: str, body: dict | None = None) -> dict | None:
+    if body and isinstance(body.get("reply_markup"), dict):
+        return body["reply_markup"]
+    if body and body.get("domofon_buttons"):
+        return _domofon_keyboard()
+    low = message.casefold()
+    if "звонок в домофон" in low or low.strip().startswith("домофон"):
+        return _domofon_keyboard()
+    return None
+
+
+async def _send_telegram_direct(
+    message: str, reply_markup: dict | None = None
+) -> tuple[bool, str]:
     if not TELEGRAM_TOKEN or not ADMIN_ID:
         return False, "telegram not configured"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload: dict = {"chat_id": ADMIN_ID, "text": message}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
     try:
         async with aiohttp.ClientSession(timeout=HTTP_TIMEOUT) as session:
-            async with session.post(
-                url, json={"chat_id": ADMIN_ID, "text": message}
-            ) as resp:
+            async with session.post(url, json=payload) as resp:
                 body = await resp.text()
-                if resp.status == 200:
-                    return True, "ok"
-                return False, f"telegram HTTP {resp.status}: {body[:200]}"
+                if resp.status != 200:
+                    return False, f"telegram HTTP {resp.status}: {body[:200]}"
+                import json as _json
+
+                try:
+                    data = _json.loads(body)
+                except Exception:
+                    data = {}
+                result = (data or {}).get("result") or {}
+                if reply_markup and not result.get("reply_markup"):
+                    log.error(
+                        "telegram accepted message but stripped reply_markup: %s",
+                        body[:300],
+                    )
+                    return False, "telegram stripped reply_markup"
+                return True, "ok"
     except Exception as exc:
         return False, str(exc)
 
 
-async def _forward_vps(message: str, auth: str) -> tuple[bool, str]:
+async def _forward_vps(
+    message: str, auth: str, reply_markup: dict | None = None
+) -> tuple[bool, str]:
     if not FORWARD_URL:
         return False, "forward not configured"
+    payload: dict = {"message": message}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+        payload["domofon_buttons"] = True
     try:
         async with aiohttp.ClientSession(timeout=HTTP_TIMEOUT) as session:
             async with session.post(
                 FORWARD_URL,
-                json={"message": message},
+                json=payload,
                 headers={"Authorization": auth, "Content-Type": "application/json"},
             ) as resp:
                 body = await resp.text()
@@ -83,14 +131,16 @@ async def _forward_vps(message: str, auth: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
-async def _dispatch(message: str, auth: str) -> tuple[bool, str]:
+async def _dispatch(
+    message: str, auth: str, reply_markup: dict | None = None
+) -> tuple[bool, str]:
     if FORWARD_ONLY and FORWARD_URL:
-        ok, detail = await _forward_vps(message, auth)
+        ok, detail = await _forward_vps(message, auth, reply_markup)
     else:
-        ok, detail = await _send_telegram_direct(message)
+        ok, detail = await _send_telegram_direct(message, reply_markup)
         if not ok and FORWARD_URL:
             log.warning("direct telegram failed: %s; forward to VPS", detail)
-            ok, detail = await _forward_vps(message, auth)
+            ok, detail = await _forward_vps(message, auth, reply_markup)
     return ok, detail
 
 
@@ -107,11 +157,14 @@ async def notify(request: web.Request) -> web.Response:
     if _is_camera_notify(message):
         log.info("dropped camera notify: %s", message[:80])
         return web.json_response({"ok": True, "dropped": "camera"})
-    ok, detail = await _dispatch(message, request.headers.get("Authorization", ""))
+    markup = _reply_markup_for(message, body)
+    ok, detail = await _dispatch(
+        message, request.headers.get("Authorization", ""), markup
+    )
     if not ok:
         log.error("notify failed: %s", detail)
         return web.json_response({"error": detail}, status=502)
-    log.info("sent: %s (%s)", message[:80], detail)
+    log.info("sent: %s (%s) kb=%s", message[:80], detail, bool(markup))
     return web.json_response({"ok": True})
 
 
@@ -125,10 +178,13 @@ async def notify_get(request: web.Request) -> web.Response:
     if _is_camera_notify(message):
         log.info("dropped camera notify (GET): %s", message[:80])
         return web.json_response({"ok": True, "dropped": "camera"})
-    ok, detail = await _dispatch(message, request.headers.get("Authorization", ""))
+    markup = _reply_markup_for(message, {"domofon_buttons": request.query.get("domofon") == "1"})
+    ok, detail = await _dispatch(
+        message, request.headers.get("Authorization", ""), markup
+    )
     if not ok:
         return web.json_response({"error": detail}, status=502)
-    log.info("sent (GET): %s (%s)", message[:80], detail)
+    log.info("sent (GET): %s (%s) kb=%s", message[:80], detail, bool(markup))
     return web.json_response({"ok": True})
 
 

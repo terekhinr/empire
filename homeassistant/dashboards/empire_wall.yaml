@@ -231,29 +231,24 @@ views:
                         name: "%"
                         color: "#38bdf8"
                         y_axis: secondary
-                  - type: custom:mini-graph-card
-                    name: Балкон
+                  - type: custom:mushroom-template-card
+                    primary: Балкон
                     icon: mdi:balcony
-                    hours_to_show: 24
-                    points_per_hour: 2
-                    line_width: 2
-                    font_size: 75
-                    animate: true
-                    show:
-                      name: true
-                      icon: true
-                      state: true
-                      legend: false
-                      graph: sparkline
-                      fill: fade
-                    entities:
-                      - entity: sensor.balkon_temperatura
-                        name: t°
-                        color: "#ef4444"
-                      - entity: sensor.balkon_vlazhnost
-                        name: "%"
-                        color: "#38bdf8"
-                        y_axis: secondary
+                    icon_color: >-
+                      {{ 'red' if states('sensor.balkon_temperatura') not in
+                         ['unknown','unavailable','none',''] else 'grey' }}
+                    secondary: >-
+                      {% set t = states('sensor.balkon_temperatura') %}
+                      {% set h = states('sensor.balkon_vlazhnost') %}
+                      {% if t not in ['unknown','unavailable','none',''] %}
+                        {{ t | float | round(1) }} °C · {{ h }}%
+                      {% else %}
+                        офлайн · кнопка на SRW-TH01 1 сек
+                      {% endif %}
+                    layout: horizontal
+                    tap_action:
+                      action: more-info
+                      entity: sensor.balkon_temperatura
                   - type: custom:mini-graph-card
                     name: Спальня
                     icon: mdi:bed
@@ -278,36 +273,40 @@ views:
                         color: "#64748b"
                   - type: horizontal-stack
                     cards:
-                      - type: custom:mini-graph-card
-                        name: Детская
+                      - type: custom:mushroom-template-card
+                        primary: Детская
                         icon: mdi:account-child
-                        hours_to_show: 12
-                        line_width: 2
-                        font_size: 65
-                        show:
-                          name: true
-                          icon: true
-                          state: true
-                          graph: sparkline
-                          fill: fade
-                        entities:
-                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
-                            color: "#00d4aa"
-                      - type: custom:mini-graph-card
-                        name: Семён
+                        icon_color: >-
+                          {{ 'teal' if states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') not in
+                             ['unknown','unavailable','none',''] else 'grey' }}
+                        secondary: >-
+                          {% set t = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura') %}
+                          {% if t not in ['unknown','unavailable','none',''] %}
+                            {{ t | float | round(1) }} °C
+                          {% else %}
+                            офлайн с 4.10 · кнопка 5–10 с
+                          {% endif %}
+                        layout: vertical
+                        tap_action:
+                          action: more-info
+                          entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura
+                      - type: custom:mushroom-template-card
+                        primary: Семён
                         icon: mdi:account-child-circle
-                        hours_to_show: 12
-                        line_width: 2
-                        font_size: 65
-                        show:
-                          name: true
-                          icon: true
-                          state: true
-                          graph: sparkline
-                          fill: fade
-                        entities:
-                          - entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
-                            color: "#a78bfa"
+                        icon_color: >-
+                          {{ 'purple' if states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2') not in
+                             ['unknown','unavailable','none',''] else 'grey' }}
+                        secondary: >-
+                          {% set t = states('sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2') %}
+                          {% if t not in ['unknown','unavailable','none',''] %}
+                            {{ t | float | round(1) }} °C
+                          {% else %}
+                            офлайн с 23.09 · батарейка / кнопка
+                          {% endif %}
+                        layout: vertical
+                        tap_action:
+                          action: more-info
+                          entity: sensor.ewelink_ck_tlsr8656_ss5_01_7014_temperatura_2
 
               # Правая колонка: свет
               - type: vertical-stack

@@ -1,0 +1,547 @@
+{
+  "version": 2,
+  "mode": "test",
+  "slots": [
+    {
+      "id": "slot-001",
+      "project_id": "tg:garden",
+      "weekday": 1,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-002",
+      "project_id": "tg:garden",
+      "weekday": 2,
+      "time": "20:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-003",
+      "project_id": "tg:garden",
+      "weekday": 5,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-004",
+      "project_id": "tg:garden",
+      "weekday": 5,
+      "time": "20:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-005",
+      "project_id": "tg:lenin",
+      "weekday": 0,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-006",
+      "project_id": "tg:lenin",
+      "weekday": 1,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-007",
+      "project_id": "tg:lenin",
+      "weekday": 2,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-008",
+      "project_id": "tg:lenin",
+      "weekday": 3,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-009",
+      "project_id": "tg:lenin",
+      "weekday": 4,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-010",
+      "project_id": "tg:lenin",
+      "weekday": 5,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-011",
+      "project_id": "tg:lenin",
+      "weekday": 6,
+      "time": "12:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-012",
+      "project_id": "tg:stern",
+      "weekday": 1,
+      "time": "10:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-013",
+      "project_id": "tg:stern",
+      "weekday": 3,
+      "time": "10:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-014",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-015",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-016",
+      "project_id": "tg:gdepar",
+      "weekday": 0,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-017",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-018",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-019",
+      "project_id": "tg:gdepar",
+      "weekday": 1,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-020",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-021",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-022",
+      "project_id": "tg:gdepar",
+      "weekday": 2,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-023",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-024",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-025",
+      "project_id": "tg:gdepar",
+      "weekday": 3,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-026",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-027",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-028",
+      "project_id": "tg:gdepar",
+      "weekday": 4,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-029",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-030",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-031",
+      "project_id": "tg:gdepar",
+      "weekday": 5,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-032",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "11:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-033",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "15:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-034",
+      "project_id": "tg:gdepar",
+      "weekday": 6,
+      "time": "21:00",
+      "label": "",
+      "enabled": true
+    },
+    {
+      "id": "slot-035",
+      "project_id": "site:gdepar",
+      "weekday": 0,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-036",
+      "project_id": "site:gdepar",
+      "weekday": 2,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-037",
+      "project_id": "site:gdepar",
+      "weekday": 4,
+      "time": "10:00",
+      "label": "Журнал",
+      "enabled": true
+    },
+    {
+      "id": "slot-038",
+      "project_id": "site:neverretire",
+      "weekday": 1,
+      "time": "10:00",
+      "label": "Статья",
+      "enabled": true
+    },
+    {
+      "id": "slot-039",
+      "project_id": "site:neverretire",
+      "weekday": 3,
+      "time": "10:00",
+      "label": "Статья",
+      "enabled": true
+    }
+  ],
+  "posts": [
+    {
+      "id": "post-c0c2b62fef",
+      "project_id": "tg:gdepar",
+      "title": "Лёгкий пар без героизма",
+      "body": "Не надо «выживать» в каменке. Задача проще: выйти сухим, в настроении, и чтобы завтра хотелось вернуться.\n\nТри правила на этот заход:\n1. Первые пять минут — молча, пар поднимаете сами.\n2. Вода на камни — мало и часто, не ковш сразу.\n3. Если кто-то орёт «ещё» — это не ваша смена командовать.\n\nКарта бань: gdepar.ru",
+      "source_filename": "gdepar_utro.md",
+      "slot_id": "slot-019",
+      "scheduled_at": "2026-09-08 21:00",
+      "status": "test_sent",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "published_at": "2026-09-08T14:53:03+00:00",
+      "last_error": null,
+      "image_path": "/root/projects/empire/media/gdepar/classic/aa_fadeev_banya.jpg",
+      "external_id": "test:post-c0c2b62fef"
+    },
+    {
+      "id": "post-03842c2bad",
+      "project_id": "tg:gdepar",
+      "title": "Чай после полка",
+      "body": "После третьего захода разговор сам становится короче. Это нормально.\n\nТермос лучше банки. Если банку всё же открыли — хотя бы не в предбаннике, где люди одеваются и думают о автобусе.\n\nВечерний пост не обязан учить. Достаточно, чтобы было тепло.",
+      "source_filename": "gdepar_vecher.md",
+      "slot_id": "slot-020",
+      "scheduled_at": "2026-09-09 11:00",
+      "status": "test_sent",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "published_at": "2026-09-08T14:53:03+00:00",
+      "last_error": null,
+      "image_path": "/root/projects/empire/media/gdepar/classic/vp_astafev_derevenskiy.jpg",
+      "external_id": "test:post-03842c2bad"
+    },
+    {
+      "id": "post-2f8932f925",
+      "project_id": "site:gdepar",
+      "title": "Как читать карту бань",
+      "body": "Коротко, без поэзии.\n\nНа gdepar.ru точка — это не рейтинг «звёзд», а место, куда можно доехать и понять, дрова там или электричество. Телефон показывается по клику, чтобы зал не звонили «просто посмотреть».\n\nЕсли бани нет на карте — напишите. Черновик лучше пустого квадрата города.",
+      "source_filename": "site_zhurnal.md",
+      "slot_id": "slot-036",
+      "scheduled_at": "2026-09-09 10:00",
+      "status": "test_sent",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "published_at": "2026-09-08T14:53:03+00:00",
+      "last_error": null,
+      "image_path": "/root/projects/empire/media/gdepar/classic/vp_astafev_banya.jpg",
+      "external_id": "test:post-2f8932f925"
+    },
+    {
+      "id": "post-1445225026",
+      "project_id": "tg:gdepar",
+      "title": "Миф про веник",
+      "body": "Веник не оружие. Если листья сыпятся сразу — вы пересушили, а не «так надо».",
+      "source_filename": null,
+      "slot_id": "slot-014",
+      "scheduled_at": "2026-09-14 11:00",
+      "status": "skipped",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "last_error": "body_too_short<80",
+      "published_at": "2026-09-08T14:53:03+00:00"
+    },
+    {
+      "id": "post-1368dae3f2",
+      "project_id": "tg:gdepar",
+      "title": "Классика полка",
+      "body": "Верхняя полка не для статуса. Там просто жарче. Кто не готов — садится ниже, и это умнее.",
+      "source_filename": null,
+      "slot_id": "slot-015",
+      "scheduled_at": "2026-09-14 15:00",
+      "status": "test_sent",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "published_at": "2026-09-08T14:53:03+00:00",
+      "last_error": null,
+      "image_path": "/root/projects/empire/media/gdepar/classic/ai_kuprin_banya_2.jpg",
+      "external_id": "test:post-1368dae3f2"
+    },
+    {
+      "id": "post-7a896c9ec0",
+      "project_id": "site:gdepar",
+      "title": "Зачем карта",
+      "body": "Карта нужна не для спора «чья баня правильная». Чтобы не ехать в закрытое.",
+      "source_filename": null,
+      "slot_id": "slot-036",
+      "scheduled_at": "2026-09-16 10:00",
+      "status": "skipped",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "last_error": "body_too_short<80",
+      "published_at": "2026-09-08T14:53:03+00:00"
+    },
+    {
+      "id": "post-0ae1b7be50",
+      "project_id": "tg:stern",
+      "title": "Два подхода",
+      "body": "Два рабочих подхода гири лучше пяти театральных. Спина скажет спасибо вечером.",
+      "source_filename": null,
+      "slot_id": "slot-013",
+      "scheduled_at": "2026-09-10 10:00",
+      "status": "skipped",
+      "created_at": "2026-09-08T14:53:03+00:00",
+      "last_error": "body_too_short<80",
+      "published_at": "2026-09-08T14:53:03+00:00"
+    }
+  ],
+  "outbox": [
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-c0c2b62fef",
+      "project_id": "tg:gdepar",
+      "kind": "telegram",
+      "title": "Лёгкий пар без героизма",
+      "scheduled_at": "2026-09-08 21:00",
+      "ok": true,
+      "skipped": false,
+      "detail": "test_outbox",
+      "external_id": "test:post-c0c2b62fef",
+      "body_preview": "Не надо «выживать» в каменке. Задача проще: выйти сухим, в настроении, и чтобы завтра хотелось вернуться.\n\nТри правила на этот заход:\n1. Первые пять минут — молча, пар поднимаете сами.\n2. Вода на камни — мало и часто, не ковш сразу.\n3. Если",
+      "image_resolved": "/root/projects/empire/media/gdepar/classic/aa_fadeev_banya.jpg",
+      "image_source": "fallback"
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-2f8932f925",
+      "project_id": "site:gdepar",
+      "kind": "site",
+      "title": "Как читать карту бань",
+      "scheduled_at": "2026-09-09 10:00",
+      "ok": true,
+      "skipped": false,
+      "detail": "test_outbox",
+      "external_id": "test:post-2f8932f925",
+      "body_preview": "Коротко, без поэзии.\n\nНа gdepar.ru точка — это не рейтинг «звёзд», а место, куда можно доехать и понять, дрова там или электричество. Телефон показывается по клику, чтобы зал не звонили «просто посмотреть».\n\nЕсли бани нет на карте — напишит",
+      "image_resolved": "/root/projects/empire/media/gdepar/classic/vp_astafev_banya.jpg",
+      "image_source": "fallback"
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-03842c2bad",
+      "project_id": "tg:gdepar",
+      "kind": "telegram",
+      "title": "Чай после полка",
+      "scheduled_at": "2026-09-09 11:00",
+      "ok": true,
+      "skipped": false,
+      "detail": "test_outbox",
+      "external_id": "test:post-03842c2bad",
+      "body_preview": "После третьего захода разговор сам становится короче. Это нормально.\n\nТермос лучше банки. Если банку всё же открыли — хотя бы не в предбаннике, где люди одеваются и думают о автобусе.\n\nВечерний пост не обязан учить. Достаточно, чтобы было т",
+      "image_resolved": "/root/projects/empire/media/gdepar/classic/vp_astafev_derevenskiy.jpg",
+      "image_source": "fallback"
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-0ae1b7be50",
+      "project_id": "tg:stern",
+      "kind": "telegram",
+      "title": "Два подхода",
+      "scheduled_at": "2026-09-10 10:00",
+      "ok": false,
+      "skipped": true,
+      "detail": "body_too_short<80",
+      "external_id": null,
+      "body_preview": "Два рабочих подхода гири лучше пяти театральных. Спина скажет спасибо вечером.",
+      "image_resolved": null,
+      "image_source": null
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-1445225026",
+      "project_id": "tg:gdepar",
+      "kind": "telegram",
+      "title": "Миф про веник",
+      "scheduled_at": "2026-09-14 11:00",
+      "ok": false,
+      "skipped": true,
+      "detail": "body_too_short<80",
+      "external_id": null,
+      "body_preview": "Веник не оружие. Если листья сыпятся сразу — вы пересушили, а не «так надо».",
+      "image_resolved": null,
+      "image_source": null
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-1368dae3f2",
+      "project_id": "tg:gdepar",
+      "kind": "telegram",
+      "title": "Классика полка",
+      "scheduled_at": "2026-09-14 15:00",
+      "ok": true,
+      "skipped": false,
+      "detail": "test_outbox",
+      "external_id": "test:post-1368dae3f2",
+      "body_preview": "Верхняя полка не для статуса. Там просто жарче. Кто не готов — садится ниже, и это умнее.",
+      "image_resolved": "/root/projects/empire/media/gdepar/classic/ai_kuprin_banya_2.jpg",
+      "image_source": "fallback"
+    },
+    {
+      "at": "2026-09-08T14:53:03+00:00",
+      "mode": "test",
+      "post_id": "post-7a896c9ec0",
+      "project_id": "site:gdepar",
+      "kind": "site",
+      "title": "Зачем карта",
+      "scheduled_at": "2026-09-16 10:00",
+      "ok": false,
+      "skipped": true,
+      "detail": "body_too_short<80",
+      "external_id": null,
+      "body_preview": "Карта нужна не для спора «чья баня правильная». Чтобы не ехать в закрытое.",
+      "image_resolved": null,
+      "image_source": null
+    }
+  ],
+  "bank_posts": [],
+  "ai_drafts": [],
+  "bot_settings": {
+    "admin_chat_id": "",
+    "notify_on": [
+      "published",
+      "skipped",
+      "failed"
+    ],
+    "digest": "daily",
+    "last_digest_at": "2026-09-29T17:53:03.355991+03:00",
+    "min_body_chars": 80,
+    "require_image": true
+  }
+}

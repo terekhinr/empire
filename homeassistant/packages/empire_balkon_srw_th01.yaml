@@ -48,9 +48,9 @@ template:
         state: >
           {% set raw = states('sensor.srw_th01_balkon_balkon_tdeg_raw') %}
           {% set n = raw | float(none) %}
-          {% if n is number and n > 5 %}
+          {% if n is number and -40 <= n <= 60 %}
             {{ n }}
-          {% elif this.state | float(none) is number and (this.state | float) > 5 %}
+          {% elif this.state | float(none) is number and -40 <= (this.state | float) <= 60 %}
             {{ this.state }}
           {% else %}
             unknown

@@ -59,6 +59,36 @@ def test_build_daily_briefing_has_focus(monkeypatch):
     assert data["kind"] == "daily"
     assert len(data["focus_items"]) >= 1
     assert "telegram_preview" in data
+    # вехи в боте выкл. по умолчанию
+    assert data.get("next_milestone") is None
+    assert "Веха" not in " ".join(data.get("focus_items") or [])
+    assert "Пайплайн" not in (data.get("telegram_preview") or "")
+
+
+def test_milestones_can_be_reenabled(monkeypatch):
+    monkeypatch.setenv("EMPIRE_INSIGHTS_MILESTONES", "1")
+    monkeypatch.setattr(
+        pi,
+        "build_empire_insights",
+        lambda **kw: {
+            "conclusions": ["ok"],
+            "tasks": {},
+            "health": {},
+            "pipeline": {"percent_weighted": 5},
+        },
+    )
+    monkeypatch.setattr(
+        pi,
+        "_tasks_due_between",
+        lambda *a, **kw: [{"title": "A", "due_date": "2026-06-24"}],
+    )
+    monkeypatch.setattr(pi, "_next_milestone", lambda: {"title": "Launch", "due_date": "2026-09-15"})
+    monkeypatch.setattr(pi, "_workouts_last_days", lambda d: 2)
+    monkeypatch.setattr(pi, "_llm_daily_focus", lambda s: None)
+
+    data = pi.build_daily_briefing(use_llm=False)
+    assert data.get("next_milestone", {}).get("title") == "Launch"
+    assert any("Веха" in x for x in (data.get("focus_items") or []))
 
 
 def test_ensure_daily_focus_checklist_idempotent(temp_planning_db, monkeypatch):

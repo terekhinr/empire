@@ -1,5 +1,7 @@
 #!/bin/sh
-# Flint 2 (GL-MT6000): полная настройка после vanilla OpenWrt 24.10.
+# Flint 2 (GL-MT6000): полная настройка после vanilla OpenWrt 24.10 — режим С VPS.
+# YouTube → podkop/VLESS. Без VPS: 00-bootstrap-novps.sh
+# Руководство: docs/FLINT2_YOUTUBE_DUAL.md
 # Запуск на роутере: curl -fsSL http://193.233.232.48:8789/00-bootstrap.sh | sh
 set -eu
 export FLINT2_BASE="${FLINT2_BASE:-http://193.233.232.48:8789}"
@@ -30,7 +32,8 @@ if [ "$CURRENT" = "192.168.1.1" ]; then
   skip_lan=1
 fi
 
-for step in 01-base-lan.sh 02-install-podkop.sh 03-config-podkop.sh 04-install-zapret2.sh \
+for step in 19-prereq-dpi.sh 01-base-lan.sh 02-install-podkop.sh 03-config-podkop.sh \
+  04-install-zapret2.sh 22-configure-zapret.sh \
   05-wireguard-server.sh 07-router-tunnel.sh 10-restore-keenetic-snapshot.sh; do
   if [ "$skip_lan" = "1" ] && [ "$step" = "01-base-lan.sh" ]; then
     continue
@@ -45,6 +48,7 @@ fetch "$FLINT2_BASE/18-torrent-sites.sh" | sh || true
 
 log "=== готово ==="
 log "LuCI: http://192.168.1.1  |  Podkop: Services → Podkop"
-log "Zapret2: Services → Zapret2 → Start"
+log "Zapret2: Services → Zapret → стратегия через zms (Zapret-Manager)"
+log "режимы: docs/FLINT2_YOUTUBE_DUAL.md  |  без VPS: 00-bootstrap-novps.sh"
 log "WG-клиент: /etc/wireguard/clients/phone.conf"
 log "VPS SSH: ssh -p 6223 root@127.0.0.1  (после туннеля с роутера)"

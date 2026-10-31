@@ -1,6 +1,7 @@
 # =========================================================================
 # Конфигурация для всех сайтов медиаимперии.
 #   neverretire.ru  → 127.0.0.1:8000 (web_app.py)
+#   snegirinegiri.ru → 127.0.0.1:8000 (Host-based лендинг + /api/snegiri)
 #   gdepar.ru       → 127.0.0.1:8001 (gdepar_app.py)
 #   /hub/           → 127.0.0.1:8501 (Streamlit dashboard)
 #   /tasks/         → 127.0.0.1:8502 (planning PWA)
@@ -39,7 +40,7 @@ server {
     include /root/projects/empire/deploy/nginx/neverretire_planning.inc;
 
     location /static/ {
-        alias /root/projects/empire/static/;
+        alias /var/www/empire-static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -47,8 +48,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name neverretire.ru www.neverretire.ru;
 
     ssl_certificate /etc/letsencrypt/live/neverretire.ru/fullchain.pem;
@@ -69,7 +70,7 @@ server {
     include /root/projects/empire/deploy/nginx/neverretire_planning.inc;
 
     location /static/ {
-        alias /root/projects/empire/static/;
+        alias /var/www/empire-static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -95,8 +96,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name napensiyunikogda.ru www.napensiyunikogda.ru;
 
     ssl_certificate /etc/letsencrypt/live/napensiyunikogda.ru/fullchain.pem;
@@ -125,8 +126,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name xn--80aaiedsaqwcbog4a0r.xn--p1ai www.xn--80aaiedsaqwcbog4a0r.xn--p1ai;
 
     ssl_certificate /etc/letsencrypt/live/xn--80aaiedsaqwcbog4a0r.xn--p1ai/fullchain.pem;
@@ -160,7 +161,7 @@ server {
     }
 
     location /static/ {
-        alias /root/projects/empire/static/;
+        alias /var/www/empire-static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -168,8 +169,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name gdepar.ru www.gdepar.ru;
 
     ssl_certificate /etc/letsencrypt/live/gdepar.ru/fullchain.pem;
@@ -187,7 +188,7 @@ server {
     }
 
     location /static/ {
-        alias /root/projects/empire/static/;
+        alias /var/www/empire-static/;
         expires 7d;
         add_header Cache-Control "public, immutable";
         access_log off;
@@ -213,8 +214,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
     server_name xn--80afde4ch.xn--p1ai www.xn--80afde4ch.xn--p1ai;
 
     ssl_certificate /etc/letsencrypt/live/xn--80aaiedsaqwcbog4a0r.xn--p1ai/fullchain.pem;

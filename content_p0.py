@@ -61,8 +61,15 @@ def p0_findings(text: str, persona_key: str | None = None) -> list[str]:
                     findings.append(f"P0: stern — «{ph}»")
 
     if persona_key == "gdepar":
-        if re.search(r"\d{2,3}\s*°\s*c", low) or re.search(r"\d{2,3}\s*градус", low):
-            if "печ" in low or "парил" in low or "жар" in low:
+        # Цитаты из книг (blockquote / «…») могут содержать реальные °C — это не выдумка.
+        commentary = re.sub(
+            r"<blockquote\b[^>]*>.*?</blockquote>", " ", text or "", flags=re.I | re.S
+        )
+        commentary = re.sub(r"«[^»]{0,500}»", " ", commentary)
+        commentary = re.sub(r"<i>\s*Источник:.*?</i>", " ", commentary, flags=re.I | re.S)
+        clow = commentary.lower()
+        if re.search(r"\d{2,3}\s*°\s*c", clow) or re.search(r"\d{2,3}\s*градус", clow):
+            if "печ" in clow or "парил" in clow or "жар" in clow:
                 findings.append("P0: выдуманная температура в парилке")
 
     # Дедуп по тексту

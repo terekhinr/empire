@@ -47,12 +47,16 @@ Keenetic сам поднимет **HTTPS** до браузера и прокси
 
 ## Шаг 3. Home Assistant (уже в репозитории)
 
-Пакет `packages/empire_http_keenetic.yaml`:
+HTTP в YAML больше не используется (предупреждение HA до 2027.2).
 
-- `use_x_forwarded_for: true`
-- `trusted_proxies: 192.168.1.1` (роутер)
+**Настройки → Система → Сеть** — trusted proxies:
 
-После деплоя: **Настройки → Система → Сеть**:
+- `127.0.0.1`, `::1`
+- `192.168.1.1` (роутер Keenetic)
+- `100.64.0.0/10` (Tailscale)
+- `172.30.32.0/23` (docker HA)
+
+После деплоя там же:
 
 - **URL локальный:** `http://192.168.1.41:8123`
 - **URL внешний:** `https://ha.potertiy.keenetic.pro`

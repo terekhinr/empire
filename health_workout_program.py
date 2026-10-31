@@ -9,8 +9,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from health_db import STRENGTH_EXERCISES
-
 BASE_DIR = Path(__file__).resolve().parent
 
 PROGRAM_REGISTRY: dict[str, dict[str, Any]] = {
@@ -30,6 +28,7 @@ PROGRAM_REGISTRY: dict[str, dict[str, Any]] = {
         "rolling_sessions": 9,
     },
 }
+USER_PROGRAMS_DIR = BASE_DIR / "data" / "health" / "programs"
 SLOT_WEEKDAYS = (0, 2, 4)  # Mon, Wed, Fri
 DAY_CYCLE = ("A", "B", "C")
 HOLD_SEC_RE = re.compile(r"(\d+)\s*сек", re.I)
@@ -55,28 +54,68 @@ def _norm_day(letter: str) -> str:
     return _CYR_TO_LAT.get(letter, letter.upper())
 
 
+def _scan_user_programs() -> dict[str, dict[str, Any]]:
+    from workout_program_v1 import ProgramFileError, loads
+
+    out: dict[str, dict[str, Any]] = {}
+    if not USER_PROGRAMS_DIR.is_dir():
+        return out
+    for path in sorted(USER_PROGRAMS_DIR.iterdir()):
+        if path.suffix.lower() not in {".json", ".yaml", ".yml"} or not path.is_file():
+            continue
+        try:
+            spec = loads(path.read_text(encoding="utf-8"), filename=path.name)
+        except (ProgramFileError, OSError, ValueError):
+            continue
+        out[spec["id"]] = {
+            "id": spec["id"],
+            "title": spec["title"],
+            "short": spec["short"],
+            "path": path,
+            "note_prefix": spec["note_prefix"],
+            "format": "v1",
+            "source": "user",
+            "slot_weekdays": tuple(spec["weekdays"]),
+            "rolling_sessions": spec.get("rolling_sessions"),
+            "spec": spec,
+        }
+    return out
+
+
+def all_programs() -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for pid, meta in PROGRAM_REGISTRY.items():
+        out[pid] = {**meta, "format": "markdown", "source": "builtin"}
+    out.update(_scan_user_programs())
+    return out
+
+
 def resolve_program_id(program_id: str | None = None) -> str:
     pid = (program_id or DEFAULT_PROGRAM_ID).strip() or DEFAULT_PROGRAM_ID
-    if pid not in PROGRAM_REGISTRY:
+    if pid not in all_programs():
         raise ValueError(f"unknown_program:{pid}")
     return pid
 
 
 def get_program_meta(program_id: str | None = None) -> dict[str, Any]:
     pid = resolve_program_id(program_id)
-    meta = PROGRAM_REGISTRY[pid]
+    meta = all_programs()[pid]
     return {
         "id": meta["id"],
         "title": meta["title"],
         "short": meta["short"],
-        "note_prefix": meta["note_prefix"],
+        "note_prefix": meta.get("note_prefix", "подход"),
         "path": str(meta["path"]),
+        "source": meta.get("source", "builtin"),
+        "format": meta.get("format", "markdown"),
+        "slot_weekdays": list(meta.get("slot_weekdays", SLOT_WEEKDAYS)),
+        "rolling_sessions": meta.get("rolling_sessions"),
     }
 
 
 def list_programs() -> list[dict[str, Any]]:
     out = []
-    for pid in PROGRAM_REGISTRY:
+    for pid in all_programs():
         meta = get_program_meta(pid)
         summary = program_summary(pid)
         out.append({**meta, **summary})
@@ -103,7 +142,9 @@ class WorkoutExercise:
 
     @property
     def exercise_label(self) -> str:
-        return STRENGTH_EXERCISES.get(self.exercise_key, self.exercise_key)
+        from health_db import exercise_label
+
+        return exercise_label(self.exercise_key)
 
     @property
     def is_rest(self) -> bool:
@@ -391,18 +432,37 @@ def _static_session_specs(program_id: str) -> list[tuple[int, str, str, str]]:
     return [(e.phase, e.day, e.label, e.note) for e in calendar]
 
 
+def _cycle_session_specs(program_id: str, start_day: str, count: int) -> list[tuple[int, str, str, str]]:
+    templates, _ = load_program(program_id)
+    keys = sorted(templates.keys(), key=lambda k: (k[0], k[1]))
+    if not keys:
+        return []
+    start = _norm_day(start_day)
+    start_idx = next((i for i, k in enumerate(keys) if k[1] == start), 0)
+    specs: list[tuple[int, str, str, str]] = []
+    for i in range(count):
+        phase, letter = keys[(start_idx + i) % len(keys)]
+        tpl = templates[(phase, letter)]
+        specs.append((phase, letter, f"Фаза {phase} / День {letter}", tpl.title))
+    return specs
+
+
 def build_rolling_calendar(
     program_id: str | None = None,
     anchor: date | str | None = None,
     start_day: str | None = None,
 ) -> list[CalendarEntry]:
     pid = resolve_program_id(program_id)
-    meta = PROGRAM_REGISTRY[pid]
+    meta = all_programs()[pid]
     slot = tuple(meta.get("slot_weekdays", SLOT_WEEKDAYS))
     start = _norm_day(start_day or "A")
+    rolling = meta.get("rolling_sessions")
 
-    if pid == "outside_hall":
-        count = int(meta.get("rolling_sessions", 9))
+    if rolling:
+        specs = _cycle_session_specs(pid, start, int(rolling))
+        count = len(specs)
+    elif pid == "outside_hall":
+        count = int(meta.get("rolling_sessions", 9) or 9)
         specs = _outside_session_specs(start, count)
     else:
         specs = _rotate_specs_to_start_day(_static_session_specs(pid), start)
@@ -433,15 +493,29 @@ def resolve_schedule(
     return anchor_d, start, cal
 
 
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=16)
 def load_program(
     program_id: str | None = None,
 ) -> tuple[dict[tuple[int, str], WorkoutDayTemplate], list[CalendarEntry]]:
     pid = resolve_program_id(program_id)
-    path = PROGRAM_REGISTRY[pid]["path"]
+    meta = all_programs()[pid]
+    if meta.get("format") == "v1":
+        from workout_program_v1 import calendar_from_spec, templates_from_spec
+
+        spec = meta.get("spec")
+        if spec is None:
+            from workout_program_v1 import loads
+
+            spec = loads(Path(meta["path"]).read_text(encoding="utf-8"), filename=Path(meta["path"]).name)
+        return templates_from_spec(spec), calendar_from_spec(spec)
+    path = Path(meta["path"])
     if not path.is_file():
         return {}, []
     return parse_program(path.read_text(encoding="utf-8"))
+
+
+def invalidate_program_cache() -> None:
+    load_program.cache_clear()
 
 
 def get_calendar(
@@ -524,7 +598,7 @@ def program_summary(
         "end": calendar[-1].on.isoformat() if calendar else None,
         "schedule_anchor": anchor_d.isoformat(),
         "schedule_start_day": start,
-        "slot_weekdays": list(PROGRAM_REGISTRY[pid].get("slot_weekdays", SLOT_WEEKDAYS)),
+        "slot_weekdays": list(all_programs()[pid].get("slot_weekdays", SLOT_WEEKDAYS)),
     }
 
 
@@ -578,3 +652,50 @@ def calendar_to_dict(
         }
         for e in get_calendar(program_id, anchor, start_day)
     ]
+
+
+def save_user_program_spec(spec: dict[str, Any]) -> dict[str, Any]:
+    from workout_program_v1 import RESERVED_IDS, dumps, register_exercises
+
+    pid = spec["id"]
+    if pid in RESERVED_IDS:
+        raise ValueError(f"reserved_program_id:{pid}")
+    USER_PROGRAMS_DIR.mkdir(parents=True, exist_ok=True)
+    path = USER_PROGRAMS_DIR / f"{pid}.json"
+    path.write_text(dumps(spec), encoding="utf-8")
+    register_exercises(spec)
+    invalidate_program_cache()
+    return get_program_meta(pid)
+
+
+def delete_user_program(program_id: str) -> bool:
+    pid = (program_id or "").strip()
+    meta = all_programs().get(pid)
+    if not meta or meta.get("source") != "user":
+        return False
+    path = Path(meta["path"])
+    if path.is_file():
+        path.unlink()
+    invalidate_program_cache()
+    return True
+
+
+def export_program_spec(program_id: str) -> dict[str, Any]:
+    from workout_program_v1 import spec_from_markdown_parse
+
+    pid = resolve_program_id(program_id)
+    meta = all_programs()[pid]
+    if meta.get("format") == "v1" and meta.get("spec"):
+        return meta["spec"]
+    templates, calendar = load_program(pid)
+    info = get_program_meta(pid)
+    return spec_from_markdown_parse(
+        templates,
+        calendar,
+        program_id=pid,
+        title=info["title"],
+        short=info["short"],
+        note_prefix=info["note_prefix"],
+        weekdays=info.get("slot_weekdays"),
+        rolling_sessions=info.get("rolling_sessions"),
+    )

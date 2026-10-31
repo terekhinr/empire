@@ -59,6 +59,10 @@ if [[ -x "$ROOT/scripts/infra/infra_backup_bundle.sh" ]]; then
 fi
 
 log "Upload empire project (код, без venv/media/PDF/dist) → ${REMOTE}:${REMOTE_DAY}/empire"
+# Полное дерево на WebDAV держало oneshot 4+ ч → SIGTERM. По умолчанию только sqlite+/etc.
+if [[ "${EMPIRE_BACKUP_SKIP_FULL_TREE:-1}" == "1" ]]; then
+  log "SKIP full tree copy (EMPIRE_BACKUP_SKIP_FULL_TREE=1)"
+else
 rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
   --exclude "venv/**" \
   --exclude ".git/**" \
@@ -94,38 +98,58 @@ rclone copy "$ROOT" "${REMOTE}:${REMOTE_DAY}/empire" \
   --timeout 2m \
   --contimeout 30s \
   -v || log "WARN: rclone copy empire — частичные ошибки (WebDAV)"
+fi
 
-log "Upload /etc/empire + systemd + sqlite backups (только свежие 3 БД)"
-[[ -f "$ETC_TAR" ]] && rclone copy "$ETC_TAR" "${REMOTE}:${REMOTE_DAY}/" -v
-[[ -d "$SYSTEMD_STAGING" ]] && rclone copy "$SYSTEMD_STAGING" "${REMOTE}:${REMOTE_DAY}/systemd" -v
+# Yandex WebDAV по IPv6 часто зависает на PUT; bind IPv4.
+RCLONE_BIND="${RCLONE_BIND:-0.0.0.0}"
+rclone_yd() {
+  rclone "$@" --bind "$RCLONE_BIND" --ignore-checksum --retries 1 --low-level-retries 2 --contimeout 30s
+}
+
+log "Upload /etc/empire + systemd + sqlite backups (сначала мелкие БД)"
+[[ -f "$ETC_TAR" ]] && rclone_yd copy "$ETC_TAR" "${REMOTE}:${REMOTE_DAY}/" --timeout 2m -v || log "WARN: etc tar"
+[[ -d "$SYSTEMD_STAGING" ]] && rclone_yd copy "$SYSTEMD_STAGING" "${REMOTE}:${REMOTE_DAY}/systemd" --timeout 2m -v || log "WARN: systemd"
+
 SQLITE_LATEST="${STAGING}/sqlite-latest"
-mkdir -p "$SQLITE_LATEST"
+SQLITE_SMALL="${STAGING}/sqlite-small"
+mkdir -p "$SQLITE_LATEST" "$SQLITE_SMALL"
 for prefix in analytics sales; do
   newest="$(ls -1t "${LOCAL_DB_BACKUP}/${prefix}-"*.db 2>/dev/null | head -1 || true)"
-  [[ -n "$newest" && -f "$newest" ]] && cp -a "$newest" "$SQLITE_LATEST/"
+  if [[ -n "$newest" && -f "$newest" ]]; then
+    cp -a "$newest" "$SQLITE_LATEST/"
+    cp -a "$newest" "$SQLITE_SMALL/"
+  fi
 done
-# empire.db ~30МБ на WebDAV часто зависает — льём gzip
+if compgen -G "${SQLITE_SMALL}/*" >/dev/null; then
+  rclone_yd copy "$SQLITE_SMALL" "${REMOTE}:${REMOTE_DAY}/sqlite-backups" --timeout 3m -v \
+    || log "WARN: analytics/sales upload"
+fi
+# empire.db gzip: отдельный PUT, иначе мелкие файлы не уезжают
 emp_newest="$(ls -1t "${LOCAL_DB_BACKUP}/empire-"*.db 2>/dev/null | head -1 || true)"
 if [[ -n "$emp_newest" && -f "$emp_newest" ]]; then
-  gzip -c "$emp_newest" > "${SQLITE_LATEST}/empire-latest.db.gz" || cp -a "$emp_newest" "$SQLITE_LATEST/"
-fi
-if compgen -G "${SQLITE_LATEST}/*" >/dev/null; then
-  rclone copy "$SQLITE_LATEST" "${REMOTE}:${REMOTE_DAY}/sqlite-backups" \
-    --transfers 3 --checkers 3 --retries 3 --timeout 90s --contimeout 30s -v \
-    || log "WARN: sqlite upload partial"
-else
-  log "WARN: нет локальных sqlite для выгрузки"
+  gzip -c "$emp_newest" > "${SQLITE_LATEST}/empire-latest.db.gz" || true
+  if [[ -f "${SQLITE_LATEST}/empire-latest.db.gz" ]]; then
+    timeout 8m rclone_yd copy "${SQLITE_LATEST}/empire-latest.db.gz" "${REMOTE}:${REMOTE_DAY}/sqlite-backups/" \
+      --timeout 8m --transfers 1 -v \
+      || log "WARN: empire.db.gz upload (локальная копия в ${LOCAL_DB_BACKUP})"
+  fi
 fi
 
 # Infra: домашняя сеть, docs snapshot, rclone backup
 if [[ -d "$ROOT/data/infra" ]]; then
   log "Upload data/infra → ${REMOTE}:${REMOTE_DAY}/infra"
-  rclone copy "$ROOT/data/infra" "${REMOTE}:${REMOTE_DAY}/infra" \
-    --transfers 2 --checkers 4 --retries 10 -v || log "WARN: infra upload"
+  rclone_yd copy "$ROOT/data/infra" "${REMOTE}:${REMOTE_DAY}/infra" \
+    --transfers 2 --checkers 4 --timeout 5m -v || log "WARN: infra upload"
 fi
 
-# «latest» — для быстрого восстановления
-rclone sync "${REMOTE}:${REMOTE_DAY}" "${REMOTE}:${REMOTE_LATEST}" -v
+# latest: только sqlite/systemd/infra — НЕ sync всей дневной папки (старый empire/ даёт 412)
+log "Обновляю latest (без дерева empire/)"
+rclone_yd copy "${REMOTE}:${REMOTE_DAY}/sqlite-backups" "${REMOTE}:${REMOTE_LATEST}/sqlite-backups" --timeout 5m -v \
+  || log "WARN: latest sqlite"
+rclone_yd copy "${REMOTE}:${REMOTE_DAY}/systemd" "${REMOTE}:${REMOTE_LATEST}/systemd" --timeout 2m -v \
+  || log "WARN: latest systemd"
+rclone_yd copy "${REMOTE}:${REMOTE_DAY}/infra" "${REMOTE}:${REMOTE_LATEST}/infra" --timeout 5m -v \
+  || log "WARN: latest infra"
 
 # Дневные папки старше 14 дней
 KEEP_DAYS="${EMPIRE_YANDEX_BACKUP_KEEP_DAYS:-14}"

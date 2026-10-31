@@ -1,0 +1,1093 @@
+start
+=== WRAPPER START 2026-09-16T20:38:22+00:00 ===
+=== FLAGSHIP 2026-09-16T20:38:22+00:00 regions=MSK,MO,SPB,LO ===
+--- OSM FLAGSHIP ---
+
+=== Москва  (ISO RU-MOW) ===
+  Overpass 504 (https://overpass-api.de/api/interpreter), пауза 20 с…
+  ISO RU-MOW: 0 объектов
+  OSM: 0 → keep 0
+
+=== Московская область  (ISO RU-MOS) ===
+  ISO RU-MOS: 345 объектов
+  OSM: 345 → keep 143
+
+=== Санкт-Петербург  (ISO RU-SPE) ===
+  Overpass 504 (https://overpass-api.de/api/interpreter), пауза 20 с…
+  Overpass 504 (https://overpass.kumi.systems/api/interpreter), пауза 45 с…
+  ISO RU-SPE: 146 объектов
+  OSM: 146 → keep 51
+
+=== Ленинградская область  (ISO RU-LEN) ===
+  ISO RU-LEN: 216 объектов
+  OSM: 216 → keep 85
+
+--- ИТОГ ---
+  Overpass отдал:  707
+  Подошло:         279
+  Пропущено:       428
+  Новых записей:   1
+  Обновлено:       278
+  Регионов с ошибкой: 0
+--- enrich MSK limit=60 ---
+Обогащаем 20 бань. Ожидаемая длительность ≈ 200 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 381, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich MO limit=60 ---
+Обогащаем 7 бань. Ожидаемая длительность ≈ 70 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 381, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich SPB limit=60 ---
+Обогащаем 1 бань. Ожидаемая длительность ≈ 10 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 381, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich LO limit=60 ---
+Обогащаем 18 бань. Ожидаемая длительность ≈ 180 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 381, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- reviews MSK batch=12 ---
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 816, in cmd_reviews
+    saved, dup, miss = run_reviews_rows(con, rows, args.max, args.dry)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 718, in run_reviews_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- reviews MO batch=12 ---
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 816, in cmd_reviews
+    saved, dup, miss = run_reviews_rows(con, rows, args.max, args.dry)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 718, in run_reviews_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- reviews SPB batch=12 ---
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 816, in cmd_reviews
+    saved, dup, miss = run_reviews_rows(con, rows, args.max, args.dry)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 718, in run_reviews_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- reviews LO batch=12 ---
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 984, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 980, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 816, in cmd_reviews
+    saved, dup, miss = run_reviews_rows(con, rows, args.max, args.dry)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 718, in run_reviews_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 187, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- hide offtopic FLAGSHIP (dry then apply) ---
+Кандидатов на hide: 0
+по статусу: {}
+по региону: {}
+
+
+dry-run. Запусти с --apply, чтобы скрыть.
+Кандидатов на hide: 0
+по статусу: {}
+по региону: {}
+
+нечего скрывать (уже hidden или пусто).
+=== FLAGSHIP DONE 2026-09-16T20:44:58+00:00 ===
+Отзывов сейчас: 2108
+Повторы внутри одной бани: 0 групп, лишних строк: 0
+  удалено внутри бани: 0
+Одинаковый текст на разных банях: 0 групп, лишних строк: 0
+  удалено между банями: 0
+  пересчитан source_id: 2108
+
+Готово: было 2108, стало 2108 (одобренных 1987)
+Удалено всего: 0
+Кандидатов на hide: 0
+по статусу: {}
+по региону: {}
+
+нечего скрывать (уже hidden или пусто).
+candidates (draft + no yurl + no rating): 1
+noise (generic title): 0
+
+preview:
+nothing to hide.
+candidates (draft + no yurl + no rating): 0
+noise (generic title): 0
+
+preview:
+nothing to hide.
+candidates (draft + no yurl + no rating): 0
+noise (generic title): 0
+
+preview:
+nothing to hide.
+candidates (draft + no yurl + no rating): 1
+noise (generic title): 1
+  LO: 1
+
+preview:
+  #5319 [LO] -                        'Баня'
+hidden: 1
+post_hide_sauna 0
+=== FLAGSHIP_PIPELINE_DONE 2026-09-16T20:45:01+00:00 ===
+=== QUALITY WRAPPER START 2026-09-16T20:50:00+00:00 ===
+--- refresh MSK ---
+Refresh 30 бань. Ожидаемое время ≈ 525 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_refresh
+    success, fail = run_refresh_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 465, in run_refresh_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- refresh MO ---
+Refresh 30 бань. Ожидаемое время ≈ 525 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_refresh
+    success, fail = run_refresh_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 465, in run_refresh_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- refresh SPB ---
+Refresh 30 бань. Ожидаемое время ≈ 525 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_refresh
+    success, fail = run_refresh_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 465, in run_refresh_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- refresh LO ---
+Refresh 29 бань. Ожидаемое время ≈ 508 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 547, in cmd_refresh
+    success, fail = run_refresh_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 465, in run_refresh_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+regions=MSK,MO,SPB,LO min_reviews=40 min_rating=4.0 review_max_age_d=540 spot_stale_d=365
+low_quality published: 152
+  #  11 [MO] rev=13 ★4.9  Малаховские бани  :: low_traffic(rev=13,★=4.9)
+  #  12 [MO] rev=12 ★5.0  Баня  :: low_traffic(rev=12,★=5.0)
+  #  13 [MO] rev=11 ★4.3  Баня  :: low_traffic(rev=11,★=4.3)
+  #  14 [MO] rev=19 ★4.4  Банифаций  :: low_traffic(rev=19,★=4.4)
+  #  15 [MO] rev=12 ★4.9  Русская Банька  :: low_traffic(rev=12,★=4.9)
+  #  16 [MO] rev=3 ★4.1  Калипсо  :: low_traffic(rev=3,★=4.1)
+  #  17 [MO] rev=15 ★5.0  Баня  :: low_traffic(rev=15,★=5.0)
+  #  18 [MO] rev=11 ★4.7  Баня  :: low_traffic(rev=11,★=4.7)
+  #  20 [MO] rev=10 ★4.3  Баня  :: low_traffic(rev=10,★=4.3)
+  #  21 [MO] rev=13 ★5.0  Баня  :: low_traffic(rev=13,★=5.0)
+  #  22 [MO] rev=11 ★4.8  Зеленый шум  :: low_traffic(rev=11,★=4.8)
+  #  23 [MO] rev=13 ★4.7  Баня  :: low_traffic(rev=13,★=4.7)
+  #  24 [MO] rev=25 ★5.0  Русская банька  :: low_traffic(rev=25,★=5.0)
+  #  25 [MO] rev=4 ★4.0  Три Пескаря  :: low_traffic(rev=4,★=4.0)
+  #  26 [MO] rev=10 ★5.0  Общественная баня №1  :: low_traffic(rev=10,★=5.0)
+  #  27 [MO] rev=11 ★4.4  Кулон  :: low_traffic(rev=11,★=4.4)
+  #  28 [MO] rev=10 ★5.0  Русские Бани  :: low_traffic(rev=10,★=5.0)
+  #  29 [MO] rev=12 ★4.6  Городская баня  :: low_traffic(rev=12,★=4.6)
+  #  31 [MO] rev=12 ★4.7  Дельфин  :: low_traffic(rev=12,★=4.7)
+  #  32 [MO] rev=10 ★5.0  Новорижские бани  :: low_traffic(rev=10,★=5.0)
+  #  33 [MO] rev=12 ★4.7  Колычёвская баня  :: low_traffic(rev=12,★=4.7)
+  #  35 [MO] rev=10 ★5.0  Баня  :: low_traffic(rev=10,★=5.0)
+  #  36 [MO] rev=11 ★4.6  Баня №3  :: low_traffic(rev=11,★=4.6)
+  #  37 [MO] rev=10 ★5.0  Баня "На Луговой"  :: low_traffic(rev=10,★=5.0)
+  #  39 [MO] rev=9 ★4.3  На Бумажной  :: low_traffic(rev=9,★=4.3)
+  #  40 [MO] rev=12 ★4.7  Баня  :: low_traffic(rev=12,★=4.7)
+  #  43 [MO] rev=10 ★5.0  Банный курорт Гуси Лебеди  :: low_traffic(rev=10,★=5.0)
+  #  44 [MO] rev=12 ★4.9  Русская баня на дровах  :: low_traffic(rev=12,★=4.9)
+  #  45 [MO] rev=12 ★4.7  Разгуляй  :: low_traffic(rev=12,★=4.7)
+  #  51 [MO] rev=11 ★4.0  Банька в Голицыно  :: low_traffic(rev=11,★=4.0)
+  #  53 [MO] rev=10 ★5.0  Апрелевская баня  :: low_traffic(rev=10,★=5.0)
+  #  54 [MO] rev=10 ★5.0  Русская банька на дровах  :: low_traffic(rev=10,★=5.0)
+  #  55 [MO] rev=10 ★4.7  Мечта  :: low_traffic(rev=10,★=4.7)
+  #  64 [MO] rev=12 ★4.6  Баня  :: low_traffic(rev=12,★=4.6)
+  #  67 [MO] rev=10 ★5.0  Слободские бани  :: low_traffic(rev=10,★=5.0)
+  #  68 [MO] rev=10 ★4.4  Старый Замок  :: low_traffic(rev=10,★=4.4)
+  #  69 [MO] rev=10 ★5.0  МУП «Городская Баня»  :: low_traffic(rev=10,★=5.0)
+  #  71 [MO] rev=10 ★5.0  Баня «У Михалыха»  :: low_traffic(rev=10,★=5.0)
+  #  73 [MO] rev=10 ★5.0  Долгопрудненская городская баня  :: low_traffic(rev=10,★=5.0)
+  #  74 [MO] rev=12 ★4.3  Белый Лебедь  :: low_traffic(rev=12,★=4.3)
+  …+112
+demoted to draft: 152
+=== FLAGSHIP 2026-09-16T20:50:15+00:00 regions=MSK,MO,SPB,LO ===
+--- OSM skip ---
+--- enrich MSK limit=30 ---
+Обогащаем 20 бань (regions=MSK,MO,SPB,LO, min_reviews=40). ≈ 200 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 593, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 391, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich MO limit=30 ---
+Обогащаем 7 бань (regions=MSK,MO,SPB,LO, min_reviews=40). ≈ 70 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 593, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 391, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich SPB limit=30 ---
+Обогащаем 1 бань (regions=MSK,MO,SPB,LO, min_reviews=40). ≈ 10 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 593, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 391, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- enrich LO limit=30 ---
+Обогащаем 17 бань (regions=MSK,MO,SPB,LO, min_reviews=40). ≈ 170 сек.
+Traceback (most recent call last):
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1076, in <module>
+    sys.exit(main(sys.argv[1:]))
+             ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 1072, in main
+    return args.func(args)
+           ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 593, in cmd_enrich
+    success, fail = run_enrich_rows(con, rows, args.dry)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 391, in run_enrich_rows
+    browser = _new_browser(p)
+              ^^^^^^^^^^^^^^^
+  File "/root/projects/empire/tools/parsers/yandex_scrape.py", line 197, in _new_browser
+    return p.chromium.launch(
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15118, in launch
+    self._sync(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
+    await self._channel.send(
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/projects/empire/venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1217/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     playwright install                                     ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+--- reviews MSK batch=10 ---
+Нет бань для отзывов (проверьте фильтр / yandex_url / min_reviews).
+--- reviews MO batch=10 ---
+Нет бань для отзывов (проверьте фильтр / yandex_url / min_reviews).
+--- reviews SPB batch=10 ---
+Нет бань для отзывов (проверьте фильтр / yandex_url / min_reviews).
+--- reviews LO batch=10 ---
+Нет бань для отзывов (проверьте фильтр / yandex_url / min_reviews).
+--- hide offtopic FLAGSHIP (dry then apply) ---
+Кандидатов на hide: 0
+по статусу: {}
+по региону: {}
+
+
+dry-run. Запусти с --apply, чтобы скрыть.
+Кандидатов на hide: 0
+по статусу: {}
+по региону: {}
+
+нечего скрывать (уже hidden или пусто).
+=== FLAGSHIP DONE 2026-09-16T20:50:50+00:00 ===
+=== QUALITY WRAPPER DONE 2026-09-16T20:50:50+00:00 ===
+=== QUALITY ENV RUN START 2026-09-17T04:25:40+00:00 ===
+--- refresh MSK ---
+Refresh 40 бань. Ожидаемое время ≈ 700 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+  ↻ #   1 Сандуновские бани                        Москва              
+     ★ 5.0 · 7628 отз.
+  ↻ #   2 Бани на Пресне                           Москва              
+     ★ 5.0 · 3082 отз.
+  ↻ #   3 Ржевские бани                            Москва              
+     ★ 4.9 · 1228 отз.
+  ↻ #   4 Варсонофьевские бани                     Москва              
+     ★ 5.0 · 7628 отз.
+  ↻ #   5 Воронцовские бани                        Москва              
+     ★ 5.0 · 4609 отз.
+  ↻ #   6 Селезнёвские бани                        Москва              
+     ★ 5.0 · 1379 отз.
+  ↻ #   7 Донские бани                             Москва              
+     ★ 4.7 · 121 отз.
+  ↻ #   8 Краснопресненские бани                   Москва              
+     ★ 5.0 · 3082 отз.
+  ↻ #   9 Измайловские бани                        Москва              
+     ★ 5.0 · 1135 отз.
+  ↻ #  10 Усачёвские бани                          Москва              
+     ★ 5.0 · 5551 отз.
+  ↻ #1128 Банно-оздоровительный комплекс           Москва              
+     ★ 5.0 · 1248 отз.
+  ↻ #1131 Усадьба банная                           Москва              
+     ★ 4.9 · 454 отз.
+  ↻ #1132 Одиссей                                  Москва              
+     ★ 4.5 · 54 отз.
+  ↻ #1133 Оздоровительный центр                    Москва              
+     ★ 4.5 · 445 отз.
+  ↻ #1134 Манхеттен                                Москва              
+     ★ 4.6 · 888 отз.
+  ↻ #1135 Косинская баня                           Москва              
+     ★ 4.9 · 270 отз.
+  ↻ #1136 Банно-оздоровительный комплекс FamilyFit Москва              
+     ★ 4.4 · 348 отз.
+  ↻ #1137 Банный клуб "Ниагара"                    Москва              
+     ★ 4.7 · 17 отз. · low_traffic→draft
+  ↻ #1140 СПА комплекс by Soho Family              Москва              
+     ★ 4.7 · 1110 отз.
+  ↻ #1141 Трюм                                     Москва              
+     ★ 4.6 · 121 отз.
+  ↻ #1144 Пирс                                     Москва              
+     ★ 4.5 · 276 отз.
+  ↻ #1145 Краснопресненские бани                   Москва              
+     ★ 5.0 · 3082 отз.
+  ↻ #1146 Бродвей                                  Москва              
+     ★ 4.9 · 2311 отз.
+  ↻ #1148 Очаковские бани                          Москва              
+     ★ 5.0 · 1823 отз.
+  ↻ #1149 Живица                                   Москва              
+     ★ 5.0 · 290 отз.
+  ↻ #1150 Ржевские бани                            Москва              
+     ★ 4.9 · 1228 отз.
+  ↻ #1153 Банный двор                              Москва              
+     ★ 5.0 · 582 отз.
+  ↻ #1155 Спарта                                   Москва              
+     ★ 4.9 · 176 отз.
+  ↻ #1156 Астраханские бани                        Москва              
+     ★ 5.0 · 1705 отз.
+  ↻ #1168 Аталанта                                 Москва              
+     ★ 5.0
+  ↻ #1202 Соколиная гора                           Москва              
+     ★ 5.0
+  ↻ #1216 Русская изба                             Москва              
+     ★ 4.7
+  ↻ #1226 Огниво                                   Москва              
+     ★ 2.0
+  ↻ #1151 Миръ бани                                Москва              
+     ★ 4.9 · 238 отз.
+  ↻ #1154 Банный клуб                              Москва              
+     ★ 5.0 · 272 отз.
+  ↻ #1158 Лакшми                                   Москва              
+     ★ 5.0 · 250 отз.
+  ↻ #1160 Банный клуб "Девятый Вал"                Москва              
+     ★ 5.0 · 865 отз.
+  ↻ #1161 Айвенго                                  Москва              
+     ★ 5.0 · 882 отз.
+  ↻ #1164 Марфинские бани                          Москва              
+     ★ 4.7 · 270 отз.
+  ↻ #1165 Люблинские бани                          Москва              
+     ★ 4.5 · 614 отз.
+--- refresh done. ok=40, miss=0
+--- refresh MO ---
+Refresh 40 бань. Ожидаемое время ≈ 700 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+  ↻ #  19 Сходненские бани №2                      Химки               
+     ★ 5.0
+  ↻ #  41 русские бани                             Фрязино             
+     ★ 5.0 · 220 отз.
+  ↻ #  42 Респект                                  Жуковский           
+     ★ 4.2 · 91 отз.
+  ↻ #  46 Городская баня                           Высоковск           
+     ★ 5.0 · 68 отз.
+  ↻ #  47 Саввинские бани                          Балашиха            
+     ★ 4.9 · 121 отз.
+  ↻ #  48 Аврора                                   Жуковский           
+     ★ 4.3 · 40 отз. · low_traffic→draft
+  ↻ #  49 Лесная поляна                            Раменское           
+     ★ 4.9 · 350 отз.
+  ↻ #  50 Городская баня                           Серпухов            
+     ★ 5.0 · 702 отз.
+  ↻ #  58 Титан                                    Люберцы             
+     ★ 5.0 · 91 отз.
+  ↻ #  59 Баня                                     Косяково            
+     ★ 4.4 · 10 отз. · low_traffic→draft
+  ↻ #  60 Баня                                     Тропарёво           
+     (без изменений)
+  ↻ #  62 Ангеловские бани                         городской округ Красногорск
+     ★ 5.0 · 677 отз.
+  ↻ #  63 Камчатка                                 Долгопрудный        
+     ★ 5.0 · 188 отз.
+  ↻ #  65 Оздоровительный центр “Терма”            Королёв             
+     ★ 5.0 · 139 отз.
+  ↻ #  66 Протвинская городская баня               Протвино            
+     ★ 5.0 · 160 отз.
+  ↻ #  82 Баня                                     Куровское           
+     ★ 4.4 · 21 отз. · low_traffic→draft
+  ↻ #  83 Кедровые бани                            Красногорск         
+     ★ 5.0 · 332 отз.
+  ↻ #  84 Баня                                     Ельдигино           
+     ★ 4.0 · 7 отз. · low_traffic→draft
+  ↻ #  85 Семейные традиции                        Дубки               
+     ★ 4.7 · 32 отз. · low_traffic→draft
+  ↻ #  86 Носовихинские бани                       Балашиха            
+     ★ 5.0 · 763 отз.
+  ↻ #  87 Маэстро                                  Горки-2             
+     ★ 4.6 · 21 отз. · low_traffic→draft
+  ↻ #  88 Банька                                   Электросталь        
+     ★ 4.7 · 10 отз. · low_traffic→draft
+  ↻ #  89 Душа Красногорска                        Красногорск         
+     ★ 5.0 · 598 отз.
+  ↻ #  90 Богородские бани                         Ногинск             
+     ★ 4.7 · 219 отз.
+  ↻ #  91 Караван-баня                             Дмитровский муниципальный округ
+     ★ 4.7 · 56 отз.
+  ↻ #  92 Плещеевские бани                         Подольск            
+     ★ 5.0 · 182 отз.
+  ↻ #  95 Термы и фитнес                           Мытищи              
+     ★ 5.0 · 8798 отз.
+  ↻ #  97 Медведь                                  Дмитровский муниципальный округ
+     ★ 4.9 · 108 отз.
+  ↻ # 105 Eva                                      Химки               
+     ★ 3.8 · 26 отз. · low_traffic→draft
+  ↻ # 128 Русская баня                             Серпухов            
+     ★ 4.8 · 108 отз.
+  ↻ # 134 Баня                                     Раменское           
+     ★ 5.0 · 163 отз.
+  ↻ # 135 Розмарин                                 Раменское           
+     ★ 4.5 · 66 отз.
+  ↻ # 175 Наши бани                                Одинцовский городской округ
+     ★ 5.0 · 227 отз.
+  ↻ #  75 Русская баня                             Одинцовский городской округ
+     ★ 5.0 · 116 отз.
+  ↻ #  11 Малаховские бани                         Малаховка           
+     ★ 4.9 · 167 отз.
+  ↻ #  12 Баня                                     Родники             
+     ★ 5.0 · 78 отз.
+  ↻ #  13 Баня                                     Колюбакино          
+     ★ 4.3 · 21 отз. · low_traffic→draft
+  ↻ #  14 Банифаций                                Электросталь        
+     ★ 4.4 · 347 отз.
+  ↻ #  15 Русская Банька                           Долгопрудный        
+     ★ 4.9 · 98 отз.
+  ↻ #  16 Калипсо                                  Раменское           
+     ★ 4.1 · 4 отз. · low_traffic→draft
+--- refresh done. ok=40, miss=0
+--- refresh SPB ---
+Refresh 40 бань. Ожидаемое время ≈ 700 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+  ↻ # 183 Баня Хамам                               Санкт-Петербург     
+     ★ 4.9 · 32 отз. · low_traffic→draft
+  ↻ # 185 Оазис                                    Санкт-Петербург     
+     ★ 4.8 · 142 отз.
+  ↻ # 196 Hollywood                                Санкт-Петербург     
+     ★ 3.6
+  ↻ # 203 Чистилище                                Санкт-Петербург     
+     (без изменений)
+  ↻ # 213 Джой                                     Санкт-Петербург     
+     (без изменений)
+  ↻ # 247 Pro.Пар                                  Санкт-Петербург     
+     ★ 5.0 · 96 отз.
+  ↻ # 262 Батенинские бани                         Санкт-Петербург     
+     ★ 4.9 · 994 отз.
+  ↻ # 263 Баня №72                                 Санкт-Петербург     
+     ★ 4.9 · 1470 отз.
+  ↻ # 265 Зелёный Грот                             Санкт-Петербург     
+     ★ 4.1 · 34 отз. · low_traffic→draft
+  ↻ # 266 Таллинские бани                          Санкт-Петербург     
+     ★ 4.3 · 726 отз.
+  ↻ # 268 Станционные бани                         Санкт-Петербург     
+     ★ 4.7 · 559 отз.
+  ↻ # 269 Баня                                     Колпино             
+     ★ 4.7 · 298 отз.
+  ↻ # 271 Петергофские бани                        Санкт-Петербург     
+     ★ 4.8 · 419 отз.
+  ↻ # 272 Баня № 1                                 Красное Село        
+     ★ 4.2 · 119 отз.
+  ↻ # 274 Чкаловские бани                          Санкт-Петербург     
+     ★ 4.3 · 199 отз.
+  ↻ # 275 Баня № 68                                Санкт-Петербург     
+     ★ 4.4 · 373 отз.
+  ↻ # 279 Баня № 5                                 Санкт-Петербург     
+     ★ 4.7 · 245 отз.
+  ↻ # 280 Пар для гурманов                         Санкт-Петербург     
+     ★ 5.0 · 73 отз.
+  ↻ # 284 Баня №4                                  Санкт-Петербург     
+     ★ 4.8 · 397 отз.
+  ↻ # 285 Баня № 73                                Сергиево            
+     ★ 4.5 · 218 отз.
+  ↻ # 286 Центр отдыха  «Купчино»                  Санкт-Петербург     
+     ★ 4.4 · 50 отз.
+  ↻ # 288 Барские бани                             Санкт-Петербург     
+     ★ 4.3 · 6 отз. · low_traffic→draft
+  ↻ # 290 Флагшток                                 Санкт-Петербург     
+     ★ 5.0 · 1001 отз.
+  ↻ # 291 Круглые бани                             Санкт-Петербург     
+     ★ 4.8 · 1101 отз.
+  ↻ # 292 Физкультурно-оздоровительный комплекс "О Санкт-Петербург     
+     ★ 4.8 · 358 отз.
+  ↻ # 701 Бор 812                                  Санкт-Петербург     
+     ★ 5.0 · 614 отз.
+  ↻ # 177 Правобережные Бани                       Санкт-Петербург     
+     ★ 5.0 · 600 отз.
+  ↻ # 260 Бани "Гражданка"                         Санкт-Петербург     
+     ★ 4.8 · 466 отз.
+  ↻ #3885 Холодная баня с Агатовыми комнатами      Санкт-Петербург     
+     ★ 5.0 · 67 отз.
+  ↻ # 176 Водолей                                  Санкт-Петербург     
+     ★ 4.9 · 646 отз.
+  ↻ # 178 Казачьи бани                             Санкт-Петербург     
+     ★ 4.7 · 570 отз.
+  ↻ # 179 Балтийские Бани                          Санкт-Петербург     
+     ★ 4.7 · 852 отз.
+  ↻ # 180 Ямские Бани                              Санкт-Петербург     
+     ★ 5.0 · 2428 отз.
+  ↻ # 182 Аэлита                                   Санкт-Петербург     
+     ★ 4.9 · 68 отз.
+  ↻ # 186 Кирочный двор                            Санкт-Петербург     
+     ★ 4.8 · 654 отз.
+  ↻ # 187 Романовские бани                         Санкт-Петербург     
+     ★ 4.7 · 183 отз.
+  ↻ # 188 Московские бани                          Санкт-Петербург     
+     ★ 4.9 · 1246 отз.
+  ↻ # 189 Аквасфера                                Санкт-Петербург     
+     ★ 4.9 · 55 отз.
+  ↻ # 190 Тропик-РА                                Санкт-Петербург     
+     ★ 4.0 · 2 отз. · low_traffic→draft
+  ↻ # 191 Царская мельница                         Санкт-Петербург     
+     ★ 4.4 · 45 отз. · low_traffic→draft
+--- refresh done. ok=40, miss=0
+--- refresh LO ---
+Refresh 30 бань. Ожидаемое время ≈ 525 сек. (пауза между точками: 11.5 с в среднем, env BANYA_REFRESH_WAIT_MIN/MAX)
+  ↻ # 702 "Дельфин" cауна и "Душ Шарко"            ?                   
+     (без изменений)
+  ↻ # 752 Гвардейские бани                         Выборг              
+     ★ 4.8
+  ↻ # 711 У Максимыча                              ?                   
+     ★ 4.6 · 305 отз.
+  ↻ # 715 Русская баня в Ларионово                 ?                   
+     ★ 4.9 · 55 отз.
+  ↻ # 721 Кудесник                                 ?                   
+     ★ 4.7 · 123 отз.
+  ↻ # 727 Боярская баня                            ?                   
+     ★ 4.4 · 189 отз.
+  ↻ # 730 мкп Кузьмоловская баня                   ?                   
+     ★ 4.8 · 124 отз.
+  ↻ # 733 Семейная баня Новоселье                  ?                   
+     ★ 5.0 · 152 отз.
+  ↻ # 734 Пар для гурманов                         ?                   
+     ★ 5.0 · 514 отз.
+  ↻ # 735 Новосергиевские бани                     ?                   
+     ★ 5.0 · 188 отз.
+  ↻ # 739 Кола 45                                  ?                   
+     ★ 4.5 · 175 отз.
+  ↻ # 749 Городская баня №1                        Гатчина             
+     ★ 4.6 · 151 отз.
+  ↻ # 750 Всеволожская городская баня № 3          Всеволожск          
+     ★ 4.4 · 114 отз.
+  ↻ # 751 Всеволожская городская баня № 1          Всеволожск          
+     ★ 4.5 · 264 отз.
+  ↻ # 754 Баня №1                                  Выборг              
+     ★ 4.8 · 201 отз.
+  ↻ # 759 Всеволожская городская баня № 2          Всеволожск          
+     ★ 4.3 · 126 отз.
+  ↻ # 776 Коробицыно-каскад                        ?                   
+     ★ 4.7 · 463 отз.
+  ↻ #3931 A-frame Village                          ?                   
+     ★ 5.0 · 164 отз.
+  ↻ #3935 Кузьмоловские бани                       ?                   
+     ★ 5.0 · 82 отз.
+  ↻ # 706 Городская баня                           ?                   
+     (без изменений)
+  ↻ # 709 Braun-house                              ?                   
+     (без изменений)
+  ↻ # 737 Пар для гурманов                         ?                   
+     ★ 5.0 · 514 отз.
+  ↻ # 740 Баня в Вистино                           ?                   
+     ★ 4.9 · 26 отз. · low_traffic→draft
+  ↻ # 741 СПА - комплекс                           ?                   
+     (без изменений)
+  ↻ # 769 ДОЗ-овская баня                          Будогощь            
+     ★ 3.6 · 3 отз. · low_traffic→draft
+Terminated                 ./venv/bin/python tools/parsers/yandex_scrape.py refresh --region "$reg" --limit 40
+--- quality gate ---
+regions=MSK,MO,SPB,LO min_reviews=50 min_rating=4.0 review_max_age_d=365 spot_stale_d=270
+low_quality published: 0
+demoted to draft: 0
+=== FLAGSHIP 2026-09-17T05:09:26+00:00 regions=MSK,MO,SPB,LO ===
+--- OSM skip ---
+--- enrich MSK limit=30 ---
+Обогащаем 4 бань (regions=MSK,MO,SPB,LO, min_reviews=50). ≈ 40 сек.
+  → #1177 Новая                                    Москва              
+  → #1210 Коптево                                  Москва              
+Terminated                 ./venv/bin/python tools/parsers/yandex_scrape.py enrich --region "$reg" --limit "$ENRICH_LIMIT"
+--- enrich MO limit=30 ---
+Обогащаем 4 бань (regions=MSK,MO,SPB,LO, min_reviews=50). ≈ 40 сек.
+  → #  56 Десна                                    Тимоново            
+  → # 143 Корпус 6                                 Вербилки            
+./scripts/run_flagship_banya.sh: line 39: 127209 Killed                     ./venv/bin/python tools/parsers/yandex_scrape.py enrich --region "$reg" --limit "$ENRICH_LIMIT"
+--- enrich SPB limit=30 ---
+Обогащаем 1 бань (regions=MSK,MO,SPB,LO, min_reviews=50). ≈ 10 сек.
+  → # 197 Озерки                                   Санкт-Петербург     

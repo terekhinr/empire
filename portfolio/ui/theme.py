@@ -107,16 +107,26 @@ def kpi_card(label: str, value: str, delta: str | None = None, delta_class: str 
     """
 
 
-def hero_block(total: str, day_abs: str, day_pct: str, day_pos: bool | None) -> str:
+def hero_block(
+    total: str,
+    day_abs: str,
+    day_pct: str,
+    day_pos: bool | None,
+    as_of: str | None = None,
+) -> str:
     if day_pos is None:
         sub = '<span class="sb-hero-sub">Изменение за день: нет вчерашних котировок</span>'
     else:
         cls = "sb-pos" if day_pos else "sb-neg"
         sub = f'<span class="sb-hero-sub {cls}">{day_abs} · {day_pct} за сегодня</span>'
+    as_of_html = ""
+    if as_of:
+        as_of_html = f'<div class="sb-note" style="color:#cbd5e1;margin-top:0.45rem">Котировки на {as_of}</div>'
     return f"""
     <div class="sb-hero">
         <div class="sb-hero-label">Стоимость портфеля</div>
         <div class="sb-hero-value">{total}</div>
         {sub}
+        {as_of_html}
     </div>
     """

@@ -151,6 +151,12 @@ def build_report() -> str:
 
     lines.extend(["", "── Постинг / продукты ──"])
     lines.extend(_posting_summary())
+    try:
+        from empire_gdepar_parse_summary import build_gdepar_parse_summary
+
+        lines.extend(["", build_gdepar_parse_summary()])
+    except Exception as exc:
+        lines.append(f"── Где Пар · парсинг ──\n⚠ {exc}")
     pm_path = LOG_DIR / "posting-metrics-latest.txt"
     kpi_path = ROOT / "data" / "empire_weekly_kpi.json"
     if pm_path.is_file():

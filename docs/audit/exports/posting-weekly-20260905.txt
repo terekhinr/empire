@@ -1,0 +1,14 @@
+📈 Постинг · неделя с 2026-08-31
+Опубликовано: 33 · skip: 0 · success 100%
+
+── По персонам ──
+  garden: +4 skip=0 (100%)
+  gdepar: +20 skip=0 (100%)
+  lenin: +7 skip=0 (100%)
+  stern: +2 skip=0 (100%)
+
+── Оценка ──
+• Автопост стабилен (≥95% слотов)
+• Мало черновиков: stern
+
+JSON: /root/projects/empire/data/empire_weekly_kpi.json

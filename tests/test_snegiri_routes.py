@@ -139,3 +139,22 @@ def test_snegiri_analyze_accepts_video(client: TestClient) -> None:
     data = r.json()
     assert "score" in data
     assert data["exercise"] == "side_plank"
+
+
+def test_snegiri_host_serves_landing(client: TestClient) -> None:
+    r = client.get("/", headers={"Host": "snegirinegiri.ru"})
+    assert r.status_code == 200
+    assert "Железо требует техники" in r.text
+    assert "Снегири" in r.text
+
+    css = client.get("/landing.css", headers={"Host": "snegirinegiri.ru"})
+    assert css.status_code == 200
+
+    app_page = client.get("/app.html", headers={"Host": "snegirinegiri.ru"})
+    assert app_page.status_code == 200
+
+    health = client.get("/api/snegiri/health", headers={"Host": "snegirinegiri.ru"})
+    assert health.status_code == 200
+
+    other = client.get("/landing.css")
+    assert other.status_code == 404

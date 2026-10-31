@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Журнал «Где Пар»: байки, карта, как парить.">
+    <title>Журнал — Где Пар</title>
+    {% if metrika_id %}
+    <link rel="preconnect" href="https://mc.yandex.ru" crossorigin>
+    {% endif %}
+    <link rel="canonical" href="{{ canonical_page_url }}">
+    <link rel="icon" type="image/svg+xml" href="/static/gdepar/logos/03-drop.svg">
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/site.css?v={{ asset_version }}">
+    <link rel="stylesheet" href="/static/gdepar/theme.css?v={{ asset_version }}">
+</head>
+<body>
+{% include "gdepar_metrika.inc.html" %}
+{% include "gdepar_nav.inc.html" %}
+
+<section class="section">
+    <h1 class="section-header">Журнал</h1>
+    <p class="section-lead">Тексты с карты и из парной. Без нейросетей в этом разделе — только то, что поставили в слоты.</p>
+    {% if posts %}
+    <div class="bayki-grid">
+        {% for p in posts %}
+        <article class="bayka-card">
+            <div class="bayka-body">
+                <div class="bayka-meta">{{ p.when_ru }}</div>
+                <h2 class="bayka-text" style="font-size:1.15rem;margin:0 0 .5rem">{{ p.title }}</h2>
+                <div class="bayka-text">{{ p.body_html | safe }}</div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Пока пусто. Когда в Издательстве пост для сайта выйдет в живом режиме — он появится здесь.</p>
+    {% endif %}
+</section>
+
+<footer>
+    <div class="footer-inner">
+        <div>
+            <div class="footer-brand">ГДЕ <span>ПАР</span></div>
+            <p class="footer-tagline">{{ site_tagline }}</p>
+        </div>
+        <nav class="footer-nav">
+            <a href="/map">Карта</a>
+            <a href="/journal">Журнал</a>
+            <a href="/">Главная</a>
+        </nav>
+    </div>
+</footer>
+</body>
+</html>

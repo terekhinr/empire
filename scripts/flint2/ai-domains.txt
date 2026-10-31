@@ -1,11 +1,119 @@
-# Домены ИИ → Amnezia awg0 (Вена). Яндекс — напрямую через WAN (РФ).
-# yandex.* сюда НЕ добавлять: awg0 не форвардит, yandex.ru таймаутит.
+# ИИ → awg0 (Amnezia). YouTube/TG/Meta остаются в VLESS (podkop.main).
+# Не класть сюда google.com / gstatic.com целиком — разнесёт Search/YouTube CDN.
+# Веб и Windows Cursor должны выходить с одного IP (Amnezia VPS).
+# На ПК: Amnezia OFF, Windows «Зашифрованный DNS» OFF.
+
+# --- Cursor (IDE + web, один egress через Amnezia) ---
+cursor.com
+www.cursor.com
+docs.cursor.com
+cursor.sh
+www.cursor.sh
+api2.cursor.sh
+api2geo.cursor.sh
+api3.cursor.sh
+api4.cursor.sh
+api5.cursor.sh
+repo42.cursor.sh
+authenticate.cursor.sh
+authenticator.cursor.sh
+agent.api5.cursor.sh
+agentn.api5.cursor.sh
+agent.us.api5.cursor.sh
+agentn.us.api5.cursor.sh
+agent.global.api5.cursor.sh
+agentn.global.api5.cursor.sh
+us-asia.gcpp.cursor.sh
+us-eu.gcpp.cursor.sh
+us-only.gcpp.cursor.sh
+cursorapi.com
+marketplace.cursorapi.com
+cursor-cdn.com
+downloads.cursor.com
+# auth / billing иногда дергает Windows-клиент
+workos.com
+api.workos.com
+
+# --- Stripe (Cursor billing / refund portal) ---
+stripe.com
+www.stripe.com
+billing.stripe.com
+checkout.stripe.com
+js.stripe.com
+api.stripe.com
+m.stripe.com
+q.stripe.com
+files.stripe.com
+invoice.stripe.com
+dashboard.stripe.com
+hooks.stripe.com
+
+# --- OpenAI / ChatGPT ---
 openai.com
 chatgpt.com
 chat.openai.com
 oaistatic.com
 oaiusercontent.com
+platform.openai.com
+api.openai.com
+
+# --- Anthropic / Claude ---
 anthropic.com
 claude.ai
+api.anthropic.com
+
+# --- Microsoft Copilot (узко; не весь microsoft.com) ---
 copilot.microsoft.com
-bing.com
+sydney.bing.com
+edgeservices.bing.com
+copilot.cloud.microsoft.com
+
+# --- OpenRouter / агрегаторы ---
+openrouter.ai
+api.openrouter.ai
+
+# --- Google AI / Gemini (узкий список, не весь Google) ---
+gemini.google.com
+ai.google.dev
+generativelanguage.googleapis.com
+alkalimakersuite-pa.clients6.google.com
+maker-suite.google.com
+bard.google.com
+
+# --- Windsurf / Codeium ---
+windsurf.com
+www.windsurf.com
+auth.windsurf.com
+windsurf.dev
+www.windsurf.dev
+marketplace.windsurf.dev
+docs.windsurf.dev
+staging.windsurf.app
+codeium.com
+www.codeium.com
+auth.codeium.com
+api.codeium.com
+server.codeium.com
+inference.codeium.com
+marketplace.codeium.com
+codeiumusercontent.com
+
+# --- Прочие IDE/LLM API ---
+api.groq.com
+groq.com
+api.together.xyz
+together.xyz
+api.perplexity.ai
+perplexity.ai
+www.perplexity.ai
+chat.deepseek.com
+api.deepseek.com
+deepseek.com
+mistral.ai
+api.mistral.ai
+huggingface.co
+api-inference.huggingface.co
+replicate.com
+api.replicate.com
+fal.ai
+api.fal.ai

@@ -1,35 +1,39 @@
 #!/bin/sh
-# Проверка YouTube и «заблокированных» сервисов после podkop/zapret2.
+# Проверка YouTube и типичных блокировок. Учитывает режим vps/novps.
 set -eu
 
 log() { printf '\033[1;32m[verify]\033[0m %s\n' "$*"; }
 fail=0
+MODE=vps
+[ -f /etc/empire/bypass-mode ] && MODE="$(tr -d '\r\n' </etc/empire/bypass-mode)"
+log "режим: $MODE"
 
 check() {
   name="$1"
   url="$2"
-  if curl -fsSIL --max-time 15 "$url" 2>/dev/null | head -1 | grep -qE '200|301|302'; then
-    log "OK  $name"
-  else
-    log "FAIL $name ($url)"
-    fail=1
-  fi
+  code=$(curl -4 -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 15 "$url" 2>/dev/null || echo 000)
+  case "$code" in
+    200|204|301|302) log "OK  $name  http=$code" ;;
+    *) log "FAIL $name ($url) http=$code"; fail=1 ;;
+  esac
 }
 
-log "DNS..."
-nslookup youtube.com 127.0.0.1 >/dev/null 2>&1 || nslookup youtube.com >/dev/null 2>&1 || log "DNS lookup warning"
+log "offload: $(uci -q get firewall.@defaults[0].flow_offloading || echo '?') (должно быть 0)"
+log "IPv6 WAN: $(uci -q get network.wan.ipv6 || echo '?') (должно быть 0)"
 
-check "YouTube" "https://www.youtube.com/"
-check "Google" "https://www.google.com/"
-check "Sber" "https://www.sberbank.ru/"
-
-if command -v podkop >/dev/null 2>&1 || [ -x /etc/init.d/podkop ]; then
+pgrep -a nfqws 2>/dev/null | head -1 || log "WARN: nfqws не запущен"
+if [ "$MODE" != "novps" ]; then
+  pgrep -a sing-box 2>/dev/null | head -1 || log "WARN: sing-box не запущен"
   /etc/init.d/podkop status 2>/dev/null || true
 fi
 
-if [ -x /etc/init.d/zapret2 ]; then
-  /etc/init.d/zapret2 status 2>/dev/null || true
-fi
+log "DNS youtube:"
+nslookup www.youtube.com 127.0.0.1 2>/dev/null | awk '/^Address:/{print}' | tail -3 || log "DNS warning"
 
-[ "$fail" -eq 0 ] && log "все проверки прошли" || log "есть ошибки — см. logread и LuCI Podkop/Zapret2"
+check "YouTube generate_204" "https://www.youtube.com/generate_204"
+check "YouTube" "https://www.youtube.com/"
+check "Telegram" "https://telegram.org/"
+check "Sber" "https://www.sberbank.ru/"
+
+[ "$fail" -eq 0 ] && log "проверки прошли" || log "есть ошибки — zms / LuCI Podkop Diagnostics / logread"
 exit "$fail"

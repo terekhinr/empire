@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Портфель · Snowball</title>
+    <style>
+        :root {
+            --bg:#0b1220; --card:#152033; --card2:#1c2b44; --line:#2a3b55;
+            --text:#f8fafc; --muted:#94a3b8; --pos:#4ade80; --neg:#f87171;
+            --accent:#14b8a6; --accent2:#042f2e;
+        }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); }
+        .wrap { max-width: 1240px; margin: 0 auto; padding: 1.1rem 1rem 3.5rem; }
+        .hero { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0d9488 100%); border-radius: 16px; padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
+        .hero-label, .l { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+        .hero-value { font-size: 2.25rem; font-weight: 750; margin: .15rem 0 .3rem; }
+        .pills { display:flex; flex-wrap:wrap; gap:.4rem; margin:.7rem 0 0; }
+        .pill { background:#0f766e33; color:#99f6e4; border:1px solid #14b8a655; border-radius:999px; padding:.15rem .6rem; font-size:.75rem; }
+        .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; margin: .7rem 0; }
+        .kpi { background: var(--card); border:1px solid var(--line); border-radius: 12px; padding: .8rem .9rem; min-height: 5rem; }
+        .kpi .v { font-size: 1.12rem; font-weight: 650; margin-top: .2rem; }
+        .kpi .d { font-size: .8rem; margin-top: .15rem; color: var(--muted); }
+        .pos { color: var(--pos); } .neg { color: var(--neg); }
+        .sec { font-size: 1.05rem; font-weight: 650; margin: 1.25rem 0 .65rem; }
+        table { width: 100%; border-collapse: collapse; font-size: .86rem; background: var(--card); border-radius: 12px; overflow: hidden; }
+        th, td { padding: .5rem .65rem; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+        th { color: var(--muted); font-size: .72rem; text-transform: uppercase; position: sticky; top: 0; background: var(--card2); }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .scroll { overflow-x: auto; border-radius: 12px; }
+        form.login { max-width: 360px; margin: 15vh auto; background: var(--card); padding: 1.5rem; border-radius: 16px; }
+        input, button, select { font: inherit; }
+        form.login input, form.login button { width: 100%; padding: .7rem .8rem; border-radius: 8px; border: 0; }
+        form.login input { background: #0f172a; color: var(--text); margin: .6rem 0 1rem; }
+        .btn { background: var(--accent); color: var(--accent2); font-weight: 700; cursor: pointer; border:0; border-radius:8px; padding:.55rem .9rem; }
+        .btn.ghost { background: transparent; color: var(--accent); border:1px solid var(--accent); }
+        .err { color: var(--neg); margin: .4rem 0; }
+        .warn { background: #422006; color: #fdba74; padding: .7rem 1rem; border-radius: 8px; margin-bottom: .8rem; }
+        a { color: var(--accent); }
+        .top { display:flex; justify-content:space-between; align-items:center; gap:.8rem; flex-wrap:wrap; margin-bottom: .8rem; color: var(--muted); font-size: .88rem; }
+        .tabs { display:flex; gap:.35rem; flex-wrap:wrap; margin: .4rem 0 1rem; }
+        .tab { background: var(--card); color: var(--text); border:1px solid var(--line); border-radius:999px; padding:.4rem .9rem; cursor:pointer; text-decoration:none; display:inline-block; }
+        .tab.on { background: var(--accent); color: var(--accent2); border-color: var(--accent); font-weight: 700; }
+        .panel { display:block; scroll-margin-top: .8rem; }
+        .ptabs { display:flex; flex-wrap:wrap; gap:.35rem; align-items:flex-start; margin: .4rem 0 1rem; }
+        .ptabs > input { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+        .ptabs > label.tab { margin:0; }
+        .ptabs > section { display:none; flex:1 1 100%; margin-top:.35rem; }
+        #pt-dash:checked ~ section.dash,
+        #pt-hold:checked ~ section.hold,
+        #pt-an:checked ~ section.an { display:block; }
+        #pt-dash:checked ~ label[for="pt-dash"],
+        #pt-hold:checked ~ label[for="pt-hold"],
+        #pt-an:checked ~ label[for="pt-an"] {
+            background: var(--accent); color: var(--accent2); border-color: var(--accent); font-weight: 700;
+        }
+        .split { display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 800px) { .split { grid-template-columns: 1fr; } .hero-value { font-size: 1.7rem; } }
+        .donut-wrap { display:flex; gap:1rem; align-items:center; background: var(--card); border-radius:12px; padding:1rem; border:1px solid var(--line); }
+        .donut { width: 148px; height: 148px; border-radius: 50%; flex-shrink:0; position:relative; }
+        .donut::after { content:""; position:absolute; inset:38px; background: var(--card); border-radius:50%; }
+        .legend { font-size: .86rem; }
+        .legend div { margin: .28rem 0; display:flex; gap:.45rem; align-items:center; }
+        .sw { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+        .filters { display:flex; flex-wrap:wrap; gap:.55rem 1rem; align-items:flex-end; margin: 0 0 .75rem; }
+        .fg { display:flex; flex-direction:column; gap:.35rem; }
+        .chips { display:flex; flex-wrap:wrap; gap:.35rem; }
+        .chip { background: var(--card2); color: var(--muted); border:1px solid var(--line); border-radius:999px; padding:.28rem .7rem; cursor:pointer; font-size:.82rem; }
+        .chip.on { background:#0f766e; color:#ecfeff; border-color:#14b8a6; }
+        #hold-search, #sort-by { background: var(--card2); color: var(--text); border:1px solid var(--line); border-radius:8px; padding:.4rem .55rem; }
+        #hold-search { min-width: 180px; }
+        .foot { color: var(--muted); font-size:.88rem; margin-top:.6rem; }
+        .info { background:#1e3a5f; color:#dbeafe; padding:.65rem .9rem; border-radius:8px; font-size:.9rem; }
+        svg.chart { width:100%; height:auto; background: var(--card); border-radius:12px; border:1px solid var(--line); }
+        .actions { display:flex; gap:.4rem; }
+        td.name { white-space: normal; max-width: 220px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+{% if not authed %}
+    <form class="login" method="post" action="/portfolio/login">
+        <div class="hero-label">Snowball · Empire</div>
+        <h1 style="margin:.3rem 0 1rem">Портфель</h1>
+        {% if error %}<div class="err">{{ error }}</div>{% endif %}
+        <label>Пароль</label>
+        <input type="password" name="password" autocomplete="current-password" required>
+        <button class="btn" type="submit">Войти</button>
+    </form>
+{% else %}
+    {% include "portfolio_snowball.html" %}
+{% endif %}
+</div>
+</body>
+</html>

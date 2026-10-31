@@ -15,6 +15,7 @@ SSH_TARGET="${HA_USER}@${HA_HOST}"
 PKGS=(
   empire_motion_light.yaml
   empire_vannaya_dimmer_fix.yaml
+  empire_vannaya_failsafe.yaml
 )
 
 echo "==> Ванная → ${SSH_TARGET}:${HA_CONFIG}/packages/"

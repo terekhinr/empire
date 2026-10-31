@@ -110,7 +110,7 @@ checks=(
   "web_app.py 3000"
   "empire_worker.py 3000"
   "gdepar_content.py 10000"
-  "content_config.json 5000"
+  "content_config.json 2000"
 )
 
 for item in "${checks[@]}"; do

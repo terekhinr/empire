@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Empire VPN healthcheck every 30 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30min
+AccuracySec=1min
+Unit=empire-vpn-healthcheck.service
+
+[Install]
+WantedBy=timers.target

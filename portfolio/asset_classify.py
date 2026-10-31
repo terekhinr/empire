@@ -24,10 +24,11 @@ GOLD_TICKERS = frozenset({"GLDRUB_TOM", "SLVRUB_TOM", "GOLD", "GOLDRUB"})
 # Денежный остаток на счёте — не фонд ликвидности
 CASH_TICKERS = frozenset({"RUB000UTSTOM", "USD000UTSTOM", "EUR000UTSTOM"})
 
-ASSET_CLASS_ORDER = ("stock", "zpif", "gold", "liquidity")
+ASSET_CLASS_ORDER = ("stock", "bond", "zpif", "gold", "liquidity")
 
 ASSET_CLASS_LABELS = {
     "stock": "Акции",
+    "bond": "Облигации",
     "zpif": "Паи ЗПИФ",
     "gold": "Золото",
     "liquidity": "Фонды ликвидности (подушка)",
@@ -60,10 +61,15 @@ def classify_asset(
     if any(k in n for k in ("lqdt", "sbmm", "tmon", "ликвид", "денежн", "фонд денеж")):
         return "liquidity", True
 
+    itype = (instrument_type or "").lower()
+    if "bond" in itype or any(k in n for k in ("облигац", "офз", "бонд", "coupon")):
+        return "bond", False
+    if t.startswith("SU") and "RMF" in t:
+        return "bond", False
+
     if _is_zpif(t, n, instrument_type):
         return "zpif", False
 
-    # облигации и ETF акций — в «акции» для сводной структуры
     return "stock", False
 
 
@@ -86,7 +92,6 @@ def _is_zpif(ticker: str, name: str, instrument_type: str | None) -> bool:
 def normalize_legacy_class(asset_class: str) -> str:
     """Старые классы → новые четыре."""
     mapping = {
-        "bond": "stock",
         "etf": "zpif",
         "other": "zpif",
     }

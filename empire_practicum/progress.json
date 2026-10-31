@@ -1,0 +1,49 @@
+{
+  "student": "Empire Student",
+  "started_at": "2026-10-22",
+  "current_level": "Python Beginner",
+  "modules": {
+    "module_1_python": {
+      "title": "Фундамент Python",
+      "status": "in_progress",
+      "lessons": {
+        "lesson_1_calculator": {
+          "title": "Калькулятор",
+          "status": "in_progress",
+          "path": "module_1_python/lesson_1_calculator"
+        },
+        "lesson_2_text_analyzer": {
+          "title": "Анализатор текста",
+          "status": "not_started",
+          "path": "module_1_python/lesson_2_text_analyzer"
+        },
+        "lesson_3_todo_list": {
+          "title": "Менеджер задач (To-Do)",
+          "status": "not_started",
+          "path": "module_1_python/lesson_3_todo_list"
+        }
+      }
+    },
+    "module_2_async_bots": {
+      "title": "Асинхронность и Telegram-боты",
+      "status": "locked",
+      "lessons": {
+        "lesson_1_echo_bot": {
+          "title": "Эхо-бот",
+          "status": "not_started",
+          "path": "module_2_async_bots/lesson_1_echo_bot"
+        },
+        "lesson_2_keyboards": {
+          "title": "Клавиатуры (Inline и Reply)",
+          "status": "not_started",
+          "path": "module_2_async_bots/lesson_2_keyboards"
+        },
+        "lesson_3_fsm_form": {
+          "title": "FSM Анкета",
+          "status": "not_started",
+          "path": "module_2_async_bots/lesson_3_fsm_form"
+        }
+      }
+    }
+  }
+}

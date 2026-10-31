@@ -33,12 +33,12 @@ if [[ -x "$ROOT/scripts/backup_empire_db.sh" ]]; then
   EMPIRE_ROOT="$ROOT" "$ROOT/scripts/backup_empire_db.sh" || log "WARN: sqlite backup failed"
 fi
 
-log "--- 2/4 код + infra → Я.Диск ---"
+log "--- 2/4 код + infra → Я.Диск (sqlite gzip + /etc; без полного дерева) ---"
 if [[ -x "$ROOT/scripts/infra/infra_backup_bundle.sh" ]]; then
   EMPIRE_ROOT="$ROOT" "$ROOT/scripts/infra/infra_backup_bundle.sh" || log "WARN: infra bundle"
 fi
 if [[ -x "$ROOT/scripts/vps_backup_to_yandex.sh" ]]; then
-  "$ROOT/scripts/vps_backup_to_yandex.sh" || log "WARN: yandex backup failed"
+  EMPIRE_BACKUP_SKIP_FULL_TREE=1 "$ROOT/scripts/vps_backup_to_yandex.sh" || log "WARN: yandex backup failed"
 fi
 
 log "--- 3/4 empire-large (>80 МБ media/data) ---"
@@ -58,10 +58,7 @@ if [[ -x "$ROOT/scripts/vps_large_files_to_cloud.sh" ]]; then
   fi
 fi
 
-log "--- 4/4 очистка staging + git snapshot ---"
-if [[ -x "$ROOT/scripts/empire_vps_git_snapshot.sh" ]]; then
-  "$ROOT/scripts/empire_vps_git_snapshot.sh" || true
-fi
+log "--- 4/4 очистка staging (без git add -A: 23G дерево вешает oneshot) ---"
 find /var/tmp -maxdepth 1 -type d -name 'empire-large-*' -mtime +2 -exec rm -rf {} + 2>/dev/null || true
 find /var/tmp -maxdepth 1 -type d -name 'empire-vps-backup-*' -mtime +1 -exec rm -rf {} + 2>/dev/null || true
 find /var/tmp -maxdepth 1 -type d -name 'tox1-parts-*' -mtime +1 -exec rm -rf {} + 2>/dev/null || true

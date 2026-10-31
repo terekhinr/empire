@@ -77,7 +77,10 @@ def main() -> int:
             if raw is None and t in topics and not isinstance(topics.get(t), dict):
                 raw = topics.get(t)
             if raw is None:
-                raw = "Свободная тема"
+                # Как main.py sparse matrix: пустой день ≠ LLM «Свободная тема»
+                print(f"  {t}  —")
+                print("         → skip (нет слота в матрице дня)")
+                continue
             preview = asyncio.run(_resolve_preview(p_key, raw, day))
             flag = ""
             if isinstance(raw, dict):

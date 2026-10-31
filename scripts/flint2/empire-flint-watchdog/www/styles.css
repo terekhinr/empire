@@ -146,6 +146,20 @@ input[type="password"], input[type="text"] {
 }
 .out.log { max-height: 220px; }
 
+.badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #0a241c;
+  color: var(--muted);
+}
+.badge.ok { color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+.badge.warn { color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); }
+.badge.bad { color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); }
+
 @media (min-width: 560px) {
   body { max-width: 520px; margin: 0 auto; }
 }

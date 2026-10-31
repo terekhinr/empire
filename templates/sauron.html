@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Око Саурона</title>
+    <script data-cfasync="false">
+    (function () {
+        try {
+            if (navigator.serviceWorker) {
+                navigator.serviceWorker.getRegistrations().then(function (rs) {
+                    rs.forEach(function (r) { r.unregister(); });
+                });
+            }
+            if (window.caches) {
+                caches.keys().then(function (keys) {
+                    keys.forEach(function (k) { caches.delete(k); });
+                });
+            }
+        } catch (e) {}
+    })();
+    </script>
+    <style>
+        :root {
+            --bg:#0b1220; --card:#152033; --card2:#1c2b44; --line:#2a3b55;
+            --text:#f8fafc; --muted:#94a3b8; --pos:#4ade80; --neg:#f87171;
+            --accent:#14b8a6; --accent2:#042f2e; --side:#0a1628;
+            color-scheme: dark;
+        }
+        * { box-sizing: border-box; }
+        html { background: #0b1220; color: #f8fafc; overflow-x: hidden; }
+        body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: #0b1220; color: #f8fafc; overflow-x: hidden; }
+        .app { display:flex; min-height:100vh; width:100%; max-width:100vw; overflow-x:hidden; }
+        .nav-toggle { position:absolute; left:-9999px; }
+        .nav-btn { display:none; }
+        .side { width: 260px; flex-shrink:0; background: #0a1628; color: #f8fafc; border-right:1px solid var(--line); padding: 1rem .85rem 2rem; }
+        .brand { font-weight: 750; font-size: 1.05rem; margin: 0 0 .2rem; }
+        .side .cap { color: var(--muted); font-size: .78rem; margin-bottom: 1rem; }
+        .sg { color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; margin: .85rem 0 .35rem; }
+        .side a { display:block; color: var(--text); text-decoration:none; padding: .38rem .55rem; border-radius: 8px; font-size: .9rem; }
+        .side a:hover { background: #152033; }
+        .side a.on { background: var(--accent); color: var(--accent2); font-weight: 700; }
+        .out { margin-top: 1.2rem; font-size: .85rem; }
+        .main { flex:1; min-width:0; max-width:100%; padding: 1.1rem 1.2rem 3rem; overflow-x:hidden; }
+        h1 { font-size: 1.35rem; margin: 0 0 .35rem; }
+        .sub { color: var(--muted); margin-bottom: 1rem; font-size: .9rem; }
+        .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; margin: .7rem 0; }
+        .kpi { background: var(--card); border:1px solid var(--line); border-radius: 12px; padding: .8rem .9rem; }
+        .l { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+        .kpi .v { font-size: 1.12rem; font-weight: 650; margin-top: .2rem; }
+        .kpi .d { font-size: .8rem; margin-top: .15rem; color: var(--muted); }
+        .pos { color: var(--pos); } .neg { color: var(--neg); }
+        .sec { font-size: 1.05rem; font-weight: 650; margin: 1.25rem 0 .65rem; }
+        table { width: 100%; border-collapse: collapse; font-size: .86rem; background: var(--card); border-radius: 12px; overflow: hidden; }
+        th, td { padding: .5rem .65rem; text-align: left; border-bottom: 1px solid var(--line); }
+        th { color: var(--muted); font-size: .72rem; text-transform: uppercase; background: var(--card2); }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .scroll { overflow-x: auto; max-width: 100%; border-radius: 12px; }
+        .btn { background: var(--accent); color: var(--accent2); font-weight: 700; cursor: pointer; border:0; border-radius:8px; padding:.5rem .85rem; font: inherit; }
+        .btn.ghost { background: transparent; color: var(--accent); border:1px solid var(--accent); }
+        .btn.danger { background:#7f1d1d; color:#fecaca; }
+        .warn { background: #422006; color: #fdba74; padding: .7rem 1rem; border-radius: 8px; margin-bottom: .8rem; }
+        .ok { background:#064e3b; color:#a7f3d0; padding: .7rem 1rem; border-radius: 8px; margin-bottom: .8rem; }
+        .info { background:#1e3a5f; color:#dbeafe; padding:.65rem .9rem; border-radius:8px; font-size:.9rem; margin-bottom:.8rem; }
+        a { color: var(--accent); }
+        textarea, input, select { font: inherit; background: var(--card2); color: var(--text); border:1px solid var(--line); border-radius:8px; padding:.45rem .55rem; width:100%; }
+        textarea { min-height: 140px; }
+        .card { background: var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; margin-bottom:1rem; }
+        .checks label { display:flex; gap:.5rem; align-items:center; margin:.4rem 0; }
+        .checks input { width:auto; }
+        pre, code, .mono { font-family: ui-monospace, monospace; font-size: .82rem; white-space: pre-wrap; }
+        .hero { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0d9488 100%); border-radius: 16px; padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
+        .hero-label { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: rgba(248,250,252,.8); }
+        .hero-value { font-size: 2.25rem; font-weight: 750; margin: .15rem 0 .3rem; }
+        .pills { display:flex; flex-wrap:wrap; gap:.4rem; margin:.7rem 0 0; }
+        .pill { background:#0f766e33; color:#99f6e4; border:1px solid #14b8a655; border-radius:999px; padding:.15rem .6rem; font-size:.75rem; }
+        .tabs { display:flex; gap:.35rem; flex-wrap:wrap; margin: .4rem 0 1rem; }
+        .tab { background: var(--card); color: var(--text); border:1px solid var(--line); border-radius:999px; padding:.4rem .9rem; cursor:pointer; text-decoration:none; display:inline-block; }
+        .tab.on, .tab:target { background: var(--accent); color: var(--accent2); border-color: var(--accent); font-weight: 700; }
+        .panel { display:block; scroll-margin-top: .8rem; }
+        .ptabs { display:flex; flex-wrap:wrap; gap:.35rem; align-items:flex-start; margin: .4rem 0 1rem; }
+        .ptabs > input { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+        .ptabs > label.tab { margin:0; }
+        .ptabs > section { display:none; flex:1 1 100%; margin-top:.35rem; }
+        #pt-dash:checked ~ section.dash,
+        #pt-hold:checked ~ section.hold,
+        #pt-an:checked ~ section.an { display:block; }
+        #pt-dash:checked ~ label[for="pt-dash"],
+        #pt-hold:checked ~ label[for="pt-hold"],
+        #pt-an:checked ~ label[for="pt-an"] {
+            background: var(--accent); color: var(--accent2); border-color: var(--accent); font-weight: 700;
+        }
+        .split { display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .donut-wrap { display:flex; gap:1rem; align-items:center; background: var(--card); border-radius:12px; padding:1rem; border:1px solid var(--line); }
+        .donut { width: 148px; height: 148px; border-radius: 50%; flex-shrink:0; position:relative; }
+        .donut::after { content:""; position:absolute; inset:38px; background: var(--card); border-radius:50%; }
+        .legend { font-size: .86rem; }
+        .legend div { margin: .28rem 0; display:flex; gap:.45rem; align-items:center; }
+        .sw { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+        .filters { display:flex; flex-wrap:wrap; gap:.55rem 1rem; align-items:flex-end; margin: 0 0 .75rem; }
+        .fg { display:flex; flex-direction:column; gap:.35rem; }
+        .chips { display:flex; flex-wrap:wrap; gap:.35rem; }
+        .chip { background: var(--card2); color: var(--muted); border:1px solid var(--line); border-radius:999px; padding:.28rem .7rem; cursor:pointer; font-size:.82rem; }
+        .chip.on { background:#0f766e; color:#ecfeff; border-color:#14b8a6; }
+        #hold-search, #sort-by { background: var(--card2); color: var(--text); border:1px solid var(--line); border-radius:8px; padding:.4rem .55rem; }
+        .foot { color: var(--muted); font-size:.88rem; margin-top:.6rem; }
+        svg.chart { width:100%; height:auto; background: var(--card); border-radius:12px; border:1px solid var(--line); }
+        .actions { display:flex; gap:.4rem; }
+        td.name { white-space: normal; max-width: 220px; }
+        .top { display:flex; justify-content:space-between; align-items:center; gap:.8rem; flex-wrap:wrap; margin-bottom: .8rem; color: var(--muted); font-size: .88rem; }
+        form.row { display:flex; flex-wrap:wrap; gap:.5rem; align-items:end; margin: .6rem 0; }
+        form.row > div { min-width: 140px; }
+        form.row input, form.row select { width: auto; }
+        @media (max-width: 900px) {
+            .app { display:block; }
+            .side { width:auto; }
+            .split { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+    <div class="brand">👑 Око Саурона</div>
+    <div class="cap">Кабинет Empire</div>
+    {% for key, label, items in sections %}
+        <div class="sg">{{ label }}</div>
+        {% for slug, title in items %}
+            <a href="/hub/{{ slug }}" class="{% if page == slug %}on{% endif %}">{{ title }}</a>
+        {% endfor %}
+    {% endfor %}
+    <div class="out"><a href="/hub/logout">Выйти</a></div>
+</aside>
+<main class="main">
+    {% if flash %}<div class="ok">Сохранено: {{ flash }}</div>{% endif %}
+    {% if err %}<div class="warn">{{ err }}</div>{% endif %}
+
+    {% if page == "portfolio" %}
+        {% if m %}
+        {% include "portfolio_snowball.html" %}
+        {% else %}
+        <h1>Портфель</h1>
+        <div class="warn">Не удалось собрать портфель. Обновите страницу.</div>
+        {% endif %}
+
+    {% elif page == "monitoring" %}
+        <h1>Мониторинг</h1>
+        <p class="sub">empire_main — один бот на все каналы. Отдельные боты — лиды, PDF, донаты.</p>
+        <div class="sec">Ядро</div>
+        <div class="kpis">
+            {% for r in core %}
+            <div class="kpi"><div class="l">{{ r.unit }}</div><div class="v">{{ r.display }}</div></div>
+            {% endfor %}
+        </div>
+        {% if disk %}
+        <div class="kpis"><div class="kpi"><div class="l">SSD свободно</div><div class="v">{{ "%.1f"|format(disk.free) }} GB</div><div class="d">из {{ "%.1f"|format(disk.total) }}</div></div></div>
+        {% endif %}
+        <div class="sec">Отдельные боты</div>
+        {% for r in bots %}
+        <div class="card">
+            <strong>{{ r.label }}</strong> — {{ r.display }}
+            <div class="sub">{{ r.note }}{% if r.detail %} · {{ r.detail }}{% endif %}</div>
+        </div>
+        {% endfor %}
+        <div class="sec">Таблицы</div>
+        <table>{% for k,v in counts.items() %}<tr><td>{{ k }}</td><td class="num">{{ v if v is not none else "—" }}</td></tr>{% endfor %}</table>
+
+    {% elif page == "flags" %}
+        <h1>Стоп-переключатели</h1>
+        <form method="post" action="/hub/flags" class="card checks">
+            {% for key, label, val in flag_items %}
+            <label><input type="checkbox" name="{{ key }}" value="1" {% if val %}checked{% endif %}> {{ label }}</label>
+            {% endfor %}
+            <p><button class="btn" type="submit">Сохранить</button></p>
+        </form>
+
+    {% elif page == "finance" %}
+        <h1>P&amp;L · Финансы</h1>
+        <p class="sub">Доходы из sales.db + ручной ledger. Не дублируйте продажу, если она уже в sales.</p>
+        {% if stop_sales %}<div class="warn">Стоп продаж включён в флагах.</div>{% endif %}
+        <div class="kpis">
+            <div class="kpi"><div class="l">Расходы YTD</div><div class="v">{{ "{:,.0f}".format(ytd.expense_ytd_rub).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">Доход YTD (sales)</div><div class="v">{{ "{:,.0f}".format(ytd.income_sales_ytd_rub).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">Маржа YTD</div><div class="v">{{ "{:,.0f}".format(ytd.margin_ytd_rub).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">НПД</div><div class="v">{{ alert.pct }}%</div><div class="d">{% if alert.alert %}алёрт{% else %}ок{% endif %}</div></div>
+        </div>
+        <div class="kpis">
+            <div class="kpi"><div class="l">Cursor</div><div class="v">{{ "{:,.0f}".format(ytd.get("expense_cursor_ytd_rub", 0)).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">OpenRouter</div><div class="v">{{ "{:,.0f}".format(ytd.get("expense_openrouter_ytd_rub", 0)).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">fal.ai</div><div class="v">{{ "{:,.0f}".format(ytd.get("expense_fal_ytd_rub", 0)).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">AI всего</div><div class="v">{{ "{:,.0f}".format(ytd.get("expense_ai_tools_ytd_rub", 0)).replace(",", " ") }} ₽</div></div>
+        </div>
+        {% if month_cats %}
+        <div class="sec">Расходы по категориям · {{ month_key }}</div>
+        <table><tr><th>Категория</th><th class="num">₽</th></tr>
+        {% for c in month_cats %}<tr><td>{{ c.label }}</td><td class="num">{{ "{:,.0f}".format(c.amount).replace(",", " ") }}</td></tr>{% endfor %}
+        </table>
+        {% endif %}
+        {% if pl_rows %}
+        <div class="sec">P&amp;L по месяцам</div>
+        <div class="scroll"><table>
+            <tr><th>Месяц</th><th class="num">Расход</th><th class="num">Доход</th><th class="num">Маржа</th></tr>
+            {% for r in pl_rows %}
+            <tr>
+                <td>{{ r.month }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.expense_rub).replace(",", " ") }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.income_total_rub).replace(",", " ") }}</td>
+                <td class="num">{{ "{:,.0f}".format(r.margin_rub).replace(",", " ") }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% endif %}
+
+    {% elif page == "sales" %}
+        <h1>Продажи</h1>
+        {% if stop_sales %}<div class="warn">Стоп продаж включён в флагах.</div>{% endif %}
+        <div class="kpis">
+            <div class="kpi"><div class="l">Выручка YTD</div><div class="v">{{ "{:,.0f}".format(alert.revenue_ytd_rub).replace(",", " ") }} ₽</div></div>
+            <div class="kpi"><div class="l">Лимит НПД</div><div class="v">{{ alert.pct }}%</div><div class="d">{% if alert.alert %}алёрт{% else %}ок{% endif %}</div></div>
+        </div>
+        {% if products %}
+        <div class="sec">Каталог</div>
+        <div class="scroll"><table>
+            <tr>{% for k in products[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr>
+            {% for p in products %}<tr>{% for v in p.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}
+        </table></div>
+        {% else %}
+        <p class="sub">Каталог пуст. YooKassa / pay.neverretire.ru — после ключей.</p>
+        {% endif %}
+
+    {% elif page == "health" %}
+        <h1>Здоровье</h1>
+        <p class="sub">Замеры. Полный ввод CSV/Garmin — данные подхватываются с диска.</p>
+        {% if summary %}
+        <div class="kpis">
+            <div class="kpi"><div class="l">Дата</div><div class="v">{{ summary.date }}</div></div>
+            <div class="kpi"><div class="l">Вес</div><div class="v">{% if summary.weight_kg %}{{ summary.weight_kg }} кг{% else %}—{% endif %}</div></div>
+            <div class="kpi"><div class="l">Талия</div><div class="v">{% if summary.waist_cm %}{{ summary.waist_cm }} см{% else %}—{% endif %}</div></div>
+            <div class="kpi"><div class="l">ИМТ</div><div class="v">{{ summary.bmi or "—" }}</div></div>
+        </div>
+        {% else %}
+        <div class="info">Нет замеров в health.db</div>
+        {% endif %}
+        {% if recent %}
+        <div class="sec">Последние записи</div>
+        <div class="scroll"><table>
+            <tr><th>Дата</th><th class="num">Вес</th><th class="num">Талия</th></tr>
+            {% for r in recent %}
+            <tr>
+                <td>{{ r.get("date") or r.get("measured_at") or "—" }}</td>
+                <td class="num">{{ r.get("weight_kg") or "—" }}</td>
+                <td class="num">{{ r.get("waist_cm") or "—" }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% endif %}
+
+    {% elif page == "planning" %}
+        <h1>Планирование</h1>
+        <p class="sub">Задачи · проекты · цели. PWA: <a href="/tasks/">/tasks/</a></p>
+        <div class="kpis">
+            <div class="kpi"><div class="l">К выполнению</div><div class="v">{{ counts.tasks_todo }}</div></div>
+            <div class="kpi"><div class="l">В работе</div><div class="v">{{ counts.tasks_doing }}</div></div>
+            <div class="kpi"><div class="l">Готово</div><div class="v">{{ counts.tasks_done }}</div></div>
+            <div class="kpi"><div class="l">Цели</div><div class="v">{{ counts.goals_active }}</div></div>
+            <div class="kpi"><div class="l">Проекты</div><div class="v">{{ counts.projects_active }}</div></div>
+        </div>
+        {% if tasks %}
+        <div class="sec">Активные задачи</div>
+        <div class="scroll"><table>
+            <tr><th>Статус</th><th>Задача</th><th>Проект</th></tr>
+            {% for t in tasks %}
+            <tr>
+                <td>{{ t.get("status") }}</td>
+                <td>{{ t.get("title") or t.get("name") }}</td>
+                <td>{{ t.get("project") or "" }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% endif %}
+
+    {% elif page == "moderation" %}
+        <h1>Модерация постов</h1>
+        {% if not drafts %}
+        <div class="ok">Черновиков нет — все проверены или очередь пуста.</div>
+        {% endif %}
+        {% for d in drafts %}
+        <div class="card">
+            <strong>[{{ d.persona_key|upper }}] #{{ d.id }}</strong>
+            <span class="sub">{{ (d.created_at or "")[:16] }}</span>
+            <form method="post" action="/hub/moderation/{{ d.id }}/save">
+                <textarea name="text_content">{{ d.text_content or "" }}</textarea>
+                <p><button class="btn ghost" type="submit">Сохранить</button></p>
+            </form>
+            <form method="post" action="/hub/moderation/{{ d.id }}/publish">
+                <input type="hidden" name="text_content" value="{{ d.text_content or "" }}">
+                <div class="checks">
+                    {% for k, lbl in channels %}
+                    <label><input type="checkbox" name="channels" value="{{ k }}"> {{ lbl }}</label>
+                    {% endfor %}
+                </div>
+                <p>
+                    <button class="btn" type="submit">Опубликовать</button>
+                </p>
+            </form>
+            <form method="post" action="/hub/moderation/{{ d.id }}/delete" onsubmit="return confirm('Удалить черновик?');">
+                <button class="btn danger" type="submit">Удалить</button>
+            </form>
+        </div>
+        {% endfor %}
+
+    {% elif page == "publisher" %}
+        <h1>Издательство — посты без ИИ</h1>
+        <p class="sub">Заливка .md/.txt и матрицы. Пока режим тест, пока нет EMPIRE_PUBLISHER_LIVE=1.</p>
+        <ul>
+            <li><a href="https://gdepar.ru/admin/studio">gdepar.ru/admin/studio</a></li>
+            <li><a href="https://neverretire.ru/admin/studio">neverretire.ru/admin/studio</a></li>
+        </ul>
+        <p class="sub">Инструкция: docs/publisher_studio.md</p>
+
+    {% elif page == "longread" %}
+        <h1>Лонгриды · Дзен / VK</h1>
+        <p class="sub">Канон: data/pension/longreads/publish/. Approve — во вкладке «Модерация постов».</p>
+        <table>
+            <tr><th>Выпуск</th><th>Дзен md</th><th>VK md</th></tr>
+            {% for it in items %}
+            <tr>
+                <td>{{ it.num }} — {{ it.title }}</td>
+                <td>{% if it.dzen %}есть{% else %}нет{% endif %}</td>
+                <td>{% if it.vk %}есть{% else %}нет{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+
+    {% elif page == "obsidian" %}
+        <h1>Obsidian · практичный режим</h1>
+        <p class="sub">Один файл = один пост. scheduled по МСК. Сейчас {{ now }}.</p>
+        <form method="post" action="/hub/obsidian/import"><button class="btn" type="submit">Импорт queue сейчас</button></form>
+        <p class="sub">Вход: {{ incoming }}</p>
+        <div class="sec">К выдаче в бот</div>
+        {% if due %}
+            {% for e in due %}<div>· <strong>{{ e.get("id") }}</strong> — {{ e.get("persona") }} — {{ (e.get("title") or "")[:60] }} — {{ e.get("scheduled") }}</div>{% endfor %}
+        {% else %}
+            <div class="info">Нет постов с наступившим scheduled и status: ready.</div>
+        {% endif %}
+        <div class="sec">Очередь</div>
+        <div class="scroll"><table>
+            <tr><th>id</th><th>persona</th><th>status</th><th>scheduled</th><th>title</th></tr>
+            {% for e in queue %}
+            <tr>
+                <td>{{ e.get("id") }}</td><td>{{ e.get("persona") }}</td>
+                <td>{{ e.get("status") }}</td><td>{{ e.get("scheduled") }}</td>
+                <td>{{ (e.get("title") or "")[:80] }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+
+    {% elif page == "pension-news" %}
+        <h1>Пенсия · новости</h1>
+        <p class="sub">Лента заголовков. Разбор голосами — из очереди RSS.</p>
+        {% if news %}
+        <div class="scroll"><table>
+            <tr><th>id</th><th>Заголовок</th><th>Категория</th><th>Источник</th></tr>
+            {% for n in news %}
+            <tr>
+                <td>{{ n.get("id") }}</td>
+                <td>{% if n.get("url") %}<a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.get("title") }}</a>{% else %}{{ n.get("title") }}{% endif %}</td>
+                <td>{{ n.get("category") or "" }}</td>
+                <td>{{ n.get("source") or "" }}</td>
+            </tr>
+            {% endfor %}
+        </table></div>
+        {% else %}
+        <div class="info">Нет строк в news.</div>
+        {% endif %}
+
+    {% elif page == "pension-summary" %}
+        <h1>Pension · сводка</h1>
+        <div class="kpis">
+            <div class="kpi"><div class="l">Waitlist</div><div class="v">{{ waitlist }}</div></div>
+            <div class="kpi"><div class="l">Метрика ID</div><div class="v">{% if metrika_id %}да{% else %}нет{% endif %}</div></div>
+            <div class="kpi"><div class="l">TG subs</div><div class="v">{{ subs.get("tg") if subs.get("tg") is not none else "—" }}</div></div>
+        </div>
+        <p>
+            {% if metrika_id %}<a href="https://metrika.yandex.ru/dashboard?id={{ metrika_id }}">Яндекс.Метрика</a>{% endif %}
+            {% if yt %} · <a href="{{ yt }}">YouTube</a>{% endif %}
+            {% if dzen %} · <a href="{{ dzen }}">Дзен</a>{% endif %}
+            {% if vk %} · <a href="{{ vk }}">ВК</a>{% endif %}
+        </p>
+        {% if weekly %}
+        <div class="sec">Недельные метрики</div>
+        <div class="scroll"><table>
+            <tr>{% for k in weekly[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr>
+            {% for r in weekly %}<tr>{% for v in r.values() %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}
+        </table></div>
+        {% endif %}
+
+    {% elif page == "sources" %}
+        <h1>Источники трафика</h1>
+        <form method="post" action="/hub/sources" class="row">
+            <div><div class="l">Персона</div>
+                <select name="persona">
+                    <option>pension</option><option>garden</option><option>gdepar</option><option>lenin</option><option>stern</option>
+                </select>
+            </div>
+            <div><div class="l">Метка</div><input name="label" placeholder="кампания"></div>
+            <button class="btn" type="submit">Создать source_id</button>
+        </form>
+        {% if links %}
+        <table>
+            <tr><th>source_id</th><th>persona</th><th>label</th><th>created</th></tr>
+            {% for x in links %}
+            <tr><td class="mono">{{ x.source_id }}</td><td>{{ x.persona_key }}</td><td>{{ x.label }}</td><td>{{ x.created_at }}</td></tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p class="sub">Пока нет ссылок.</p>
+        {% endif %}
+
+    {% elif page == "spy" %}
+        <h1>Разведка · Gdepar / Stern</h1>
+        {% if not live %}<div class="warn">Разведка выключена (нет Telethon-сессии или stop_spy). Пенсия сюда не относится.</div>{% endif %}
+        <div class="kpis">
+            <div class="kpi"><div class="l">Live</div><div class="v">{% if live %}да{% else %}нет{% endif %}</div></div>
+            <div class="kpi"><div class="l">API</div><div class="v">{% if configured %}есть{% else %}нет{% endif %}</div></div>
+            <div class="kpi"><div class="l">Сессия</div><div class="v">{% if session_ready %}есть{% else %}нет{% endif %}</div></div>
+            <div class="kpi"><div class="l">stop_spy</div><div class="v">{% if stop_spy %}да{% else %}нет{% endif %}</div></div>
+        </div>
+
+    {% elif page == "shorts" %}
+        <h1>Видео · Shorts</h1>
+        {% if scripts %}
+        <div class="scroll"><table>
+            <tr><th>id</th><th>persona</th><th>title</th><th>status</th><th>created</th></tr>
+            {% for s in scripts %}
+            <tr><td>{{ s.id }}</td><td>{{ s.persona_key }}</td><td>{{ s.title }}</td><td>{{ s.status }}</td><td>{{ s.created_at }}</td></tr>
+            {% endfor %}
+        </table></div>
+        {% else %}
+        <div class="info">Нет сценариев. Job shorts_scripts или понедельник 06:00.</div>
+        {% endif %}
+
+    {% elif page == "neurocomment" %}
+        <h1>Нейрокомментинг (dry-run)</h1>
+        {% if plans %}
+        <div class="scroll"><table>
+            <tr><th>id</th><th>persona</th><th>канал</th><th>текст</th><th>status</th></tr>
+            {% for p in plans %}
+            <tr><td>{{ p.id }}</td><td>{{ p.persona_key }}</td><td>{{ p.channel_ref }}</td><td>{{ p.text }}</td><td>{{ p.status }}</td></tr>
+            {% endfor %}
+        </table></div>
+        {% else %}
+        <div class="info">Планов нет — дождитесь spy + neurocomment job.</div>
+        {% endif %}
+
+    {% elif page == "analytics" %}
+        <h1>Статистика</h1>
+        <div class="sec">Черновики</div>
+        {% if drafts %}
+        <table><tr><th>persona</th><th>status</th><th class="num">cnt</th></tr>
+        {% for r in drafts %}<tr><td>{{ r.persona_key }}</td><td>{{ r.status }}</td><td class="num">{{ r.cnt }}</td></tr>{% endfor %}
+        </table>
+        {% else %}<p class="sub">Нет данных post_drafts.</p>{% endif %}
+        <div class="sec">Публикации</div>
+        {% if pubs %}
+        <table><tr><th>persona</th><th class="num">cnt</th></tr>
+        {% for r in pubs %}<tr><td>{{ r.persona_key }}</td><td class="num">{{ r.cnt }}</td></tr>{% endfor %}
+        </table>
+        {% endif %}
+
+    {% elif page == "ai" %}
+        <h1>AI Insights</h1>
+        {% if last_file %}<p class="sub">Последний файл: {{ last_file }}</p>{% endif %}
+        <div class="sec">События за 7 дней</div>
+        <pre>{{ summary }}</pre>
+        <div class="sec">Гипотезы</div>
+        <ul>{% for h in insights.get("hypotheses", []) %}<li>{{ h }}</li>{% endfor %}</ul>
+
+    {% endif %}
+</main>
+</div>
+</body>
+</html>

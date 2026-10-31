@@ -1,0 +1,549 @@
+#!/bin/sh
+# empire-ha-healer — автохилер Home Assistant НА роутере Flint (OpenWrt).
+# Без VPS/Cursor/ИИ. Cron каждые 5 мин.
+#
+# Что делает:
+#  1) HA API жив? иначе homeassistant.restart (редко, cooldown)
+#  2) critical entities unavailable → reload ZHA / LocalTuya (cooldown)
+#  3) залипание mmWave occupancy → light.turn_off + TG (НЕ трогает чувствительность)
+#  4) свет on при presence off дольше порога → light.turn_off
+#  5) SmartIntercom ping (.101 / .65) → TG если мёртв
+#
+# Режимы: --check (только отчёт)  --force (игнор cooldown)
+# Лог: /tmp/empire-ha-healer.log   State: /tmp/empire-ha-healer.state
+set -eu
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+
+LOG="${EMPIRE_HA_HEAL_LOG:-/tmp/empire-ha-healer.log}"
+STATE="${EMPIRE_HA_HEAL_STATE:-/tmp/empire-ha-healer.state}"
+ENV_FILE="/etc/empire-flint-ui.env"
+MAX_LOG_LINES=500
+
+# Пороги (секунды), можно переопределить в /etc/empire-ha-healer.env
+STUCK_OCCUPANCY_SEC="${STUCK_OCCUPANCY_SEC:-2700}"   # 45 мин occupancy on
+DESYNC_LIGHT_SEC="${DESYNC_LIGHT_SEC:-300}"         # 5 мин light on + presence off (было 3 — меньше ложных)
+FIX_COOLDOWN_SEC="${FIX_COOLDOWN_SEC:-1800}"        # 30 мин между одинаковыми фиксами
+HA_RESTART_COOLDOWN_SEC="${HA_RESTART_COOLDOWN_SEC:-3600}"
+TG_COOLDOWN_SEC="${TG_COOLDOWN_SEC:-1800}"          # 30 мин между одинаковыми TG
+# Не рестартить HA чаще 1 раза в час; reload ZHA/Tuya — раз в час (can_fix)
+INTERCOM_IPS="${INTERCOM_IPS:-192.168.1.101 192.168.1.65}"
+# Безопасность: по умолчанию HA restart разрешён только если API мёртв
+ALLOW_HA_RESTART="${ALLOW_HA_RESTART:-1}"
+# 0 = молчать в TG (дайджест 2×/день с VPS). 1 = слать алерты (отвалы/reload).
+EMPIRE_HA_HEAL_TG="${EMPIRE_HA_HEAL_TG:-0}"
+
+STATES_FILE="/tmp/empire-ha-healer-states.json"
+CHECK_ONLY=0
+FORCE=0
+for a in "$@"; do
+  case "$a" in
+    --check|-c) CHECK_ONLY=1 ;;
+    --force|-f) FORCE=1 ;;
+    --help|-h)
+      echo "Usage: empire-ha-healer [--check|--force]"
+      exit 0
+      ;;
+  esac
+done
+
+# shellcheck disable=SC1091
+[ -f /etc/empire-ha-healer.env ] && . /etc/empire-ha-healer.env
+
+log() {
+  line="$(date -Is 2>/dev/null || date) $*"
+  echo "$line" >>"$LOG"
+  if [ -f "$LOG" ]; then
+    lines=$(wc -l <"$LOG" 2>/dev/null || echo 0)
+    if [ "$lines" -gt "$MAX_LOG_LINES" ]; then
+      tail -n 250 "$LOG" >"${LOG}.tmp" && mv "${LOG}.tmp" "$LOG"
+    fi
+  fi
+  if [ "${EMPIRE_HA_HEAL_VERBOSE:-0}" = "1" ] || [ "$CHECK_ONLY" = "1" ]; then
+    echo "$line"
+  fi
+  return 0
+}
+
+now_epoch() { date +%s; }
+
+state_get() {
+  _sk="$1"
+  [ -f "$STATE" ] || { echo ""; return 0; }
+  grep -E "^${_sk}=" "$STATE" 2>/dev/null | tail -1 | cut -d= -f2- || true
+}
+
+state_set() {
+  # не использовать имена key/val — в ash нет local, затирают вызывающий tg_send
+  _sk="$1"
+  _sv="$2"
+  tmp="${STATE}.tmp"
+  if [ -f "$STATE" ]; then
+    grep -vE "^${_sk}=" "$STATE" >"$tmp" 2>/dev/null || : >"$tmp"
+  else
+    : >"$tmp"
+  fi
+  echo "${_sk}=${_sv}" >>"$tmp"
+  mv "$tmp" "$STATE"
+}
+
+state_del() {
+  _sk="$1"
+  [ -f "$STATE" ] || return 0
+  grep -vE "^${_sk}=" "$STATE" >"${STATE}.tmp" 2>/dev/null || : >"${STATE}.tmp"
+  mv "${STATE}.tmp" "$STATE"
+}
+
+can_fix() {
+  key="$1"
+  cooldown="${2:-$FIX_COOLDOWN_SEC}"
+  [ "$FORCE" = "1" ] && return 0
+  [ "$CHECK_ONLY" = "1" ] && return 1
+  last=$(state_get "fix_${key}_ts")
+  [ -z "$last" ] && return 0
+  now=$(now_epoch)
+  [ $((now - last)) -ge "$cooldown" ] && return 0
+  return 1
+}
+
+mark_fix() {
+  state_set "fix_$1_ts" "$(now_epoch)"
+}
+
+json_escape() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' '
+}
+
+load_ha_env() {
+  HA_URL="http://192.168.1.41:8123"
+  HA_TOKEN=""
+  if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    . "$ENV_FILE" 2>/dev/null || true
+  fi
+  HA_URL="${HA_URL:-http://192.168.1.41:8123}"
+  case "$HA_URL" in
+    *100.80.133.85*) HA_URL="http://192.168.1.41:8123" ;;
+  esac
+  HA_TOKEN="${HA_TOKEN:-}"
+  [ -n "$HA_TOKEN" ] || return 1
+  return 0
+}
+
+ha_get() {
+  path="$1"
+  curl -fsS --connect-timeout 8 --max-time 45 \
+    -H "Authorization: Bearer $HA_TOKEN" \
+    -H "Content-Type: application/json" \
+    "${HA_URL}${path}" 2>/dev/null
+}
+
+ha_post() {
+  path="$1"
+  body="${2:-{}}"
+  curl -fsS --connect-timeout 8 --max-time 60 \
+    -X POST \
+    -H "Authorization: Bearer $HA_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$body" \
+    "${HA_URL}${path}" 2>/dev/null
+}
+
+tg_can_send() {
+  key="$1"
+  [ "$CHECK_ONLY" = "1" ] && return 1
+  last=$(state_get "tg_${key}_ts")
+  [ -z "$last" ] && return 0
+  now=$(now_epoch)
+  [ $((now - last)) -ge "$TG_COOLDOWN_SEC" ] && return 0
+  return 1
+}
+
+tg_send() {
+  key="$1"
+  msg="$2"
+  # по умолчанию тихо — сводка утро/вечер; FORCE_TG=1 или EMPIRE_HA_HEAL_TG=1
+  if [ "${EMPIRE_HA_HEAL_TG:-0}" != "1" ] && [ "${FORCE_TG:-0}" != "1" ]; then
+    log "TG silent key=$key (digest only)"
+    return 0
+  fi
+  tg_can_send "$key" || return 0
+  # JSON через файл — надёжнее, чем -d в ash с кириллицей
+  tmp="/tmp/empire-ha-healer-tg-$$.json"
+  if command -v jq >/dev/null 2>&1; then
+    jq -nc --arg m "$msg" '{message:$m}' >"$tmp" 2>/dev/null || \
+      printf '{"message":"%s"}' "$(json_escape "$msg")" >"$tmp"
+  else
+    printf '{"message":"%s"}' "$(json_escape "$msg")" >"$tmp"
+  fi
+  code=$(curl -sS -o /tmp/empire-ha-healer-tg.out -w "%{http_code}" --connect-timeout 8 --max-time 20 \
+    -X POST \
+    -H "Authorization: Bearer $HA_TOKEN" \
+    -H "Content-Type: application/json" \
+    --data-binary @"$tmp" \
+    "${HA_URL}/api/services/rest_command/empire_telegram" 2>/dev/null || echo "000")
+  rm -f "$tmp"
+  case "$code" in
+    200|201)
+      state_set "tg_${key}_ts" "$(now_epoch)"
+      log "TG ok key=$key"
+      ;;
+    *)
+      log "TG fail key=$key http=$code"
+      ;;
+  esac
+}
+
+entity_state() {
+  # stdin: full states json dump file path as $1, entity as $2 → prints state or MISSING
+  file="$1"
+  eid="$2"
+  if command -v jq >/dev/null 2>&1; then
+    jq -r --arg e "$eid" '
+      [.[] | select(.entity_id==$e) | .state] | if length==0 then "MISSING" else .[0] end
+    ' "$file" 2>/dev/null || echo "MISSING"
+  else
+    # crude fallback
+    grep -o "\"entity_id\": *\"$eid\"[^}]*\"state\": *\"[^\"]*\"" "$file" 2>/dev/null \
+      | head -1 | sed 's/.*"state": *"\([^"]*\)".*/\1/' || echo "MISSING"
+  fi
+}
+
+entity_last_changed_epoch() {
+  file="$1"
+  eid="$2"
+  iso=$(jq -r --arg e "$eid" '
+    [.[] | select(.entity_id==$e) | .last_changed] | if length==0 then empty else .[0] end
+  ' "$file" 2>/dev/null || true)
+  [ -z "$iso" ] && { echo 0; return 0; }
+  # ISO → epoch (busybox date often supports -D)
+  sec=$(date -u -D "%Y-%m-%dT%H:%M:%S" -d "$(echo "$iso" | cut -c1-19)" +%s 2>/dev/null || echo 0)
+  if [ "$sec" = "0" ]; then
+    sec=$(date -u -d "$(echo "$iso" | cut -c1-19 | tr T ' ')" +%s 2>/dev/null || echo 0)
+  fi
+  echo "$sec"
+}
+
+track_occupancy() {
+  # key suffix, presence entity, light entity
+  name="$1"
+  presence="$2"
+  light="$3"
+  file="$4"
+  now=$(now_epoch)
+
+  pstate=$(entity_state "$file" "$presence")
+  lstate=$(entity_state "$file" "$light")
+  log "occ $name presence=$pstate light=$lstate"
+
+  if [ "$pstate" = "on" ]; then
+    since=$(state_get "occ_${name}_on_since")
+    if [ -z "$since" ] || [ "$since" = "0" ]; then
+      # bootstrap from HA last_changed if possible
+      lc=$(entity_last_changed_epoch "$file" "$presence")
+      if [ "$lc" != "0" ] && [ $((now - lc)) -gt 0 ] && [ $((now - lc)) -lt 86400 ]; then
+        since=$lc
+      else
+        since=$now
+      fi
+      state_set "occ_${name}_on_since" "$since"
+    fi
+    age=$((now - since))
+    log "occ $name stuck_age=${age}s threshold=${STUCK_OCCUPANCY_SEC}s"
+    if [ "$age" -ge "$STUCK_OCCUPANCY_SEC" ]; then
+      log "STUCK occupancy $name age=${age}s"
+      if [ "$lstate" = "on" ] && can_fix "stuck_$name"; then
+        if [ "$CHECK_ONLY" = "1" ]; then
+          log "would turn_off $light (stuck $name)"
+        else
+          ha_post "/api/services/light/turn_off" "{\"entity_id\":\"$light\"}" >/dev/null || true
+          mark_fix "stuck_$name"
+          log "FIX stuck $name → light.turn_off $light"
+          tg_send "stuck_$name" "HA healer: $name — датчик присутствия on >$((age/60)) мин, свет выключил. Проверь Sonoff (угол/батарейка)."
+        fi
+      elif [ "$lstate" != "on" ]; then
+        # light already off but sensor stuck — alert only
+        if tg_can_send "stuck_sensor_$name"; then
+          tg_send "stuck_sensor_$name" "HA healer: $name — occupancy залип on >$((age/60)) мин (свет уже off). Датчик не сбрасывается."
+        fi
+      fi
+    fi
+  else
+    state_del "occ_${name}_on_since"
+  fi
+
+  # desync: presence off, light on too long
+  if [ "$pstate" = "off" ] && [ "$lstate" = "on" ]; then
+    dsince=$(state_get "desync_${name}_since")
+    if [ -z "$dsince" ]; then
+      state_set "desync_${name}_since" "$now"
+      dsince=$now
+    fi
+    dage=$((now - dsince))
+    log "desync $name age=${dage}s"
+    if [ "$dage" -ge "$DESYNC_LIGHT_SEC" ] && can_fix "desync_$name"; then
+      if [ "$CHECK_ONLY" = "1" ]; then
+        log "would turn_off $light (desync $name)"
+      else
+        ha_post "/api/services/light/turn_off" "{\"entity_id\":\"$light\"}" >/dev/null || true
+        # toilet template may need raw too
+        case "$name" in
+          tualet)
+            ha_post "/api/services/light/turn_off" "{\"entity_id\":\"light.hobeian_zg_301z\"}" >/dev/null || true
+            ;;
+          vannaya)
+            ha_post "/api/services/light/turn_off" "{\"entity_id\":\"light.tz3000_mgusv51k_ts0052\"}" >/dev/null || true
+            ;;
+        esac
+        mark_fix "desync_$name"
+        state_del "desync_${name}_since"
+        log "FIX desync $name → light off"
+        tg_send "desync_$name" "HA healer: $name — свет горел при пустом датчике >$((dage/60)) мин, выключил."
+      fi
+    fi
+  else
+    state_del "desync_${name}_since"
+  fi
+}
+
+reload_domain() {
+  domain="$1"
+  entries=$(ha_get "/api/config/config_entries/entry" 2>/dev/null || echo "[]")
+  echo "$entries" | jq -r --arg d "$domain" '.[] | select(.domain==$d) | .entry_id' 2>/dev/null | while read -r eid; do
+    [ -n "$eid" ] || continue
+    log "reload config_entry $domain $eid"
+    if [ "$CHECK_ONLY" = "1" ]; then
+      log "would reload $domain $eid"
+    else
+      curl -fsS --connect-timeout 8 --max-time 90 \
+        -X POST \
+        -H "Authorization: Bearer $HA_TOKEN" \
+        "${HA_URL}/api/config/config_entries/entry/${eid}/reload" >/dev/null 2>&1 || \
+      ha_post "/api/services/homeassistant/reload_config_entry" "{\"entry_id\":\"$eid\"}" >/dev/null || true
+    fi
+  done
+}
+
+# Человекочитаемые ярлыки для TG (entity_id → текст)
+label_entity() {
+  case "$1" in
+    binary_sensor.sonoff_snzb_06p) echo "Ванная · присутствие SNZB-06P" ;;
+    binary_sensor.sonoff_snzb_06p_2) echo "Прихожая · присутствие SNZB-06P" ;;
+    binary_sensor.sonoff_snzb_06p_3) echo "Туалет · присутствие SNZB-06P" ;;
+    binary_sensor.hobeian_zg_222z) echo "Ванная · протечка HOBEIAN" ;;
+    binary_sensor.balkon_datchik_gaza) echo "Балкон · газ" ;;
+    light.tz3000_mgusv51k_ts0052) echo "Ванная · диммер TS0052" ;;
+    light.empire_vannaya_svet) echo "Ванная · свет" ;;
+    light.hobeian_zg_301z) echo "Туалет · свет HOBEIAN" ;;
+    light.tz3000_mgusv51k_ts0052_2|light.empire_prihozhaya_svet) echo "Прихожая · диммер TS0052" ;;
+    light.zbeacon_ts0001_2) echo "Прихожая · старый Zbeacon (снят)" ;;
+    sensor.srw_th01_balkon_balkon_tdeg_raw|sensor.balkon_temperatura) echo "Балкон · SRW-TH01 (сон/батарея/Wi‑Fi)" ;;
+    switch.kuhnya_chainik) echo "Кухня · розетка Tuya" ;;
+    switch.spalnya_svet|switch.spalnya_svet_2) echo "Спальня · W602 свет" ;;
+    switch.balkon_multivarka) echo "Балкон · розетка" ;;
+    camera.ezviz_podezd) echo "Камера подъезд EZVIZ" ;;
+    camera.ezviz_prihozhaya) echo "Камера прихожая EZVIZ" ;;
+    binary_sensor.smartintercom_detektor_vyzova) echo "Домофон · вызов" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+hint_entity() {
+  case "$1" in
+    *snzb*|*hobeian_zg_222*) echo "Zigbee: питание 220В / кнопка датчика." ;;
+    *tz3000*|*empire_vannaya*|*hobeian_zg_301*) echo "Zigbee свет: питание линии." ;;
+    *zbeacon*|*prihozhaya*) echo "Цикл питания модуля + ZHA pairing." ;;
+    *srw*|*balkon_temperatura*) echo "Кнопка SRW 1с; DHCP .51 (не .143 кухня)." ;;
+    *chainik*|*spalnya*|*multivarka*) echo "Tuya Wi‑Fi 2.4 + питание розетки." ;;
+    *smartintercom*) echo "Питание/Wi‑Fi 192.168.1.101 MQTT." ;;
+    *ezviz*) echo "Камера: LAN/cloud EZVIZ." ;;
+    *) echo "Проверь питание и связь." ;;
+  esac
+}
+
+check_unavailable() {
+  file="$1"
+  need_zha=0
+  need_tuya=0
+  issues=""
+  human=""
+
+  for eid in \
+    light.tz3000_mgusv51k_ts0052 \
+    light.empire_vannaya_svet \
+    light.hobeian_zg_301z \
+    light.tz3000_mgusv51k_ts0052_2 \
+    light.empire_prihozhaya_svet \
+    binary_sensor.sonoff_snzb_06p \
+    binary_sensor.sonoff_snzb_06p_2 \
+    binary_sensor.sonoff_snzb_06p_3 \
+    binary_sensor.hobeian_zg_222z \
+    binary_sensor.balkon_datchik_gaza \
+    binary_sensor.smartintercom_detektor_vyzova \
+    camera.ezviz_podezd \
+    camera.ezviz_prihozhaya
+  do
+    st=$(entity_state "$file" "$eid")
+    case "$st" in
+      unavailable|unknown|MISSING)
+        issues="$issues $eid=$st"
+        human="$human · $(label_entity "$eid") [$st]"
+        case "$eid" in
+          # Old hallway Zbeacon left in mesh offline — report only.
+          light.zbeacon_ts0001_2) ;;
+          *sonoff*|*hobeian*|*tz3000*|*zbeacon*|*empire_vannaya*|*empire_prihozhaya*|*gaza*) need_zha=1 ;;
+        esac
+        # отдельный алерт по сущности (cooldown на ключ)
+        if tg_can_send "unavail_$eid"; then
+          tg_send "unavail_$eid" "Отвал: $(label_entity "$eid"). $(hint_entity "$eid") Flint healer попробует soft reload."
+        fi
+        ;;
+    esac
+  done
+
+  # LocalTuya / balcony / plugs
+  for eid in \
+    sensor.srw_th01_balkon_balkon_tdeg_raw \
+    sensor.balkon_temperatura \
+    switch.kuhnya_chainik \
+    switch.spalnya_svet \
+    switch.balkon_multivarka
+  do
+    st=$(entity_state "$file" "$eid")
+    case "$st" in
+      unavailable|unknown|MISSING)
+        issues="$issues $eid=$st"
+        human="$human · $(label_entity "$eid") [$st]"
+        # SRW sleep/offline is normal — don't reload LocalTuya every hour for it alone.
+        case "$eid" in
+          sensor.srw_th01_balkon_balkon_tdeg_raw|sensor.balkon_temperatura) ;;
+          *) need_tuya=1 ;;
+        esac
+        if tg_can_send "unavail_$eid"; then
+          tg_send "unavail_$eid" "Отвал: $(label_entity "$eid"). $(hint_entity "$eid")"
+        fi
+        ;;
+    esac
+  done
+
+  if [ -n "$issues" ]; then
+    log "unavailable:$issues"
+    state_set "last_issues" "$issues"
+    if [ "$need_zha" = "1" ] && can_fix "reload_zha" 3600; then
+      reload_domain zha
+      mark_fix "reload_zha"
+      tg_send "reload_zha" "Flint healer: soft reload ZHA.${human}"
+    fi
+    if [ "$need_tuya" = "1" ] && can_fix "reload_tuya" 3600; then
+      reload_domain localtuya
+      reload_domain tuya_local
+      mark_fix "reload_tuya"
+      tg_send "reload_tuya" "Flint healer: soft reload LocalTuya.${human}"
+    fi
+  else
+    state_del "last_issues"
+    log "critical entities OK (or not unavailable)"
+  fi
+}
+
+check_intercom() {
+  alive=0
+  for ip in $INTERCOM_IPS; do
+    if ping -c 1 -W 2 "$ip" >/dev/null 2>&1; then
+      log "intercom ping OK $ip"
+      alive=1
+      state_set "intercom_ip" "$ip"
+      break
+    fi
+  done
+  if [ "$alive" = "0" ]; then
+    log "intercom DOWN ($INTERCOM_IPS)"
+    tg_send "intercom_down" "HA healer: SmartIntercom не пингуется ($INTERCOM_IPS). Питание/Wi‑Fi."
+  fi
+  # HA entities
+  if [ -f "$STATES_FILE" ]; then
+    # Real MQTT entity (not fictional accept_call)
+    st=$(entity_state "$STATES_FILE" "switch.smartintercom_otkryt_dver")
+    if [ "$st" = "MISSING" ] || [ "$st" = "unavailable" ]; then
+      log "intercom HA entity missing/unavailable"
+      tg_send "intercom_ha" "HA healer: нет switch.smartintercom_otkryt_dver (MQTT/Mosquitto?). Модуль на LAN есть."
+      # Module on LAN but MQTT dead → soft reload mqtt entry (not ZHA).
+      if [ "$alive" = "1" ] && can_fix "reload_mqtt" 1800; then
+        reload_domain mqtt
+        mark_fix "reload_mqtt"
+        log "reloaded mqtt after intercom entity down"
+      fi
+    fi
+  fi
+}
+
+# ---------- main ----------
+log "START check_only=$CHECK_ONLY force=$FORCE"
+
+if ! load_ha_env; then
+  log "FAIL: no HA_TOKEN in $ENV_FILE"
+  exit 1
+fi
+
+# HA API
+if ! ha_get "/api/" >/dev/null 2>&1; then
+  log "HA API DOWN"
+  if [ "$ALLOW_HA_RESTART" = "1" ] && can_fix "ha_restart" "$HA_RESTART_COOLDOWN_SEC"; then
+    if [ "$CHECK_ONLY" = "1" ]; then
+      log "would restart HA"
+    else
+      ha_post "/api/services/homeassistant/restart" "{}" >/dev/null 2>&1 || true
+      mark_fix "ha_restart"
+      log "FIX: homeassistant.restart requested"
+      # TG may fail if HA down — best effort after sleep
+      sleep 25
+      tg_send "ha_restart" "Flint healer: HA API мёртв → restart (макс. 1/час)."
+    fi
+  else
+    log "HA DOWN but restart skipped (ALLOW_HA_RESTART=$ALLOW_HA_RESTART or cooldown)"
+    # TG через Flint UI token не ходим — нет HA; пишем лог
+  fi
+  check_intercom
+  log "END (HA was down)"
+  exit 0
+fi
+log "HA API OK"
+
+if ! ha_get "/api/states" >"$STATES_FILE"; then
+  log "FAIL: cannot fetch /api/states"
+  exit 1
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+  log "WARN: jq missing — limited checks"
+fi
+
+track_occupancy "vannaya" "binary_sensor.sonoff_snzb_06p" "light.empire_vannaya_svet" "$STATES_FILE"
+track_occupancy "tualet" "binary_sensor.sonoff_snzb_06p_3" "light.empire_tualet_svet" "$STATES_FILE"
+
+check_unavailable "$STATES_FILE"
+check_intercom
+
+# machine-readable summary for PWA / empire-api
+write_status_summary() {
+  now=$(now_epoch)
+  vp=$(state_get "occ_vannaya_on_since")
+  tp=$(state_get "occ_tualet_on_since")
+  vage=0; tage=0
+  [ -n "$vp" ] && [ "$vp" != "0" ] && vage=$((now - vp))
+  [ -n "$tp" ] && [ "$tp" != "0" ] && tage=$((now - tp))
+  iip=$(state_get "intercom_ip")
+  [ -z "$iip" ] && iip="none"
+  # presence/light from last fetch if file still there — re-query lightly
+  issues_s=$(state_get "last_issues")
+  cat > /tmp/empire-ha-healer-status.json <<JSON
+{"ok":true,"ts":$now,"installed":true,"cron":true,"vannaya_stuck_age":$vage,"tualet_stuck_age":$tage,"stuck_threshold":$STUCK_OCCUPANCY_SEC,"desync_threshold":$DESYNC_LIGHT_SEC,"intercom_ip":"$iip","issues":"$(json_escape "${issues_s:-}")","last_run":"$(date -Is 2>/dev/null || date)"}
+JSON
+  state_set "last_run" "$(date -Is 2>/dev/null || date)"
+  state_set "last_ok" "1"
+}
+
+# stash issues for summary (best-effort from log line pattern — also set in check_unavailable)
+write_status_summary
+rm -f "$STATES_FILE"
+log "END ok"
+exit 0

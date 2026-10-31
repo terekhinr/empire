@@ -87,7 +87,9 @@ async def build_rubric_slot(
         import stern_athletic_legacy as sal
 
         return await sal.build_athletic_legacy_slot(weekday=weekday)
-    entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
+    entry = rubric_posts.pick_entry(
+        _RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key, global_cooldown_days=30
+    )
     tag = RUBRIC_TOPIC_TAGS.get(key, "[Штерн · рубрика]")
     if not entry:
         body = f"{tag}\n\nСегодня без выпуска — завтра снова разбор с источником."
@@ -103,7 +105,9 @@ async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) 
     if prebuilt:
         return topic, prebuilt, img
     key = rubric_key_for_weekday(weekday, rubric_key)
-    entry = rubric_posts.pick_entry(_RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key)
+    entry = rubric_posts.pick_entry(
+        _RUBRICS_PATH, _RUBRICS_HISTORY, rubric=key, global_cooldown_days=30
+    )
     if not entry:
         return topic, f"{topic}\n\nСегодня без выпуска.", img
     return topic, rubric_body_html(key, entry), img

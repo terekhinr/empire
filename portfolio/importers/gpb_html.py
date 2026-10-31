@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 
 from portfolio.asset_classify import classify_asset
 from portfolio.db import broker_account_id, upsert_instrument, upsert_manual_position
+from portfolio.importers.isin_ticker import isin_to_ticker
 
 
 def _num(s: str) -> float:
@@ -58,10 +59,11 @@ def import_gpb_html(conn: sqlite3.Connection, path: str | Path) -> dict[str, Any
             continue
         if qty <= 0:
             continue
-        asset_class, is_liq = classify_asset(isin, name=name)
+        ticker = isin_to_ticker(isin) or isin
+        asset_class, is_liq = classify_asset(ticker, name=name)
         iid = upsert_instrument(
             conn,
-            isin,
+            ticker,
             isin=isin,
             name=name[:200],
             asset_class=asset_class,
@@ -76,18 +78,14 @@ def import_gpb_html(conn: sqlite3.Connection, path: str | Path) -> dict[str, Any
             note=f"gpb_html:{path.name}",
         )
         if close_price > 0:
-            from datetime import date
-
-            today = date.today().isoformat()
-            for px_date in (report_date, today):
-                conn.execute(
-                    """
-                    INSERT INTO price_cache (ticker, price_date, price, source)
-                    VALUES (?, ?, ?, 'gpb_report')
-                    ON CONFLICT(ticker, price_date) DO UPDATE SET price=excluded.price, source=excluded.source
-                    """,
-                    (isin, px_date, close_price),
-                )
+            conn.execute(
+                """
+                INSERT INTO price_cache (ticker, price_date, price, source)
+                VALUES (?, ?, ?, 'gpb_report')
+                ON CONFLICT(ticker, price_date) DO UPDATE SET price=excluded.price, source=excluded.source
+                """,
+                (ticker, report_date, close_price),
+            )
         updated += 1
 
     return {"broker": "gpb", "positions_updated": updated, "file": path.name, "report_date": report_date}

@@ -600,10 +600,14 @@ fix_telegram() {
 
 fix_awg() {
   can_fix awg || return 1
-  log "FIX amnezia awg0 (ifup + split + awg-quick)"
-  # UCI/netifd путь надёжнее голого awg-quick на OpenWrt
-  ifdown awg0 2>/dev/null || true
-  sleep 1
+  log "FIX amnezia awg0 (ifup only if device missing)"
+  # ifdown при живом интерфейсе не пробивает блокировку UDP у провайдера,
+  # зато сбрасывает handshake. Поднимаем только если устройства нет.
+  if ip link show awg0 >/dev/null 2>&1; then
+    log "FIX awg: device up, skip ifdown"
+    mark_fix awg
+    return 1
+  fi
   ifup awg0 2>/dev/null || true
   /etc/init.d/amnezia-split restart 2>/dev/null || true
   sh /etc/amnezia/start-split.sh 2>/dev/null || true
@@ -632,7 +636,7 @@ fix_ai_awg() {
   fi
   # 1) LKG/golden — без podkop regenerate (race → duplicate rule-set tags)
   if [ -x /usr/sbin/empire-singbox-lkg ]; then
-    /usr/sbin/empire-singbox-lkg restore >/tmp/empire-ai-fix.out 2>&1 || true
+    /usr/sbin/empire-singbox-lkg ensure >/tmp/empire-ai-fix.out 2>&1 || true
     sleep 3
     if ok_ai_awg; then
       mark_fix ai_awg

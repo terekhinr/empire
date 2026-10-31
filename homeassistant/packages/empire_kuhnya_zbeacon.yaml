@@ -15,6 +15,9 @@ script:
           zbeacon: light.zbeacon_ts0001
           target: "{{ 'on' if want_on else 'off' }}"
           cmd: "{{ 'light.turn_on' if want_on else 'light.turn_off' }}"
+      - condition: template
+        value_template: >-
+          {{ states(zbeacon) not in ['unavailable', 'unknown', 'none', ''] }}
       - action: homeassistant.update_entity
         target:
           entity_id: "{{ zbeacon }}"
@@ -26,21 +29,15 @@ script:
             target:
               entity_id: light.empire_kuhnya_svet
           - stop: "Zbeacon already {{ target }}"
-      - action: button.press
-        target:
-          entity_id: button.zbeacon_ts0001_identifikatsiia
-        continue_on_error: true
-      - delay:
-          milliseconds: 800
       - repeat:
-          count: 12
+          count: 4
           sequence:
             - action: "{{ cmd }}"
               target:
                 entity_id: "{{ zbeacon }}"
               continue_on_error: true
             - wait_template: "{{ is_state(zbeacon, target) }}"
-              timeout: "00:00:06"
+              timeout: "00:00:04"
               continue_on_timeout: true
             - if:
                 - condition: template
@@ -51,7 +48,7 @@ script:
                     entity_id: light.empire_kuhnya_svet
                 - stop: "Zbeacon {{ target }}"
             - delay:
-                milliseconds: 800
+                milliseconds: 500
       - action: homeassistant.update_entity
         target:
           entity_id:

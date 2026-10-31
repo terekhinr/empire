@@ -2,6 +2,8 @@
 
 **Начни здесь**, если VPS/роутер/бот сломались или нужно поднять всё с нуля.
 
+Полный срез схем, аудита и промптов для другого ИИ (31.10.2026): [handoff/2026-10-31/README.md](handoff/2026-10-31/README.md).
+
 ---
 
 ## Быстрые ссылки
@@ -15,6 +17,7 @@
 | Home Assistant | [HA_GOOGLE_DRIVE_BACKUP.md](HA_GOOGLE_DRIVE_BACKUP.md) | GDrive addon на HA |
 | Cursor → VPS | [cursor_vps_ssh_ru.md](cursor_vps_ssh_ru.md) | Tailscale + SSH key |
 | Flint миграция (детали) | [FLINT2_SETUP.md](FLINT2_SETUP.md) | bootstrap `:8789` |
+| YouTube на Flint (VPS и без) | [FLINT2_YOUTUBE_DUAL.md](FLINT2_YOUTUBE_DUAL.md) | `20-mode-vps.sh` / `21-mode-novps.sh` |
 
 ---
 

@@ -8,10 +8,28 @@ DEV="/dev/$DEVNAME"
 
 case "$ACTION" in
   add)
+    # раздел или целый диск — ждём blkid
+    sleep 1
     uuid=$(blkid -s UUID -o value "$DEV" 2>/dev/null || true)
-    [ "$uuid" = "$USB_UUID" ] || exit 0
+    # родительский диск без UUID — всё равно пробуем mount (раздел появится)
+    if [ -n "$uuid" ] && [ "$uuid" != "$USB_UUID" ]; then
+      exit 0
+    fi
+    if [ -z "$uuid" ]; then
+      # sdX без партиции в событии — проверить дочерние
+      found=0
+      for p in "${DEV}"[0-9]* "${DEV}"p[0-9]*; do
+        [ -b "$p" ] || continue
+        pu=$(blkid -s UUID -o value "$p" 2>/dev/null || true)
+        [ "$pu" = "$USB_UUID" ] && found=1 && break
+      done
+      [ "$found" = "1" ] || exit 0
+    fi
     /etc/init.d/empire-usb-mount start 2>/dev/null || true
+    /etc/init.d/samba4 enable 2>/dev/null || true
     /etc/init.d/samba4 restart 2>/dev/null || true
+    /etc/init.d/wsdd2 enable 2>/dev/null || true
+    /etc/init.d/wsdd2 restart 2>/dev/null || true
     ;;
   remove)
     if grep -q " $DEV " /proc/mounts 2>/dev/null || grep -q ' /mnt/usb ' /proc/mounts 2>/dev/null; then

@@ -47,7 +47,7 @@ CANONICAL_HOST = os.getenv("GDEPAR_CANONICAL_HOST", "gdepar.ru").strip() or "gde
 CANONICAL_BASE_URL = f"https://{CANONICAL_HOST}".rstrip("/")
 _GDEPAR_DEFAULT_OG_IMAGE_PATH = "/static/gdepar/logos/03-drop.svg"
 # Сброс кэша CSS у клиентов после правок вёрстки (можно переопределить в .env).
-GDEPAR_ASSET_VERSION = os.getenv("GDEPAR_ASSET_VERSION", "20260520c").strip() or "20260520c"
+GDEPAR_ASSET_VERSION = os.getenv("GDEPAR_ASSET_VERSION", "20261017a").strip() or "20261017a"
 _HTML_NO_CACHE = {"Cache-Control": "no-cache, must-revalidate"}
 _SEO_STATIC_CACHE = {"Cache-Control": "public, max-age=3600"}
 _HTML_404_HEADERS = {**_HTML_NO_CACHE, "X-Robots-Tag": "noindex"}
@@ -1070,6 +1070,11 @@ async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession
 
 admin_banya.configure(templates, async_session)
 app.include_router(admin_banya.router)
+
+import publisher.app as publisher_app
+
+publisher_app.configure(templates)
+app.include_router(publisher_app.router)
 
 
 def _spot_to_dict(spot: BanyaSpot) -> dict:
@@ -2242,6 +2247,8 @@ async def sitemap_xml():
         % _xml_escape_loc(f"{root}/"),
         "  <url><loc>%s</loc><changefreq>daily</changefreq><priority>0.9</priority></url>"
         % _xml_escape_loc(f"{root}/map"),
+        "  <url><loc>%s</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>"
+        % _xml_escape_loc(f"{root}/journal"),
     ]
     for slug, u_at in await _published_spot_slugs_for_sitemap():
         loc = _xml_escape_loc(f"{root}/banya/{slug}")
@@ -2272,10 +2279,13 @@ async def home(request: Request):
         result = await session.execute(stmt)
         posts = list(result.scalars().all())
 
-    # Точки и города для карты-виджета на главной (без фильтров: все опубликованные).
-    map_spots = await _fetch_banya_spots(city=None, heating="all", visited_only=False)
-    map_spots_data = [_spot_to_dict(s) for s in map_spots]
+    # Города + счётчик для главной; точки карты грузит браузер с /api/banya/spots
+    # (раньше 1.2MB JSON в HTML — страница «молчали» на слабых каналах).
     map_city_options = _city_options_for_ui(await _distinct_cities_published())
+    async with async_session() as session:
+        cnt_stmt = select(func.count()).select_from(BanyaSpot)
+        cnt_stmt = _apply_banya_filters(cnt_stmt, None, "all", False)
+        map_spots_count = int((await session.execute(cnt_stmt)).scalar_one() or 0)
 
     return templates.TemplateResponse(
         request,
@@ -2286,8 +2296,9 @@ async def home(request: Request):
             "canonical_host": CANONICAL_HOST,
             "site_title": "Где Пар",
             "site_tagline": "Дровяные бани, парение, тёплое братство",
-            "map_spots_data": map_spots_data,
-            "map_spots_count": len(map_spots_data),
+            "map_spots_data": None,
+            "map_spots_lazy": True,
+            "map_spots_count": map_spots_count,
             "map_city_options": map_city_options,
             "filter_city": "",
             "asset_version": GDEPAR_ASSET_VERSION,
@@ -2857,6 +2868,54 @@ async def gdepar_partners_page(request: Request):
             "nav_active": "partners",
         },
         headers=_html_public_page_headers(f"{CANONICAL_BASE_URL}/partners"),
+    )
+
+
+def _studio_journal_body_html(text: str) -> str:
+    parts: list[str] = []
+    for para in (text or "").split("\n\n"):
+        para = para.strip()
+        if not para:
+            continue
+        parts.append("<p>" + html_std.escape(para).replace("\n", "<br>") + "</p>")
+    return "".join(parts)
+
+
+@app.get("/journal")
+async def gdepar_journal_page(request: Request):
+    """Лента сайта из Издательства (site:gdepar, только status=published)."""
+    from publisher.feed import site_feed
+    from publisher.store import Store
+
+    raw = site_feed(Store(), "site:gdepar", include_test=False)
+    posts = []
+    for p in raw:
+        when = p.get("published_at") or p.get("scheduled_at") or ""
+        when_ru = when[8:10] + "." + when[5:7] + "." + when[:4] if len(when) >= 10 else ""
+        posts.append(
+            {
+                "title": p.get("title") or "Без названия",
+                "body_html": _studio_journal_body_html(p.get("body") or ""),
+                "when_ru": when_ru,
+            }
+        )
+    return templates.TemplateResponse(
+        request,
+        "gdepar_journal.html",
+        {
+            "request": request,
+            "canonical_host": CANONICAL_HOST,
+            "canonical_base_url": CANONICAL_BASE_URL,
+            "canonical_page_url": f"{CANONICAL_BASE_URL}/journal",
+            "asset_version": GDEPAR_ASSET_VERSION,
+            "metrika_id": YANDEX_METRIKA_ID,
+            "metrika_page": "journal",
+            "posts": posts,
+            "site_title": "Где Пар",
+            "site_tagline": "Журнал — байки и короткие тексты с карты",
+            "nav_active": "journal",
+        },
+        headers=_html_public_page_headers(f"{CANONICAL_BASE_URL}/journal"),
     )
 
 

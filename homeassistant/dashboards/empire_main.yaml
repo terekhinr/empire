@@ -419,11 +419,11 @@ views:
           action: call-service
           service: script.empire_domofon_otkryt
       - type: custom:mushroom-entity-card
-        entity: switch.smartintercom_accept_call
+        entity: switch.smartintercom_otkryt_dver
         name: Открыть (реле)
         icon: mdi:door-open
       - type: custom:mushroom-entity-card
-        entity: binary_sensor.smartintercom_line_detect
+        entity: binary_sensor.smartintercom_detektor_vyzova
         name: Звонок
         icon: mdi:phone-ring
 

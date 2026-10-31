@@ -20,7 +20,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="center"
-        android:text="На Xiaomi WebView часто пустой.\nЗадачник открывается в Chrome.\nВиджет на столе — отдельно."
+        android:text="На Xiaomi WebView часто пустой.\nЗал открывается в Chrome.\nВиджет задач на столе — отдельно."
         android:textColor="#94A3B8"
         android:textSize="15sp" />
 
@@ -29,7 +29,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="28dp"
-        android:text="Открыть Задачник" />
+        android:text="Открыть Зал" />
 
     <Button
         android:id="@+id/btn_pin_widget"

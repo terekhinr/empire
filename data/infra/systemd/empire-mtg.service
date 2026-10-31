@@ -1,0 +1,15 @@
+[Unit]
+Description=Empire Telegram MTProto proxy (mtg)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/root/empire-secrets/mtproto/mtg.env
+ExecStart=/usr/local/bin/mtg simple-run 0.0.0.0:${MTG_PORT} ${MTG_SECRET}
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,4 @@
+# Ванная failsafe: БЕЗ Telegram и БЕЗ автогашения.
+# Offline датчика → в утро/вечер digest и /ha; не спамим бот.
+
+automation: []

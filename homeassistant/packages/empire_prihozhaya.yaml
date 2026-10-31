@@ -1,115 +1,100 @@
-# Прихожая: SONOFF SNZB-06P + Zbeacon TS0001_2. Автосвет + голос (Алиса).
-
-script:
-  empire_prihozhaya_zbeacon_set:
-    alias: "Прихожая — Zbeacon установить on/off"
-    mode: queued
-    max: 3
-    fields:
-      want_on:
-        description: "true = включить, false = выключить"
-        selector:
-          boolean:
-    sequence:
-      - variables:
-          target: "{{ 'on' if want_on else 'off' }}"
-          cmd: "{{ 'light.turn_on' if want_on else 'light.turn_off' }}"
-      - action: homeassistant.update_entity
-        target:
-          entity_id: light.zbeacon_ts0001_2
-      - if:
-          - condition: template
-            value_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
-        then:
-          - stop: "Zbeacon already {{ target }}"
-      - repeat:
-          count: 8
-          sequence:
-            - action: "{{ cmd }}"
-              target:
-                entity_id: light.zbeacon_ts0001_2
-              continue_on_error: true
-            - wait_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
-              timeout: "00:00:04"
-              continue_on_timeout: true
-            - if:
-                - condition: template
-                  value_template: "{{ is_state('light.zbeacon_ts0001_2', target) }}"
-              then:
-                - stop: "Zbeacon {{ target }}"
-            - delay:
-                milliseconds: 600
-      - action: homeassistant.update_entity
-        target:
-          entity_id:
-            - light.zbeacon_ts0001_2
-            - light.empire_prihozhaya_svet
-
-  empire_prihozhaya_zbeacon_on:
-    alias: "Прихожая — включить свет (Zbeacon)"
-    mode: restart
-    sequence:
-      - action: script.empire_prihozhaya_zbeacon_set
-        data:
-          want_on: true
-
-  empire_prihozhaya_zbeacon_off:
-    alias: "Прихожая — выключить свет (Zbeacon)"
-    mode: restart
-    sequence:
-      - action: script.empire_prihozhaya_zbeacon_set
-        data:
-          want_on: false
+# Прихожая: binary_sensor.sonoff_snzb_06p_2 → light.empire_prihozhaya_svet
+# Диммер: light.tz3000_mgusv51k_ts0052_2 (прямое on/off).
+# Как ванная: on по presence→on, off по presence→off + 15с.
+# БЕЗ recover: при залипшем occupancy recover держал свет вечно.
 
 template:
+  - binary_sensor:
+      - name: "Прихожая — ночь (расписание)"
+        unique_id: empire_prihozhaya_dim_night
+        default_entity_id: binary_sensor.empire_prihozhaya_dim_night
+        icon: mdi:brightness-4
+        state: >
+          {% set ts = as_timestamp(now()) %}
+          {% set h = ts | timestamp_custom('%H', true, 'Europe/Moscow') | int(0) %}
+          {% set min = ts | timestamp_custom('%M', true, 'Europe/Moscow') | int(0) %}
+          {% set mins = h * 60 + min %}
+          {{ mins >= 60 and mins < 351 }}
+
   - light:
       - name: "Прихожая свет"
         unique_id: empire_prihozhaya_svet
         default_entity_id: light.empire_prihozhaya_svet
         icon: mdi:ceiling-light
         availability: >
-          {{ states('light.zbeacon_ts0001_2') not in ['unavailable', 'unknown', 'none'] }}
+          {{ states('light.tz3000_mgusv51k_ts0052_2') not in ['unavailable', 'unknown', 'none'] }}
         state: >
-          {{ is_state('light.zbeacon_ts0001_2', 'on') }}
+          {{ is_state('light.tz3000_mgusv51k_ts0052_2', 'on') }}
+        level: >
+          {{ state_attr('light.tz3000_mgusv51k_ts0052_2', 'brightness') | int(0) }}
         turn_on:
           - action: input_boolean.turn_off
             target:
               entity_id:
                 - input_boolean.rezhim_ushel
                 - input_boolean.rezhim_otpusk
-          - action: script.empire_prihozhaya_zbeacon_set
+          - action: light.turn_on
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052_2
             data:
-              want_on: true
+              brightness_pct: >
+                {% if brightness_pct is defined %}
+                  {{ brightness_pct | int }}
+                {% elif brightness is defined %}
+                  {{ [((brightness | int) * 100 // 255), 1] | max }}
+                {% else %}
+                  100
+                {% endif %}
+          - delay:
+              milliseconds: 350
+          - action: light.turn_on
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052_2
+            data:
+              brightness_pct: >
+                {% if brightness_pct is defined %}
+                  {{ brightness_pct | int }}
+                {% elif brightness is defined %}
+                  {{ [((brightness | int) * 100 // 255), 1] | max }}
+                {% else %}
+                  100
+                {% endif %}
         turn_off:
-          - action: script.empire_prihozhaya_zbeacon_set
+          - action: light.turn_off
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052_2
+          - delay:
+              milliseconds: 250
+          - action: light.turn_off
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052_2
+        set_level:
+          - action: light.turn_on
+            target:
+              entity_id: light.tz3000_mgusv51k_ts0052_2
             data:
-              want_on: false
+              brightness: "{{ brightness }}"
 
 automation:
   - id: empire_prihozhaya_sensor_init
-    alias: "Прихожая — настройка Sonoff PIR при старте"
+    alias: "Прихожая — настройка Sonoff при старте"
     trigger:
       - platform: homeassistant
         event: start
     action:
-      # Medium (2): High держит «присутствие» почти постоянно — свет не гаснет.
-      - action: zha.set_zigbee_cluster_attribute
+      # Low: транзит, быстрее отпускает occupancy чем Medium
+      - action: select.select_option
+        target:
+          entity_id: select.prikhozhaia_sonoff_snzb_06p_chuvstvitelnost_obnaruzheniia
         data:
-          ieee: "8c:73:da:ff:fe:f2:cb:4e"
-          endpoint_id: 1
-          cluster_id: 1030
-          cluster_type: in
-          attribute: 34
-          value: 2
-      # Тайм-аут «нет присутствия» ~15 с (как в ванной).
-      - action: zha.set_zigbee_cluster_attribute
+          option: "Low"
+        continue_on_error: true
+      - action: number.set_value
+        target:
+          entity_id: number.prikhozhaia_sonoff_snzb_06p_taim_aut_obnaruzheniia_prisutstviia
         data:
-          ieee: "8c:73:da:ff:fe:f2:cb:4e"
-          endpoint_id: 1
-          cluster_id: 1030
-          cluster_type: in
-          attribute: 33
           value: 15
+        continue_on_error: true
 
   - id: empire_prihozhaya_motion_light_on
     alias: "Прихожая — присутствие, свет вкл"
@@ -118,10 +103,43 @@ automation:
       - trigger: state
         entity_id: binary_sensor.sonoff_snzb_06p_2
         to: "on"
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('light.tz3000_mgusv51k_ts0052_2') not in
+             ['unavailable', 'unknown'] }}
     actions:
-      - action: script.empire_prihozhaya_zbeacon_set
-        data:
-          want_on: true
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.empire_prihozhaya_dim_night
+                state: "on"
+            sequence:
+              - action: light.turn_on
+                target:
+                  entity_id: light.empire_prihozhaya_svet
+                data:
+                  brightness_pct: 40
+              - delay:
+                  milliseconds: 400
+              - action: light.turn_on
+                target:
+                  entity_id: light.empire_prihozhaya_svet
+                data:
+                  brightness_pct: 40
+        default:
+          - action: light.turn_on
+            target:
+              entity_id: light.empire_prihozhaya_svet
+            data:
+              brightness_pct: 100
+          - delay:
+              milliseconds: 400
+          - action: light.turn_on
+            target:
+              entity_id: light.empire_prihozhaya_svet
+            data:
+              brightness_pct: 100
 
   - id: empire_prihozhaya_motion_light_off
     alias: "Прихожая — нет присутствия, свет выкл"
@@ -131,20 +149,76 @@ automation:
         entity_id: binary_sensor.sonoff_snzb_06p_2
         to: "off"
         for:
-          seconds: 20
+          seconds: 15
+    conditions:
+      - condition: state
+        entity_id: binary_sensor.sonoff_snzb_06p_2
+        state: "off"
     actions:
-      - action: script.empire_prihozhaya_zbeacon_set
-        data:
-          want_on: false
+      - action: light.turn_off
+        target:
+          entity_id: light.empire_prihozhaya_svet
 
-  - id: empire_prihozhaya_zbeacon_state_sync
-    alias: "Прихожая — синхрон состояния Zbeacon → template"
+  - id: empire_prihozhaya_dim_night_brightness
+    alias: "Прихожая — смена день/ночь, яркость"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: binary_sensor.empire_prihozhaya_dim_night
+    conditions:
+      - condition: state
+        entity_id: light.empire_prihozhaya_svet
+        state: "on"
+      - condition: state
+        entity_id: binary_sensor.sonoff_snzb_06p_2
+        state: "on"
+    actions:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.empire_prihozhaya_dim_night
+                state: "on"
+            sequence:
+              - action: light.turn_on
+                target:
+                  entity_id: light.empire_prihozhaya_svet
+                data:
+                  brightness_pct: 40
+                  transition: 1
+        default:
+          - action: light.turn_on
+            target:
+              entity_id: light.empire_prihozhaya_svet
+            data:
+              brightness_pct: 100
+              transition: 1
+
+  - id: empire_prihozhaya_dimmer_state_sync
+    alias: "Прихожая — синхрон диммера → template"
     mode: queued
     max: 5
     triggers:
       - trigger: state
-        entity_id: light.zbeacon_ts0001_2
+        entity_id: light.tz3000_mgusv51k_ts0052_2
     actions:
       - action: homeassistant.update_entity
         target:
           entity_id: light.empire_prihozhaya_svet
+
+  - id: empire_prihozhaya_dimmer_power_restore
+    alias: "Прихожая — диммер снова в сети"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: light.tz3000_mgusv51k_ts0052_2
+        from:
+          - unavailable
+          - unknown
+    actions:
+      - delay:
+          seconds: 5
+      - action: homeassistant.update_entity
+        target:
+          entity_id:
+            - light.tz3000_mgusv51k_ts0052_2
+            - light.empire_prihozhaya_svet

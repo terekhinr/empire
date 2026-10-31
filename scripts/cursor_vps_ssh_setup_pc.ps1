@@ -6,8 +6,9 @@
 # Пароль root спросит один раз при копировании ключа на VPS.
 
 $ErrorActionPreference = "Stop"
-$VpsHost = "193.233.232.48"
-$VpsHostTs = "100.84.19.35"
+$VpsHost = "45.146.88.222"
+# Tailscale IP подставьте после `tailscale up` на NEW (старый 100.124.148.18 был на 138…)
+$VpsHostTs = "100.124.148.18"
 $VpsUser = "root"
 $SshAlias = "empire-vps"
 $SshAliasTs = "empire-vps-ts"

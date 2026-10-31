@@ -2,6 +2,8 @@
 
 **Устройство:** Tuya `_TZ3000_mgusv51k` / **TS0052** (диммер 220 V LED, в т.ч. [Ozon](https://www.ozon.ru/product/dimmer-zigbee-3-0-dlya-svetodiodnyh-lamp-220v-led-s-alisoy-dlya-umnogo-doma-dimmiruemoe-rele-s-1675892193/)).
 
+**Прихожая (2026-10):** тот же чип → `light.tz3000_mgusv51k_ts0052_2`, инверсия в `empire_prihozhaya.yaml` → `light.empire_prihozhaya_svet`.
+
 **Симптомы:**
 
 | Что видите | Почему |

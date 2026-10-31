@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Задачник</string>
+    <string name="app_name">Зал</string>
     <string name="widget_name">Задачник · 7 дней</string>
     <string name="widget_title">Следующие 7 дней</string>
     <string name="widget_desc">Просроченные и задачи на неделю — как в TickTick</string>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru" style="color-scheme:dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0f172a">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Зал</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; background: #0f172a; color: #f8fafc; font-family: system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    .hidden { display: none !important; }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      padding: 12px 14px; background: #0f172a; border-bottom: 1px solid #334155;
+    }
+    header h1 { margin: 0; font-size: 1.15rem; flex: 1; min-width: 80px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    button, .btn, label.btn {
+      background: #2563eb; color: #fff; border: 0; border-radius: 10px;
+      padding: 9px 12px; font-weight: 600; cursor: pointer; font-size: 0.92rem;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button.secondary, .btn.secondary { background: #334155; }
+    button.active { outline: 2px solid #38bdf8; }
+    main { padding: 14px; max-width: 820px; margin: 0 auto 48px; }
+    .card { background: #1e293b; border-radius: 14px; padding: 14px; margin: 0 0 12px; }
+    .muted { color: #94a3b8; font-size: 0.88rem; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+    input {
+      background: #020617; color: #fff; border: 1px solid #475569; border-radius: 8px;
+      padding: 8px 10px; font-size: 0.95rem;
+    }
+    input[type="number"] { width: 88px; }
+    input[type="date"] { min-width: 140px; }
+    input[type="password"], input.wide { width: 100%; }
+    .ex { border-top: 1px solid #334155; padding: 12px 0; }
+    .ex:first-child { border-top: 0; padding-top: 0; }
+    .set { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+    .set label { display: flex; gap: 6px; align-items: center; font-size: 0.9rem; }
+    .auth { max-width: 420px; margin: 10vh auto; }
+    .err { background: #7f1d1d; padding: 10px 12px; border-radius: 10px; margin: 8px 0; }
+    .ok { background: #14532d; padding: 8px 10px; border-radius: 8px; margin: 8px 0; }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+    .chip { background: #334155; }
+    .chip.on { background: #2563eb; }
+    svg.chart { width: 100%; height: 140px; display: block; color: #38bdf8; }
+    .toast {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: #334155; padding: 10px 14px; border-radius: 10px; z-index: 50;
+    }
+  </style>
+</head>
+<body>
+  <!-- auth ВИДЕН по умолчанию — иначе при сбое JS чёрный экран -->
+  <div id="auth" class="auth card">
+    <h1>Зал</h1>
+    <p class="muted">Токен из PLANNING_API_TOKEN. После входа программа откроется сразу.</p>
+    <form method="post" action="/gym/session" id="auth-form">
+      <input id="token" class="wide" type="password" name="token" placeholder="Токен доступа" autocomplete="current-password" required>
+      <div class="row"><button type="submit">Войти</button></div>
+    </form>
+    <div id="auth-err" class="err hidden"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <header>
+      <h1>Зал</h1>
+      <div class="tabs">
+        <button type="button" class="active" data-tab="program">Программа</button>
+        <button type="button" data-tab="diary">Дневник</button>
+        <button type="button" data-tab="meas">Замеры</button>
+      </div>
+      <form method="post" action="/gym/logout" style="margin:0">
+        <button type="submit" class="secondary">Выйти</button>
+      </form>
+    </header>
+    <main>
+      <div id="flash" class="hidden"></div>
+      <div id="content"></div>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="application/json" id="gym-boot">{{GYM_BOOT}}</script>
+  <script type="application/json" id="gym-err">{{GYM_ERR}}</script>
+  <script>
+  (function () {
+    function $(id) { return document.getElementById(id); }
+    function show(el, on) { if (el) el.classList.toggle("hidden", !on); }
+    function esc(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    function toast(msg) {
+      var t = $("toast");
+      if (!t) return;
+      t.textContent = msg;
+      show(t, true);
+      setTimeout(function () { show(t, false); }, 2200);
+    }
+    function flash(msg, ok) {
+      var f = $("flash");
+      if (!f) return;
+      f.className = ok ? "ok" : "err";
+      f.textContent = msg;
+      show(f, true);
+    }
+    function todayISO() {
+      var d = new Date();
+      return d.toISOString().slice(0, 10);
+    }
+    function setCount(ex) {
+      var n = Number(ex.sets || 0);
+      if (n > 0) return n;
+      var m = String(ex.prescription || "").match(/(\d+)\s*[x×]/i);
+      return m ? Number(m[1]) : 3;
+    }
+    function defaultReps(ex) {
+      if (ex.reps) return Number(ex.reps);
+      if (ex.reps_min) return Number(ex.reps_min);
+      var m = String(ex.prescription || "").match(/[x×]\s*(\d+)/i);
+      return m ? Number(m[1]) : 8;
+    }
+    function lineChart(points, title) {
+      if (!points.length) return '<div class="card muted">' + esc(title) + ": нет данных</div>";
+      var w = 320, h = 140, pad = 18;
+      var ys = points.map(function (p) { return p.y; });
+      var min = Math.min.apply(null, ys), max = Math.max.apply(null, ys);
+      if (min === max) { min -= 1; max += 1; }
+      var coords = points.map(function (p, i) {
+        var x = pad + (i * (w - 2 * pad)) / Math.max(points.length - 1, 1);
+        var y = h - pad - ((p.y - min) / (max - min)) * (h - 2 * pad);
+        return x.toFixed(1) + "," + y.toFixed(1);
+      }).join(" ");
+      var last = points[points.length - 1];
+      return '<div class="card"><div class="muted">' + esc(title) + " · сейчас " + esc(last.y) + "</div>"
+        + '<svg class="chart" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">'
+        + '<polyline fill="none" stroke="currentColor" stroke-width="2.2" points="' + coords + '"/></svg></div>';
+    }
+
+    var boot = null;
+    var errMsg = null;
+    try { boot = JSON.parse(($("gym-boot") && $("gym-boot").textContent) || "null"); } catch (e) { boot = null; }
+    try { errMsg = JSON.parse(($("gym-err") && $("gym-err").textContent) || "null"); } catch (e) { errMsg = null; }
+
+    var KEY = "empire_planning_token";
+    var API = "/gym/api";
+    var state = {
+      tab: "program",
+      summary: boot,
+      session: (boot && boot.session) || null,
+      programId: (boot && boot.program_id) || "gym_2026",
+      date: (boot && boot.date) || "",
+      workouts: (boot && boot.workouts) || [],
+      measurements: (boot && boot.measurements) || [],
+      dayLogs: (boot && boot.day_logs) || [],
+    };
+
+    function token() {
+      try { return (localStorage.getItem(KEY) || "").trim(); } catch (e) { return ""; }
+    }
+    function setToken(v) {
+      try { localStorage.setItem(KEY, v); } catch (e) {}
+    }
+
+    function api(path, opts) {
+      opts = opts || {};
+      return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open(opts.method || "GET", API + path, true);
+        xhr.timeout = opts.timeoutMs || 20000;
+        var tok = token();
+        if (tok) xhr.setRequestHeader("X-Planning-Token", tok);
+        if (opts.body && !(opts.body instanceof FormData)) {
+          xhr.setRequestHeader("Content-Type", "application/json");
+        }
+        xhr.onload = function () {
+          if (xhr.status === 401) { reject(new Error("auth")); return; }
+          if (xhr.status < 200 || xhr.status >= 300) {
+            var detail = "HTTP " + xhr.status;
+            try {
+              var err = JSON.parse(xhr.responseText || "{}");
+              if (err.detail) detail = typeof err.detail === "object" ? JSON.stringify(err.detail) : String(err.detail);
+            } catch (e) {}
+            reject(new Error(detail));
+            return;
+          }
+          if (!xhr.responseText) { resolve(null); return; }
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch (e) { resolve(xhr.responseText); }
+        };
+        xhr.onerror = function () { reject(new Error("Сеть недоступна")); };
+        xhr.ontimeout = function () { reject(new Error("Таймаут сервера")); };
+        xhr.send(opts.body || null);
+      });
+    }
+
+    function renderProgram() {
+      var sum = state.summary || {};
+      var session = state.session;
+      if (!session) {
+        session = (sum.today && typeof sum.today === "object") ? sum.today
+          : ((sum.next && typeof sum.next === "object") ? sum.next : null);
+        state.date = state.date || (session && session.on) || sum.start || todayISO();
+        state.session = session;
+      }
+      var logs = state.dayLogs || [];
+      var programs = sum.programs || [];
+      var html = "";
+      html += '<div class="card"><div class="chip-row">';
+      programs.forEach(function (p) {
+        var on = (p.id === state.programId) ? " on" : "";
+        html += '<button type="button" class="chip' + on + '" data-switch="' + esc(p.id) + '">' + esc(p.short || p.title || p.id) + "</button>";
+      });
+      html += "</div>";
+      html += '<div class="row">'
+        + '<label class="btn secondary">Загрузить файл<input id="upload" type="file" accept=".json,.yaml,.yml,.md" hidden></label>'
+        + '<button type="button" class="secondary" id="btn-template">Шаблон</button>'
+        + '<button type="button" class="secondary" id="btn-backup">Бэкап</button>'
+        + '<a class="btn secondary" href="/gym/?t=' + Date.now() + '">Обновить</a>'
+        + "</div>";
+      html += '<div class="muted">' + esc(sum.title || "") + " · " + esc(sum.start || "") + " — " + esc(sum.end || "") + "</div></div>";
+      html += '<div class="card row"><label>Дата <input type="date" id="day" value="' + esc(state.date) + '"></label>'
+        + '<button type="button" class="secondary" id="btn-reload-day">Показать</button></div>';
+
+      if (!session || !(session.exercises || []).length) {
+        html += '<div class="card muted">Нет тренировки на эту дату. Старт: ' + esc(sum.start || "—") + "</div>";
+      } else {
+        html += '<div class="card">';
+        html += "<div><b>" + esc(session.label || "Сессия") + "</b></div>";
+        if (session.title) html += '<div class="muted">' + esc(session.title) + "</div>";
+        html += '<div id="save-hint" class="muted">Отметьте подходы и сохраните</div>';
+        (session.exercises || []).forEach(function (ex, idx) {
+          if (ex.is_rest) return;
+          var n = setCount(ex);
+          var name = ex.exercise_label || ex.name || ex.exercise_key;
+          var sug = ex.suggested_weight_kg != null ? ex.suggested_weight_kg : "";
+          html += '<div class="ex">';
+          html += "<div><b>" + esc(name) + '</b> <span class="muted">' + esc(ex.prescription || "") + "</span></div>";
+          if (ex.detail) html += '<div class="muted">' + esc(ex.detail) + "</div>";
+          for (var s = 1; s <= n; s++) {
+            var prev = logs.find(function (l) {
+              return l.exercise_key === ex.exercise_key && String(l.note || "").indexOf(s + "/" + n) >= 0;
+            });
+            var w = prev ? prev.weight_kg : sug;
+            var r = prev ? prev.reps : defaultReps(ex);
+            var checked = prev ? " checked" : "";
+            html += '<div class="set">'
+              + '<label><input type="checkbox" class="done" data-idx="' + idx + '" data-set="' + s + '"' + checked + "> #" + s + "</label>"
+              + '<input type="number" step="0.5" class="w" data-idx="' + idx + '" data-set="' + s + '" placeholder="кг" value="' + esc(w === "" || w == null ? "" : w) + '">'
+              + '<input type="number" class="r" data-idx="' + idx + '" data-set="' + s + '" placeholder="повт" value="' + esc(r) + '">'
+              + "</div>";
+          }
+          html += "</div>";
+        });
+        html += '<div class="row"><button type="button" id="btn-save">Сохранить подходы</button></div></div>';
+      }
+      $("content").innerHTML = html;
+
+      document.querySelectorAll("[data-switch]").forEach(function (b) {
+        b.onclick = function () {
+          location.href = "/gym/?program=" + encodeURIComponent(b.getAttribute("data-switch"));
+        };
+      });
+      var up = $("upload");
+      if (up) up.onchange = async function () {
+        if (!up.files || !up.files[0]) return;
+        var fd = new FormData();
+        fd.append("file", up.files[0]);
+        try {
+          await api("/workouts/program/upload", { method: "POST", body: fd });
+          location.href = "/gym/?t=" + Date.now();
+        } catch (e) { flash(String(e.message || e), false); toast(String(e.message || e)); }
+      };
+      var bt = $("btn-template");
+      if (bt) bt.onclick = async function () {
+        try {
+          var data = await api("/workouts/program/template");
+          var text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+          a.download = "full_body_3day.json";
+          document.body.appendChild(a); a.click(); a.remove();
+        } catch (e) { flash(String(e.message || e), false); }
+      };
+      var bb = $("btn-backup");
+      if (bb) bb.onclick = function () {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", API + "/body/backup", true);
+        xhr.setRequestHeader("X-Planning-Token", token());
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.responseType = "blob";
+        xhr.timeout = 60000;
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            var a = document.createElement("a");
+            a.href = URL.createObjectURL(xhr.response);
+            a.download = "health_backup.zip";
+            document.body.appendChild(a); a.click(); a.remove();
+            toast("Бэкап скачан");
+          } else flash("HTTP " + xhr.status, false);
+        };
+        xhr.onerror = function () { flash("Сеть недоступна", false); };
+        xhr.send("{}");
+      };
+      var day = $("day");
+      var reload = $("btn-reload-day");
+      if (reload && day) reload.onclick = function () {
+        location.href = "/gym/?program=" + encodeURIComponent(state.programId) + "&on=" + encodeURIComponent(day.value || todayISO());
+      };
+      var save = $("btn-save");
+      if (save) save.onclick = saveSets;
+    }
+
+    async function saveSets() {
+      var session = state.session;
+      if (!session) return;
+      var entries = [];
+      (session.exercises || []).forEach(function (ex, idx) {
+        if (ex.is_rest) return;
+        var n = setCount(ex);
+        for (var s = 1; s <= n; s++) {
+          var done = document.querySelector('.done[data-idx="' + idx + '"][data-set="' + s + '"]');
+          var wInp = document.querySelector('.w[data-idx="' + idx + '"][data-set="' + s + '"]');
+          var rInp = document.querySelector('.r[data-idx="' + idx + '"][data-set="' + s + '"]');
+          if (!done || !done.checked) continue;
+          var reps = Number(rInp && rInp.value);
+          if (!reps || reps < 1) continue;
+          var w = wInp && wInp.value !== "" ? Number(wInp.value) : 0;
+          entries.push({
+            exercise_key: ex.exercise_key,
+            exercise_label: ex.exercise_label || ex.name || ex.exercise_key,
+            sets: 1,
+            reps: reps,
+            weight_kg: w,
+            note: s + "/" + n,
+          });
+        }
+      });
+      if (!entries.length) { toast("Отметьте хотя бы один подход"); return; }
+      try {
+        var r = await api("/workouts/program/log-batch", {
+          method: "POST",
+          body: JSON.stringify({
+            logged_on: state.date,
+            entries: entries,
+            replace_program: true,
+            program_id: state.programId,
+          }),
+        });
+        toast("Сохранено: " + r.saved);
+        var hint = $("save-hint");
+        if (hint) hint.textContent = "Сохранено: " + r.saved + " подх.";
+      } catch (e) { flash(String(e.message || e), false); toast(String(e.message || e)); }
+    }
+
+    function renderDiary() {
+      var rows = state.workouts || [];
+      if (!rows.length) {
+        $("content").innerHTML = '<div class="card muted">Пока нет записей.</div>';
+        return;
+      }
+      $("content").innerHTML = rows.map(function (w) {
+        return '<div class="card"><b>' + esc(w.exercise_label || w.exercise_key || w.id) + "</b>"
+          + '<div class="muted">' + esc(w.logged_on || "") + " · "
+          + esc(w.sets || 1) + "×" + esc(w.reps || "") + " · " + esc(w.weight_kg || 0) + " кг"
+          + (w.note ? (" · " + esc(w.note)) : "") + "</div></div>";
+      }).join("");
+    }
+
+    function renderMeas() {
+      var rows = (state.measurements || []).slice().sort(function (a, b) {
+        return String(a.measured_on).localeCompare(String(b.measured_on));
+      });
+      function series(key) {
+        return rows.filter(function (m) { return m[key] != null; }).map(function (m) {
+          return { x: m.measured_on, y: Number(m[key]) };
+        });
+      }
+      var html = '<div class="card"><b>Новый замер</b>'
+        + '<div class="row"><input type="date" id="m-date" value="' + todayISO() + '">'
+        + '<input type="number" step="0.1" id="m-w" placeholder="вес кг">'
+        + '<input type="number" step="0.1" id="m-waist" placeholder="талия">'
+        + '<input type="number" step="0.1" id="m-br" placeholder="биц. пр">'
+        + '<input type="number" step="0.1" id="m-bl" placeholder="биц. лев">'
+        + '<input type="number" step="0.1" id="m-legs" placeholder="ноги">'
+        + '<button type="button" id="m-save">Сохранить</button></div></div>';
+      var biceps = rows.filter(function (m) { return m.biceps_r_cm != null || m.biceps_l_cm != null; }).map(function (m) {
+        var a = Number(m.biceps_r_cm || 0), b = Number(m.biceps_l_cm || 0);
+        var n = (m.biceps_r_cm != null ? 1 : 0) + (m.biceps_l_cm != null ? 1 : 0);
+        return { x: m.measured_on, y: n ? (a + b) / n : 0 };
+      });
+      html += lineChart(series("weight_kg"), "Вес, кг");
+      html += lineChart(series("waist_cm"), "Талия, см");
+      html += lineChart(biceps, "Бицепс ср., см");
+      html += lineChart(series("legs_cm"), "Ноги, см");
+      html += rows.slice().reverse().slice(0, 15).map(function (m) {
+        return '<div class="card"><b>' + esc(m.measured_on) + '</b><div class="muted">вес '
+          + esc(m.weight_kg != null ? m.weight_kg : "—") + " · талия " + esc(m.waist_cm != null ? m.waist_cm : "—")
+          + " · биц " + esc(m.biceps_r_cm != null ? m.biceps_r_cm : "—") + "/" + esc(m.biceps_l_cm != null ? m.biceps_l_cm : "—")
+          + " · ноги " + esc(m.legs_cm != null ? m.legs_cm : "—") + "</div></div>";
+      }).join("");
+      $("content").innerHTML = html;
+      $("m-save").onclick = async function () {
+        var body = {
+          measured_on: $("m-date").value || todayISO(),
+          weight_kg: $("m-w").value !== "" ? Number($("m-w").value) : null,
+          waist_cm: $("m-waist").value !== "" ? Number($("m-waist").value) : null,
+          biceps_r_cm: $("m-br").value !== "" ? Number($("m-br").value) : null,
+          biceps_l_cm: $("m-bl").value !== "" ? Number($("m-bl").value) : null,
+          legs_cm: $("m-legs").value !== "" ? Number($("m-legs").value) : null,
+        };
+        try {
+          await api("/measurements", { method: "POST", body: JSON.stringify(body) });
+          location.href = "/gym/?tab=meas&t=" + Date.now();
+        } catch (e) { flash(String(e.message || e), false); }
+      };
+    }
+
+    function openTab(name) {
+      state.tab = name;
+      document.querySelectorAll(".tabs button").forEach(function (b) {
+        b.classList.toggle("active", b.getAttribute("data-tab") === name);
+      });
+      show($("flash"), false);
+      if (name === "program") renderProgram();
+      else if (name === "diary") renderDiary();
+      else renderMeas();
+    }
+
+    // Сохранить токен из формы в localStorage (для API-сохранений)
+    var form = $("auth-form");
+    if (form) {
+      form.addEventListener("submit", function () {
+        var v = ($("token") && $("token").value || "").trim();
+        if (v) setToken(v);
+      });
+    }
+    document.querySelectorAll(".tabs button").forEach(function (b) {
+      b.onclick = function () { openTab(b.getAttribute("data-tab")); };
+    });
+
+    // Если сервер уже вшил данные — показываем приложение сразу.
+    if (boot && typeof boot === "object" && boot.program_id) {
+      show($("auth"), false);
+      show($("app"), true);
+      var tab = "program";
+      try {
+        var sp = new URLSearchParams(location.search || "");
+        var t = sp.get("tab");
+        if (t === "diary" || t === "meas" || t === "program") tab = t;
+        if (sp.get("on")) state.date = sp.get("on");
+      } catch (e) {}
+      openTab(tab);
+      return;
+    }
+
+    // Иначе форма входа уже видна. Показать ошибку, если есть.
+    if (errMsg) {
+      var ae = $("auth-err");
+      if (ae) { ae.textContent = String(errMsg); show(ae, true); }
+    }
+    // Подставить токен из localStorage в поле — пользователь жмёт «Войти» сам (без авто-POST).
+    try {
+      var tok = token();
+      if (tok && $("token") && !$("token").value) $("token").value = tok;
+    } catch (e) {}
+  })();
+  </script>
+</body>
+</html>

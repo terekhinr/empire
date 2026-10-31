@@ -19,8 +19,7 @@ import ru.neverretire.zadachnik.widget.TasksWidgetProvider
 
 /**
  * Xiaomi WebView нестабилен — UI всегда в Chrome Custom Tabs.
- * Токен: один раз вводим в приложении (виджет) + при первом открытии
- * в Chrome через одноразовый native_token (потом в localStorage).
+ * Токен всегда передаём в URL: Chrome может сбросить localStorage.
  */
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -59,24 +58,24 @@ class MainActivity : AppCompatActivity() {
         val token = TokenStore(this).token.orEmpty()
         val path = intent?.getStringExtra(EXTRA_PATH) ?: BuildConfig.TASKS_PATH
         val uri = Uri.parse(BuildConfig.BASE_URL.trimEnd('/') + path).buildUpon().apply {
-            // Только если в Chrome ещё нет токена — иначе не светим в URL повторно.
-            // Pref: chrome_token_sent
-            val prefs = getSharedPreferences("zadachnik", MODE_PRIVATE)
-            val needToken = passToken && token.isNotBlank() && !prefs.getBoolean("chrome_token_ok", false)
-            if (needToken) {
+            if (passToken && token.isNotBlank()) {
                 appendQueryParameter("native_token", token)
-                prefs.edit().putBoolean("chrome_token_ok", true).apply()
             }
         }.build()
 
+        val viewIntent = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
-                .setUrlBarHidingEnabled(true)
+                .setUrlBarHidingEnabled(false)
                 .build()
                 .launchUrl(this, uri)
         } catch (_: Exception) {
-            startActivity(Intent(Intent.ACTION_VIEW, uri))
+            try {
+                startActivity(viewIntent)
+            } catch (_: Exception) {
+                Toast.makeText(this, "Не удалось открыть браузер: $uri", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -113,10 +112,10 @@ class MainActivity : AppCompatActivity() {
                 .build()
         }
         sm.dynamicShortcuts = listOf(
-            shortcut("new", "Новая задача", BuildConfig.TASKS_PATH + "?action=new"),
-            shortcut("assistant", "ИИ-ассистент", BuildConfig.TASKS_PATH + "?view=assistant"),
-            shortcut("someday", "Когда-нибудь", BuildConfig.TASKS_PATH + "?view=someday"),
-            shortcut("today", "Сегодня", BuildConfig.TASKS_PATH + "?view=today"),
+            shortcut("program", "Тренировка", "/gym/"),
+            shortcut("measure", "Замеры", "/gym/?tab=meas"),
+            shortcut("stats", "Статистика", "/gym/?tab=meas"),
+            shortcut("diary", "Дневник", "/gym/?tab=diary"),
         )
     }
 

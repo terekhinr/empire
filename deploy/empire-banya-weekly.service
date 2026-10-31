@@ -1,0 +1,20 @@
+[Unit]
+Description=Empire Gdepar banya weekly quality scrape (FLAGSHIP, low priority)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/root/projects/empire/.env
+Environment=PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+Environment=BANYA_MIN_REVIEWS=50
+Environment=BANYA_REQUIRE_PHONE=1
+ExecStart=/root/projects/empire/scripts/run_banya_weekly.sh
+User=root
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=6h
+TimeoutStopSec=15min
+
+[Install]
+WantedBy=multi-user.target

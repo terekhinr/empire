@@ -17,7 +17,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, FSInputFile, LinkPreviewOptions
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+    FSInputFile,
+    LinkPreviewOptions,
+    BotCommand,
+)
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -144,13 +151,16 @@ PDF_HELP_TEXT = (
     "• Большая книга: залей файл на VPS и запусти:\n"
     "<code>/book /полный/путь/к/книге.pdf</code>\n"
     f"• Локально на VPS: до <b>{PDF_AUDIO_LOCAL_MAX_MB} МБ</b>.\n\n"
-    "<b>2. Какой текст подходит</b>\n"
-    "• PDF с текстовым слоем (не чистый скан) или обычный TXT/DOCX.\n"
-    "• Текст: ru-normalizr + silero-stress (числа, аббревиатуры, ударения).\n\n"
+    "<b>2. Озвучка</b>\n"
+    "• По умолчанию: <b>Yandex SpeechKit filipp</b> + ударения + словарь произношения; "
+    "если квота кончилась — <b>Silero</b> (тоже с ударениями).\n"
+    "• Перед TTS: аббр. (ув., т.д.), юрформы (АО/ООО), фонемы (много≠мново).\n"
+    "• Gemini/Edge — только если явно задан PDF_AUDIO_TTS_PROVIDER.\n"
+    "• PDF с текстовым слоем (не скан).\n\n"
     "<b>3. Аудиокнига</b>\n"
-    "• Режет по главам (Глава/Chapter/#) или по объёму ~30–40 мин.\n"
-    "• Шлёт MP3-части по мере готовности — можно слушать, пока идёт дальше.\n"
-    "• Долгие книги: часы работы — не дублируй файл, смотри прогресс.\n\n"
+    "• Режет по главам или ~30–40 мин на часть; ударения; TTS.\n"
+    "• Если MP3 &gt; ~45 МБ — режет на тома для Telegram.\n"
+    "• Без отдельной склейки FULL.\n\n"
     "<b>4. Команды</b>\n"
     "/pdf или /book — эта инструкция\n"
     "/book /path/to/file — озвучить файл с диска VPS\n"
@@ -170,6 +180,9 @@ HELP_TEXT = (
     "/pdf — инструкция\n"
     "/book /path/file.pdf — большая книга с диска VPS\n"
     "Или пришли PDF/TXT/DOCX документом → MP3 частями\n\n"
+    "<b>Дом</b>\n"
+    "/domofon — меню домофона (режим, автооткрытие, курьер)\n"
+    "/ha — диагностика HA/датчиков в чат (по запросу; сводка также утро/вечер)\n\n"
     "<b>VPS / автопост</b>\n"
     "/vps — статус ключевых сервисов\n"
     "/fix — удалённо починить всё (тот же самохилер, безопасно для бота)\n"
@@ -1950,6 +1963,13 @@ async def _try_auto_publish_scheduled(
             per = (cfg.get("personas") or {}).get(p_key) or {}
             if not per.get("enabled"):
                 return False
+        # Ленин без картинки: подставить пул/дефолт до проверки require_image
+        if p_key == "lenin" and (not img_f or not os.path.exists(str(img_f))):
+            filled = _pick_random_lenin_from_pool(d_id)
+            if filled:
+                draft.image_path = filled
+                img_f = filled
+                await session.commit()
         reason = _auto_publish_reason_blocked(
             cfg, p_key, text, img_f, draft, rules_override=rules if rubric else None
         )
@@ -3696,21 +3716,34 @@ def _systemctl_is_active(unit: str) -> str:
         return f"err:{exc}"[:40]
 
 
+def _yandex_key_ok() -> bool:
+    return bool(
+        (os.getenv("YANDEX_API_KEY") or os.getenv("SPEECHKIT_API_KEY") or "").strip()
+    )
+
+
 def _load_pdf_audio_module():
-    """Ленивая загрузка PDF→MP3 (bots/stepanich/pdf_audio_bot.py)."""
+    """Загрузка PDF→MP3 (bots/stepanich/pdf_audio_bot.py), с reload для обновлений."""
     import importlib.util
     import sys
 
     path = EMPIRE_ROOT / "bots" / "stepanich" / "pdf_audio_bot.py"
     mod_name = "empire_pdf_audio_bot"
     existing = sys.modules.get(mod_name)
-    if existing is not None and hasattr(existing, "convert_pdf_to_mp3s"):
-        return existing
+    if existing is not None and hasattr(existing, "convert_book_to_mp3s"):
+        import importlib
+
+        if getattr(existing, "__spec__", None) is not None:
+            try:
+                return importlib.reload(existing)
+            except ModuleNotFoundError:
+                pass
+        sys.modules.pop(mod_name, None)
+
     spec = importlib.util.spec_from_file_location(mod_name, path)
     if not spec or not spec.loader:
         raise RuntimeError(f"Не найден модуль: {path}")
     mod = importlib.util.module_from_spec(spec)
-    # Важно: зарегистрировать до exec_module, иначе @dataclass падает
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
     return mod
@@ -3845,6 +3878,7 @@ async def _run_audiobook_job(
     keep_workdir: bool | None = None,
 ) -> None:
     """Озвучка с прогрессом; MP3-части уходят по мере готовности."""
+    load_dotenv(EMPIRE_ROOT / ".env", override=True)
     mod = _load_pdf_audio_module()
     convert_book_to_mp3s = getattr(mod, "convert_book_to_mp3s", None) or mod.convert_pdf_to_mp3s
     media_root = Path(mod.MEDIA_ROOT)
@@ -3855,6 +3889,7 @@ async def _run_audiobook_job(
     loop = asyncio.get_running_loop()
     sent_parts = 0
     last_status_edit = 0.0
+    tts_label = mod.tts_profile_label() if hasattr(mod, "tts_profile_label") else "TTS"
 
     def progress_cb(done, total, part_title, mp3_path, stage):
         nonlocal sent_parts, last_status_edit
@@ -3901,7 +3936,8 @@ async def _run_audiobook_job(
         await status_msg.edit_text(
             f"📥 <code>{html_std.escape(source_path.name)}</code> "
             f"({source_path.stat().st_size / 1024 / 1024:.1f} МБ)\n"
-            "Текст → главы → TTS → MP3 частями (приходят по готовности).",
+            f"🎙 <b>{html_std.escape(tts_label)}</b>\n"
+            "Текст → сокращения → ударения → TTS → MP3 частями.",
             parse_mode="HTML",
         )
         title, mp3_paths, total_chars = await asyncio.to_thread(
@@ -3922,7 +3958,12 @@ async def _run_audiobook_job(
                     title=mp3_path.stem[:64],
                     caption=caption[:1024],
                 )
-            await status_msg.edit_text(f"✅ Готово: {len(mp3_paths)} частей, {total_chars} симв.")
+        await status_msg.edit_text(
+            f"✅ Готово: {len(mp3_paths)} частей, {total_chars} симв.\n"
+            f"🎙 {html_std.escape(tts_label)}\n"
+            f"📁 <code>{workdir}</code>",
+            parse_mode="HTML",
+        )
     finally:
         keep = PDF_AUDIO_KEEP_WORKDIR if keep_workdir is None else keep_workdir
         try:
@@ -4163,7 +4204,12 @@ async def handle_pdf_document(message: types.Message):
         )
         return
 
-    if not GEMINI_API_KEY and (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "edge").strip().lower() in (
+    if not _yandex_key_ok() and (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "").strip().lower() in (
+        "yandex",
+    ):
+        await message.answer("Нет YANDEX_API_KEY в .env — Yandex SpeechKit недоступен.")
+        return
+    if not GEMINI_API_KEY and (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "").strip().lower() in (
         "gemini",
     ):
         await message.answer("Нет GEMINI_API_KEY в .env — озвучка Gemini недоступна.")
@@ -5040,6 +5086,289 @@ def _append_to_blacklist(p_key: str, basename: str) -> None:
         logger.warning(f"[blacklist] append error: {e}")
 
 
+# SmartIntercom MQTT — меню /domofon + кнопки при «Звонок в домофон!»
+_DOMOFON_HA_SWITCH = {
+    "open": "switch.smartintercom_otkryt_dver",
+    "delivery": "switch.smartintercom_otkryt_kureru",
+    "reject": "switch.smartintercom_sbrosit_vyzov",
+}
+_DOMOFON_LABEL = {
+    "open": "Открываю дверь",
+    "delivery": "Режим курьера",
+    "reject": "Сбрасываю вызов",
+}
+_DOMOFON_MODE_ENTITY = "select.smartintercom_deistvie_po_umolchaniiu"
+_DOMOFON_MODES = {
+    "off": "Не активен",
+    "auto": "Открывать всегда",
+    "rej": "Сбрасывать вызов",
+    "tube": "Управление с трубки",
+}
+def _ha_creds() -> tuple[str | None, str | None]:
+    base = (os.getenv("HA_URL") or "").rstrip("/")
+    token = (os.getenv("HA_TOKEN") or "").strip()
+    if not base or not token:
+        return None, None
+    return base, token
+
+
+async def _ha_request(
+    method: str, path: str, json_body: dict | None = None
+) -> tuple[bool, object]:
+    base, token = _ha_creds()
+    if not base:
+        return False, "нет HA_URL/HA_TOKEN"
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            r = await client.request(
+                method,
+                f"{base}{path}",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=json_body,
+            )
+            if r.status_code >= 300:
+                return False, f"HA HTTP {r.status_code}: {r.text[:160]}"
+            if not r.content:
+                return True, None
+            try:
+                return True, r.json()
+            except Exception:
+                return True, r.text
+    except Exception as exc:
+        return False, str(exc)
+
+
+async def _ha_switch_turn_on(entity_id: str) -> tuple[bool, str]:
+    ok, detail = await _ha_request(
+        "POST", "/api/services/switch/turn_on", {"entity_id": entity_id}
+    )
+    return ok, detail if isinstance(detail, str) else "ok"
+
+
+async def _ha_switch_turn_off(entity_id: str) -> tuple[bool, str]:
+    ok, detail = await _ha_request(
+        "POST", "/api/services/switch/turn_off", {"entity_id": entity_id}
+    )
+    return ok, detail if isinstance(detail, str) else "ok"
+
+
+async def _ha_select_option(entity_id: str, option: str) -> tuple[bool, str]:
+    ok, detail = await _ha_request(
+        "POST",
+        "/api/services/select/select_option",
+        {"entity_id": entity_id, "option": option},
+    )
+    return ok, detail if isinstance(detail, str) else "ok"
+
+
+async def _ha_entity_state(entity_id: str) -> str:
+    ok, data = await _ha_request("GET", f"/api/states/{entity_id}")
+    if not ok or not isinstance(data, dict):
+        return "?"
+    return str(data.get("state") or "?")
+
+
+async def _domofon_status_text() -> str:
+    mode = await _ha_entity_state(_DOMOFON_MODE_ENTITY)
+    line = await _ha_entity_state("sensor.smartintercom_status_linii")
+    detect = await _ha_entity_state("binary_sensor.smartintercom_detektor_vyzova")
+    once_open = await _ha_entity_state("switch.smartintercom_otkryt_dver")
+    once_del = await _ha_entity_state("switch.smartintercom_otkryt_kureru")
+    once_rej = await _ha_entity_state("switch.smartintercom_sbrosit_vyzov")
+
+    def _sw(v: str) -> str:
+        return "вкл" if v == "on" else ("выкл" if v == "off" else v)
+
+    detect_h = "звонок!" if detect == "on" else "нет"
+    return (
+        "<b>🚪 Домофон</b>\n\n"
+        f"Режим: <b>{html_std.escape(mode)}</b>\n"
+        f"Линия: {html_std.escape(line)}\n"
+        f"Детектор: {detect_h}\n\n"
+        f"Разово — открыть: {_sw(once_open)}\n"
+        f"Разово — курьер: {_sw(once_del)}\n"
+        f"Разово — сброс: {_sw(once_rej)}\n\n"
+        "<i>«Открывать всегда» — каждый звонок открывает дверь "
+        "(трубка обычно молчит). «Не активен» — обычный режим.</i>"
+    )
+
+
+def _domofon_menu_kb(mode: str | None = None) -> InlineKeyboardMarkup:
+    cur = mode or ""
+    def mark(code: str, title: str) -> str:
+        opt = _DOMOFON_MODES[code]
+        return f"✓ {title}" if cur == opt else title
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=mark("off", "Обычный"), callback_data="dmn_m_off"
+                ),
+                InlineKeyboardButton(
+                    text=mark("auto", "Автооткрытие"), callback_data="dmn_m_auto"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=mark("rej", "Автосброс"), callback_data="dmn_m_rej"
+                ),
+                InlineKeyboardButton(
+                    text=mark("tube", "С трубки"), callback_data="dmn_m_tube"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⏭ Открыть след.", callback_data="dmn_once_open"
+                ),
+                InlineKeyboardButton(
+                    text="📦 Курьер след.", callback_data="dmn_once_delivery"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📵 Сброс след.", callback_data="dmn_once_reject"
+                ),
+                InlineKeyboardButton(
+                    text="🧹 Снять разовые", callback_data="dmn_once_clear"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔓 Открыть сейчас", callback_data="dmn_now"
+                ),
+                InlineKeyboardButton(text="🔄 Обновить", callback_data="dmn_refresh"),
+            ],
+        ]
+    )
+
+
+async def _domofon_render_menu() -> tuple[str, InlineKeyboardMarkup]:
+    mode = await _ha_entity_state(_DOMOFON_MODE_ENTITY)
+    return await _domofon_status_text(), _domofon_menu_kb(mode)
+
+
+@dp.message(Command("domofon"))
+async def cmd_domofon(message: types.Message):
+    if not message.from_user or message.from_user.id != ADMIN_ID:
+        return
+    text, kb = await _domofon_render_menu()
+    await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+
+@dp.message(Command("ha", "home"))
+async def cmd_ha_diagnose(message: types.Message):
+    """Разовая диагностика HA → Telegram (без спама фоном)."""
+    if not message.from_user or message.from_user.id != ADMIN_ID:
+        return
+    wait = await message.answer("🔎 Запрашиваю диагностику HA…")
+    ok, detail = await _ha_request(
+        "POST",
+        "/api/services/script/empire_watch_diagnose_now",
+        {},
+    )
+    if ok:
+        await wait.edit_text("Готово — сводка ушла отдельным сообщением в этот чат.")
+    else:
+        await wait.edit_text(f"Не удалось вызвать diagnose: {detail}")
+
+
+@dp.callback_query(F.data.startswith("dmn_"))
+async def cb_domofon_menu(callback: CallbackQuery):
+    """Меню /domofon — режимы и разовые действия."""
+    if callback.from_user and callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа.", show_alert=True)
+        return
+    action = (callback.data or "").removeprefix("dmn_").strip()
+
+    if action == "refresh":
+        await callback.answer("Обновляю")
+    elif action.startswith("m_"):
+        code = action.removeprefix("m_")
+        option = _DOMOFON_MODES.get(code)
+        if not option:
+            await callback.answer("Неизвестный режим", show_alert=True)
+            return
+        await callback.answer(option)
+        ok, detail = await _ha_select_option(_DOMOFON_MODE_ENTITY, option)
+        if not ok:
+            await callback.answer(f"HA: {str(detail)[:80]}", show_alert=True)
+            return
+    elif action == "once_open":
+        await callback.answer("Открыть при следующем")
+        await _ha_switch_turn_on(_DOMOFON_HA_SWITCH["open"])
+    elif action == "once_delivery":
+        await callback.answer("Курьер при следующем")
+        await _ha_switch_turn_on(_DOMOFON_HA_SWITCH["delivery"])
+    elif action == "once_reject":
+        await callback.answer("Сброс при следующем")
+        await _ha_switch_turn_on(_DOMOFON_HA_SWITCH["reject"])
+    elif action == "once_clear":
+        await callback.answer("Снимаю разовые")
+        for eid in _DOMOFON_HA_SWITCH.values():
+            await _ha_switch_turn_off(eid)
+    elif action == "now":
+        await callback.answer("Открываю")
+        ok, detail = await _ha_request(
+            "POST",
+            "/api/services/script/turn_on",
+            {"entity_id": "script.empire_domofon_otkryt"},
+        )
+        if not ok:
+            # fallback — разовое открытие как «сейчас» через switch
+            ok2, _ = await _ha_switch_turn_on(_DOMOFON_HA_SWITCH["open"])
+            if not ok2:
+                await callback.answer(f"HA: {str(detail)[:80]}", show_alert=True)
+                return
+    else:
+        await callback.answer("?", show_alert=True)
+        return
+
+    try:
+        text, kb = await _domofon_render_menu()
+        await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+    except Exception:
+        pass
+
+
+@dp.callback_query(F.data.startswith("domofon_"))
+async def cb_domofon(callback: CallbackQuery):
+    """Кнопки домофона из уведомления HA → MQTT SmartIntercom."""
+    if callback.from_user and callback.from_user.id != ADMIN_ID:
+        await callback.answer("Нет доступа.", show_alert=True)
+        return
+    action = (callback.data or "").removeprefix("domofon_").strip()
+    entity = _DOMOFON_HA_SWITCH.get(action)
+    if not entity:
+        await callback.answer("Неизвестная кнопка.", show_alert=True)
+        return
+    label = _DOMOFON_LABEL.get(action, action)
+    # Сначала answer — иначе Telegram гасит callback по таймауту, пока ждём HA.
+    await callback.answer(label)
+    ok, detail = await _ha_switch_turn_on(entity)
+    if ok:
+        try:
+            text = callback.message.text or "Звонок в домофон!"
+            await callback.message.edit_text(f"{text}\n\n→ {label}")
+        except Exception:
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+    else:
+        logger.warning("[domofon] HA fail action=%s: %s", action, detail)
+        try:
+            text = callback.message.text or "Звонок в домофон!"
+            await callback.message.edit_text(
+                f"{text}\n\n⚠ {label}: {str(detail)[:120]}"
+            )
+        except Exception:
+            pass
+
+
 @dp.callback_query(F.data.startswith("badimg_"))
 async def cb_badimg(callback: CallbackQuery):
     d_id = int(callback.data.split("_")[1])
@@ -5546,7 +5875,7 @@ async def check_scheduler():
                 and "[Лунный календарь]" in (topic or "")
             ):
                 img_f = await generate_image(
-                    garden_content.LUNAR_IMAGE_PROMPT,
+                    garden_content.lunar_image_prompt(),
                     d_id,
                     p_key,
                     topic_hint=topic,
@@ -5606,6 +5935,9 @@ async def check_scheduler():
                 if vis:
                     dest = Path("media/lenin/rubrics") / f"topic_{d_id}.jpg"
                     img_f = await rubric_posts.fetch_wiki_page_image(str(vis), dest)
+            # Fallback: пул / _default_lenin.jpg — иначе автопост skip no_image
+            if p_key == "lenin" and not img_f:
+                img_f = _pick_random_lenin_from_pool(d_id)
             is_curated_prebuilt = (
                 (gdepar_content and gdepar_content.CLASSIC_RUBRIC_TAG in (topic or ""))
                 or "[Дуэт]" in (topic or "")
@@ -5750,56 +6082,77 @@ async def task_daily_briefing():
 _BANYA_DAILY_LOG = EMPIRE_ROOT / "logs" / "banya_daily_last.log"
 
 
-async def task_banya_maps_daily():
-    """Раз в сутки: малый enrich + reviews (Playwright), лимиты — env BANYA_DAILY_*.
+async def task_banya_maps_weekly():
+    """Раз в неделю: лёгкий enrich+reviews FLAGSHIP (см. scripts/run_banya_weekly.sh).
 
-    Полный stdout/stderr пишется в logs/banya_daily_last.log — оттуда читает
-    утренний отчёт (task_banya_morning_report).
+    Daily отключён намеренно (R7 + нагрузка на 4GB VPS). Отчёт — empire-weekly-report.
     """
-    logger.info("banya_maps_daily: старт")
-    _BANYA_DAILY_LOG.parent.mkdir(parents=True, exist_ok=True)
+    from empire_flags import load_empire_flags
+
+    if load_empire_flags().get("stop_worker"):
+        return
+    if os.environ.get("BANYA_DISABLE_WEEKLY", "").lower() in ("1", "true", "yes"):
+        logger.info("banya_maps_weekly: disabled via BANYA_DISABLE_WEEKLY")
+        return
+    logger.info("banya_maps_weekly: старт")
+    script = EMPIRE_ROOT / "scripts" / "run_banya_weekly.sh"
+    if not script.is_file():
+        logger.warning("banya_maps_weekly: нет %s", script)
+        return
     try:
         proc = await asyncio.create_subprocess_exec(
-            "python3", "-u", "tools/parsers/yandex_scrape.py", "daily",
+            "bash", str(script),
             cwd=str(EMPIRE_ROOT),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
-        out, _ = await asyncio.wait_for(proc.communicate(), timeout=3600)
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout=6 * 3600)
         body = (out or b"").decode("utf-8", errors="replace")
         rc = proc.returncode
-        header = (
-            f"# banya_maps_daily run\n"
-            f"# started: {datetime.now(MSK_TZ).isoformat(timespec='seconds')}\n"
-            f"# rc: {rc}\n"
-            f"# bytes: {len(body)}\n\n"
-        )
-        _BANYA_DAILY_LOG.write_text(header + body, encoding="utf-8")
         if rc != 0:
-            logger.warning("banya_maps_daily rc=%s (см. %s)", rc, _BANYA_DAILY_LOG)
+            logger.warning("banya_maps_weekly rc=%s tail=%s", rc, body[-400:])
         else:
-            logger.info("banya_maps_daily ok (см. %s)", _BANYA_DAILY_LOG)
+            logger.info("banya_maps_weekly ok")
     except asyncio.TimeoutError:
-        logger.error("banya_maps_daily: timeout 3600s")
-        _BANYA_DAILY_LOG.write_text(
-            f"# banya_maps_daily TIMEOUT 3600s at "
-            f"{datetime.now(MSK_TZ).isoformat(timespec='seconds')}\n",
-            encoding="utf-8",
-        )
+        logger.error("banya_maps_weekly: timeout 6h")
     except Exception as e:
-        logger.exception("banya_maps_daily: %s", e)
-        _BANYA_DAILY_LOG.write_text(
-            f"# banya_maps_daily EXCEPTION at "
-            f"{datetime.now(MSK_TZ).isoformat(timespec='seconds')}\n{e}\n",
-            encoding="utf-8",
-        )
+        logger.exception("banya_maps_weekly: %s", e)
+
+
+# legacy alias for imports / manual triggers
+async def task_banya_maps_daily():
+    """Deprecated: вызывает weekly-скрипт только если BANYA_FORCE_DAILY=1."""
+    if os.environ.get("BANYA_FORCE_DAILY", "").lower() in ("1", "true", "yes"):
+        logger.warning("banya_maps_daily: FORCE — лучше использовать weekly")
+        # старый путь
+        _BANYA_DAILY_LOG.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "python3", "-u", "tools/parsers/yandex_scrape.py", "daily",
+                cwd=str(EMPIRE_ROOT),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            out, _ = await asyncio.wait_for(proc.communicate(), timeout=3600)
+            body = (out or b"").decode("utf-8", errors="replace")
+            rc = proc.returncode
+            header = (
+                f"# banya_maps_daily FORCE run\n"
+                f"# started: {datetime.now(MSK_TZ).isoformat(timespec='seconds')}\n"
+                f"# rc: {rc}\n\n"
+            )
+            _BANYA_DAILY_LOG.write_text(header + body, encoding="utf-8")
+        except Exception as e:
+            logger.exception("banya_maps_daily force: %s", e)
+        return
+    logger.info("banya_maps_daily: skipped (используйте weekly вс / task_banya_maps_weekly)")
 
 
 async def _build_banya_morning_report() -> str:
     """Текст-отчёт для админа: состояние БД + хвост daily-лога + свежие pending."""
     lines: list[str] = []
     ts = datetime.now(MSK_TZ).strftime("%Y-%m-%d %H:%M %Z")
-    lines.append(f"<b>🌅 Утренний отчёт по картам</b> · {ts}")
+    lines.append(f"<b>🗓 Еженедельный отчёт по картам</b> · {ts}")
     lines.append("")
     async with async_session() as session:
         rows = (await session.execute(text(
@@ -5923,6 +6276,16 @@ async def main():
     )
     scheduler.add_job(task_generate_rss, "interval", hours=1)
     scheduler.add_job(
+        task_banya_maps_weekly,
+        "cron",
+        day_of_week="sun",
+        hour=7,
+        minute=30,
+        id="banya_maps_weekly",
+        replace_existing=True,
+    )
+    # daily job id сохранён как no-op / force-only (не жрём RAM каждую ночь)
+    scheduler.add_job(
         task_banya_maps_daily,
         "cron",
         hour=4,
@@ -5933,7 +6296,8 @@ async def main():
     scheduler.add_job(
         task_banya_morning_report,
         "cron",
-        hour=7,
+        day_of_week="sun",
+        hour=8,
         minute=0,
         id="banya_morning_report",
         replace_existing=True,
@@ -5983,6 +6347,19 @@ async def main():
     )
 
     scheduler.start()
+    try:
+        await bot.set_my_commands(
+            [
+                BotCommand(command="domofon", description="Домофон: режим и открытие"),
+                BotCommand(command="ha", description="Диагностика дома/HA (по запросу)"),
+                BotCommand(command="help", description="Список команд"),
+                BotCommand(command="draft", description="Черновик поста"),
+                BotCommand(command="vps", description="Статус VPS"),
+                BotCommand(command="fix", description="Починить сервисы"),
+            ]
+        )
+    except Exception as exc:
+        logger.warning("set_my_commands: %s", exc)
     logger.info("🚀 Оркестратор запущен")
     await dp.start_polling(bot)
 

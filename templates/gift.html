@@ -29,12 +29,12 @@
     <div id="gift-form-wrap">
         <form class="waitlist-form gift-form" id="gift-form" novalidate>
             <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" aria-label="Email">
+            <label class="gift-consent">
+                <input type="checkbox" name="consent" required>
+                <span>Согласен на обработку email и рассылку о выходе книги. Отписаться можно в любой момент.</span>
+            </label>
             <button type="submit" class="btn btn-primary" data-pension-goal="gift_submit">Скачать бесплатно</button>
         </form>
-        <label class="gift-consent">
-            <input type="checkbox" name="consent" required>
-            <span>Согласен на обработку email и рассылку о выходе книги. Отписаться можно в любой момент.</span>
-        </label>
         <p id="gift-msg" class="waitlist-msg muted" hidden></p>
     </div>
 

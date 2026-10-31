@@ -184,6 +184,7 @@ def main() -> int:
                 "status": status,
                 "image": (meta.get("image") or "").strip() or None,
                 "image_prompt": (meta.get("image_prompt") or meta.get("image_prompt_en") or "").strip() or None,
+                "skip_image": (meta.get("skip_image") or "").strip().lower() in {"1", "true", "yes", "on"},
                 "imported_at": datetime.now(timezone.utc).isoformat(),
             }
         )

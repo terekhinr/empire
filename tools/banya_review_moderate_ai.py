@@ -100,13 +100,11 @@ def _top_chunks(
 
 
 def _refresh_counts(cur: sqlite3.Cursor, spot_ids: set[int], now: str) -> None:
+    """Не трогаем reviews_total (счётчик Яндекса / посещаемость)."""
     for sid in spot_ids:
         cur.execute(
-            "UPDATE banya_spots SET reviews_total = ("
-            " SELECT COUNT(*) FROM banya_reviews "
-            " WHERE spot_id = ? AND status = 'approved'"
-            "), updated_at = ? WHERE id = ?",
-            (sid, now, sid),
+            "UPDATE banya_spots SET updated_at = ? WHERE id = ?",
+            (now, sid),
         )
 
 

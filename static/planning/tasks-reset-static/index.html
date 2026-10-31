@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<title>Сброс Задачника</title>
+</head>
+<body style="margin:0;min-height:100vh;background:#ffe600;color:#111;font-family:system-ui,sans-serif;padding:28px;box-sizing:border-box">
+<div style="max-width:520px;margin:40px auto;background:#111;color:#ffe600;border:4px solid #111;border-radius:16px;padding:28px;text-align:center">
+  <h1 style="margin:0 0 12px;font-size:1.6rem;color:#ffe600">Сброс Задачника</h1>
+  <p id="msg" style="margin:0 0 18px;color:#fff;font-size:1.05rem;line-height:1.4">
+    Нажмите жёлтую кнопку ниже. Иконку приложения не открывайте.
+  </p>
+  <p style="margin:0">
+    <a id="open-x" href="/go-tasks/?src=recover"
+       style="display:inline-block;padding:16px 22px;background:#ffe600;color:#111;font-weight:800;font-size:1.2rem;text-decoration:none;border-radius:12px">
+      ВОЙТИ В ЗАДАЧНИК
+    </a>
+  </p>
+  <p style="margin:20px 0 0;color:#ccc;font-size:0.9rem;line-height:1.45;text-align:left">
+    Если экран снова чёрный:<br>
+    1) Chrome → значок слева от адреса neverretire.ru<br>
+    2) «Данные сайта» → удалить данные<br>
+    3) Снова откройте <code>/go-reset/</code> и кнопку
+  </p>
+</div>
+<script>
+(function () {
+  var msg = document.getElementById("msg");
+  function done(t) { try { msg.textContent = t; } catch (e) {} }
+  var tasks = [];
+  try {
+    if (navigator.serviceWorker) {
+      tasks.push(
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        })
+      );
+    }
+  } catch (e1) {}
+  try {
+    if (window.caches) {
+      tasks.push(caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }));
+    }
+  } catch (e2) {}
+  Promise.all(tasks).then(function () { done("Жмите «ВОЙТИ В ЗАДАЧНИК»."); }).catch(function () {
+    done("Жмите «ВОЙТИ В ЗАДАЧНИК».");
+  });
+})();
+</script>
+</body>
+</html>

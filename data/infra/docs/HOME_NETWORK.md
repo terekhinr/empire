@@ -8,15 +8,25 @@
 - **HA:** `192.168.1.41`, Tailscale `100.80.133.85`
 - **Workgroup Samba:** **HOME** (как Keenetic)
 
-## Маршрутизация трафика (podkop)
+## Маршрутизация трафика
+
+Два режима (подробно: [`docs/FLINT2_YOUTUBE_DUAL.md`](../FLINT2_YOUTUBE_DUAL.md)):
+
+| Режим | YouTube / блокировки РФ | Как включить |
+|--------|-------------------------|--------------|
+| **A — с VPS** (по умолчанию дома) | podkop → VLESS Empire `:8443` | `00-bootstrap.sh` / `20-mode-vps.sh` |
+| **B — без VPS** | zapret (DPI), без туннеля | `00-bootstrap-novps.sh` / `21-mode-novps.sh` |
+
+В режиме A:
 
 | Трафик | Куда | Как проверить |
 |--------|------|---------------|
 | YouTube, Meta, TikTok… | VLESS → Empire `:8443` | `curl -I https://www.youtube.com/generate_204` с Flint |
 | Telegram | VLESS + список `telegram` | web.telegram.org с ПК без Amnezia |
 | OpenAI, Claude, Яндекс AI | **awg0** Amnezia (если туннель жив) | `awg show awg0` handshake |
-| Gemini / Google AI | VLESS + `google_ai` (если awg0 мёртв) | gemini.google.com |
 | Остальное | WAN напрямую | — |
+
+Обязательно: **vanilla OpenWrt**, flow offloading **выкл**, IPv6 WAN **выкл**. Zapret и podkop не должны резать один и тот же домен сразу.
 
 **Amnezia на ПК дома — выключать** (конфликт с Flint).
 

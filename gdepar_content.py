@@ -417,15 +417,18 @@ _KIRILYCH_LEAD_RE = re.compile(
 
 
 def kirilych_template_opening(text: str) -> bool:
-    """Шаблонное обращение «Кириллыч, …» в начале — не диалог «Кириллыч: реплика»."""
-    plain = re.sub(r"<[^>]+>", "", text or "").strip()
+    """Шаблонное обращение «Кириллыч, …» / «слушай, Кириллыч» — не лейбл «Кириллыч:»."""
+    plain = re.sub(r"<[^>]+>", " ", text or "")
+    plain = re.sub(r"\s+", " ", plain).strip()
     if not plain:
         return False
-    if re.match(r"^(?:кириллыч|михалыч)\s*:\s", plain, re.I):
-        return False
-    if re.match(r"^(?:кириллыч|михалыч)\s*[,—:\-–]", plain, re.I):
+    head = plain[:180]
+    if re.search(r"(?i)\bслушай,?\s*кириллыч\b", head):
         return True
-    return kirilych_in_opening(text)
+    # «Кириллыч, смотри» / «Кириллыч — слушай»; двоеточие = реплика диалога.
+    if re.search(r"(?i)\bкириллыч\s*[,—\-–]\s*\S", head):
+        return True
+    return False
 
 
 def kirilych_in_opening(text: str, *, window: int = 80) -> bool:
@@ -571,10 +574,37 @@ _PORTRAIT_REJECT_IN_URL = (
 
 
 def _portrait_url_ok(url: str) -> bool:
-    low = (url or "").lower()
-    if not low or not low.startswith("http"):
+    low = (url or "").lower().split("?", 1)[0]
+    if not low or not (url or "").lower().startswith("http"):
+        return False
+    if low.endswith((".svg", ".gif", ".tif", ".tiff")):
         return False
     return not any(x in low for x in _PORTRAIT_REJECT_IN_URL)
+
+
+def _author_surname(author: str) -> str:
+    """«С.Д. Довлатов» → «Довлатов». Пусто, если фамилии нет."""
+    a = (author or "").strip()
+    bare = re.sub(r"^[А-ЯA-Z](?:\.[А-ЯA-Z])*\s*", "", a).strip()
+    parts = [p for p in (bare or a).split() if p]
+    return parts[-1] if parts else ""
+
+
+def _owner_marked_image(entry: dict) -> bool:
+    """Файл из списка, который владелец отметил сам. Общая пачка image_file — не этот список."""
+    raw = entry.get("image_approved")
+    if raw is True:
+        return True
+    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _wiki_page_is_author(title: str, author: str) -> bool:
+    """Страница годится, только если в заголовке фамилия автора, а не сосед по поиску."""
+    surname = _author_surname(author).lower().replace("ё", "е")
+    if len(surname) < 3:
+        return False
+    page = (title or "").lower().replace("ё", "е")
+    return surname in page
 
 
 def _author_search_queries(author: str) -> list[str]:
@@ -713,6 +743,10 @@ async def fetch_wikipedia_author_portrait(author: str, dest: Path) -> bool:
                     title = hit.get("title") or ""
                     if "значения)" in title.lower():
                         continue
+                    # Не брать первую иллюстрацию выдачи: у Довлатова нет pageimage,
+                    # и следующим файлом оказывается чужой портрет (Берберова).
+                    if not _wiki_page_is_author(title, author):
+                        continue
                     img_api = (
                         "https://ru.wikipedia.org/w/api.php?action=query"
                         f"&titles={quote(title)}&prop=pageimages&format=json"
@@ -757,13 +791,16 @@ def classic_image_abs_path(entry: dict) -> Path:
 
 
 async def ensure_classic_image(entry: dict) -> str | None:
-    """Скачивает портрет автора. Только фото человека — не баня, не Flux."""
+    """Портрет автора.
+
+    Автомат — только страница Википедии, в заголовке которой есть фамилия.
+    Иначе файл только если владелец поставил image_approved.
+    Кэш на диске без этой отметки не отдаём: там уже оказывалась Берберова.
+    """
     eid = (entry.get("id") or "classic").strip()
     rel = classic_image_rel_path(entry)
     _CLASSIC_MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     dest = classic_image_abs_path(entry)
-    if dest.is_file() and dest.stat().st_size > 2048:
-        return rel
 
     tried: set[str] = set()
 
@@ -779,20 +816,18 @@ async def ensure_classic_image(entry: dict) -> str | None:
                 logger.warning("classic image %s url fail: %s", eid, type(exc).__name__)
         return False
 
-    # 1) Курированный image_file из JSON
-    if await try_urls(_classic_image_candidate_urls(entry)):
-        return rel
+    if _owner_marked_image(entry):
+        if dest.is_file() and dest.stat().st_size > 2048:
+            return rel
+        if await try_urls(_classic_image_candidate_urls(entry)):
+            return rel
+        logger.warning("classic marked image missing for %s", eid)
+        return None
 
-    # 2) ru.wikipedia — портрет на странице автора
+    if dest.is_file():
+        dest.unlink()
     if await fetch_wikipedia_author_portrait(entry.get("author") or "", dest):
         return rel
-
-    # 3) Commons: только portrait-запросы
-    if (entry.get("image_kind") or "author_portrait") == "author_portrait":
-        if await try_urls(await _author_portrait_urls(entry)):
-            return rel
-
-    # Не подставляем «русскую баню» вместо автора — лучше без фото.
     logger.warning("classic portrait missing for %s (%s)", eid, entry.get("author"))
     return None
 

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "surface": "дорого",
+      "replacement": "д+орого",
+      "kind": "alias",
+      "context_left": null,
+      "hits": 1,
+      "last_cer": null,
+      "notes": "legacy: дорово"
+    },
+    {
+      "surface": "много",
+      "replacement": "ˈmnogə",
+      "kind": "phoneme",
+      "context_left": null,
+      "hits": 1,
+      "last_cer": null,
+      "notes": "legacy: мново"
+    },
+    {
+      "surface": "немного",
+      "replacement": "nʲɪˈmnogə",
+      "kind": "phoneme",
+      "context_left": null,
+      "hits": 1,
+      "last_cer": null,
+      "notes": "legacy: немново"
+    },
+    {
+      "surface": "нищепанк",
+      "replacement": "нищеп+анк",
+      "kind": "alias",
+      "context_left": null,
+      "hits": 1,
+      "last_cer": null,
+      "notes": "legacy stress"
+    }
+  ]
+}

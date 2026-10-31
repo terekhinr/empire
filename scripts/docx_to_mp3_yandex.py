@@ -43,6 +43,9 @@ def folder_id() -> str:
     return (os.getenv("YANDEX_FOLDER_ID") or os.getenv("YC_FOLDER_ID") or "").strip()
 
 
+from tts_nsw import hard_slices_preserving_sil  # noqa: E402
+
+
 def split_text(text: str, max_len: int = MAX_CHUNK) -> list[str]:
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     chunks: list[str] = []
@@ -71,8 +74,7 @@ def split_text(text: str, max_len: int = MAX_CHUNK) -> list[str]:
                 if len(sent) <= max_len:
                     buf = sent
                 else:
-                    for i in range(0, len(sent), max_len):
-                        chunks.append(sent[i : i + max_len])
+                    chunks.extend(hard_slices_preserving_sil(sent, max_len))
                     buf = ""
         if buf:
             chunks.append(buf)

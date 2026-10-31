@@ -3,8 +3,10 @@
 > **Полный гайд Tailscale:** [`docs/cursor_vps_tailscale_ru.md`](cursor_vps_tailscale_ru.md) — пошаговое подключение, самодиагностика, помощь агента.
 
 Рабочая папка на VPS: `/root/projects/empire`  
-**Рекомендуемый хост Cursor:** `empire-vps-ts` (Tailscale `100.84.19.35`) — минует VPN/xray и NAT Keenetic.  
-Запасной: `empire-vps` (`193.233.232.48`).
+**Прод VPS:** `138.124.90.47` (`empire-vps` / `rough-beige`, VIEs-2)  
+**Cursor Host (рекомендуется):** `empire-vps-ts` → Tailscale `100.124.148.18`  
+**Запасной:** `empire-vps` → `138.124.90.47`  
+Старый VIEs-3: `193.233.232.48` / `100.84.19.35` (`moderate-amethys`) — не прод.
 
 На VPS уже включено (2026-06-20): `ClientAliveInterval 10`, очистка зомби Cursor каждые 3 мин, xray healthcheck без агрессивных рестартов, Tailscale SSH (`tailscale set --ssh`).
 

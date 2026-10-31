@@ -512,4 +512,47 @@ window.EMPIRE_FINANCE_MODEL = {
       "Раз в месяц сверять план/факт: платящие, отток, расходы на сервер (см. docs/snegiri_finmodel_gemini.md).",
     ],
   },
+
+  /** Карьера · LMS /go-learn/ (Codecademy path UX) + пайплайн */
+  career: {
+    title: "Карьера · B2B Lead Bot / выход",
+    period: "Sem1 · 17 недель · уход 12–24 мес",
+    intro: [
+      "**Главный вход учёбы:** https://neverretire.ru/go-learn/ (Continue + % + силлабус).",
+      "UX как у **Codecademy** (Baymard top): path → неделя → шаги, прогресс по уроку.",
+      "Контент как **Практикум**: 30/70 · Python→Aiogram→SQL→диплом Lead Bot.",
+      "Deep work **20–24 ч/нед**; семья ≥**4 ч**; работа ≤**3 ч**.",
+    ],
+    pipelineRef: "career-b2b-pipeline",
+    projectTitle: "Карьера · B2B Lead Bot / выход",
+    modulesSectionTitle: "Семестр 1 · недели LMS",
+    phases: [
+      { key: "lms-sem1-w00", label: "W0 · Онбординг", dates: "22–26 окт", focus: "Режим + tracker" },
+      { key: "lms-sem1-w04", label: "W1–4 · Python+Git", dates: "до 23 ноя", focus: "To-Do CLI · M1" },
+      { key: "lms-sem1-w08", label: "W5–8 · Aiogram", dates: "до 21 дек", focus: "FSM · M2" },
+      { key: "lms-sem1-w12", label: "W9–12 · SQL", dates: "до 18 янв", focus: "КТ-1" },
+      { key: "lms-sem1-w16", label: "W13–16 · Диплом", dates: "до 15 фев", focus: "КТ-2 Lead Bot" },
+    ],
+    weekChecklists: [
+      { key: "lms-sem1-w00", label: "W0 онбординг" },
+      { key: "lms-sem1-w01", label: "W1 Python типы" },
+      { key: "lms-sem1-w02", label: "W2 циклы/функции" },
+      { key: "lms-sem1-w03", label: "W3 To-Do CLI" },
+      { key: "lms-sem1-w04", label: "W4 Git · M1" },
+      { key: "lms-sem1-w05", label: "W5 Aiogram start" },
+      { key: "lms-sem1-w08", label: "W8 · M2" },
+      { key: "lms-sem1-w12", label: "W12 · КТ-1" },
+      { key: "lms-sem1-w16", label: "W16 · КТ-2" },
+    ],
+    extraChecklists: [
+      { key: "career-b2b-pipeline", label: "Pipeline %" },
+    ],
+    howTo: [
+      "Телефон/ПК учёба: **/go-learn/** — Continue и галочки.",
+      "Тренировка завтра: **/gym/** через **/go/**.",
+      "Задачи: **/go-tasks/** (не /tasks/).",
+      "Seed: scripts/seed_practicum_lms_2026.py --force",
+      "Канон: docs/career_curriculum_b2b_2026-10.md",
+    ],
+  },
 };

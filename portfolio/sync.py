@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any
 
 from portfolio.calc.snapshots import save_monthly_snapshot
@@ -18,13 +19,33 @@ from portfolio.calc.positions import compute_positions
 log = logging.getLogger(__name__)
 
 
-def refresh_prices() -> dict[str, Any]:
+def refresh_prices(*, force: bool = True) -> dict[str, Any]:
+    """Сеть MOEX — без открытой сессии SQLite, иначе GET вкладок ждёт лок 60с."""
+    from portfolio.prices.moex import cache_prices, fetch_prices, get_cached_or_fetch
+    from portfolio.web_routes import invalidate_bundle
+
     with db_session() as conn:
         init_db(conn)
-        positions = compute_positions(conn)
-        tickers = [p.ticker for p in positions]
-        prices = get_cached_or_fetch(conn, tickers)
-        return {"tickers": len(tickers), "priced": len(prices)}
+        tickers = [p.ticker for p in compute_positions(conn)]
+    prices: dict[str, float] = {}
+    if force and tickers:
+        try:
+            prices = fetch_prices(tickers)
+        except Exception:
+            log.exception("moex fetch during refresh")
+            prices = {}
+        if prices:
+            with db_session(timeout=15, busy_ms=8000) as conn:
+                cache_prices(conn, prices)
+    else:
+        with db_session() as conn:
+            prices = get_cached_or_fetch(conn, tickers, force=False, network=False)
+    invalidate_bundle()
+    return {"tickers": len(tickers), "priced": len(prices), "forced": force}
+
+
+def refresh_prices_background(*, force: bool = True) -> None:
+    threading.Thread(target=refresh_prices, kwargs={"force": force}, daemon=True).start()
 
 
 def run_full_sync(tbank_days: int = 365) -> dict[str, Any]:
@@ -42,7 +63,7 @@ def run_full_sync(tbank_days: int = 365) -> dict[str, Any]:
 
         positions = compute_positions(conn)
         tickers = [p.ticker for p in positions]
-        results["prices"] = {"priced": len(get_cached_or_fetch(conn, tickers))}
+        results["prices"] = {"priced": len(get_cached_or_fetch(conn, tickers, force=True))}
         results["snapshot"] = save_monthly_snapshot(conn)
     return results
 

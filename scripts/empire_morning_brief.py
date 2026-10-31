@@ -175,13 +175,7 @@ def build_brief() -> str:
     lines.append("")
     lines.append("── Бэкапы ──")
     lines.extend(_backup_lines())
-    try:
-        from empire_gdepar_parse_summary import build_gdepar_parse_summary
-
-        lines.append("")
-        lines.append(build_gdepar_parse_summary())
-    except Exception as exc:
-        lines.append(f"── Где Пар · парсинг ──\n⚠ {exc}")
+    # Парсинг бань — в weekly-отчёте, не в daily brief (проект сырой).
     lines.append("")
     lines.append("Полный лог: /var/log/empire/daily-audit-latest.log")
     return "\n".join(lines)
@@ -199,10 +193,13 @@ def main() -> int:
             pass
 
     text = build_brief()
-    ok = notify.send_twice_daily("morning_brief", text, force=False)
-    # Утреннее окно 04-06 UTC; если вне окна — всё равно шлём при force env
-    if not ok and os.getenv("EMPIRE_MORNING_FORCE") == "1":
+    # TG только через empire-status-digest (утро+вечер). Brief — локальный лог + Я.Диск.
+    skipped = os.getenv("EMPIRE_MORNING_FORCE") != "1"
+    if not skipped:
         ok = notify.send(text)
+    else:
+        ok = False
+        print("telegram=skipped (use empire-status-digest 07/20 MSK)", flush=True)
     print(text)
     print(f"telegram={ok}", flush=True)
 
@@ -224,7 +221,7 @@ def main() -> int:
         except Exception as exc:
             print(f"yandex_audit warn: {exc}", flush=True)
 
-    return 0 if ok else 1
+    return 0 if (ok or skipped) else 1
 
 
 if __name__ == "__main__":

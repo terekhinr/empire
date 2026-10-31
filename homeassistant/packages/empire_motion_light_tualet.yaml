@@ -45,6 +45,10 @@ automation:
         to: "on"
         for:
           seconds: 1
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('light.hobeian_zg_301z') not in ['unavailable', 'unknown', 'none', ''] }}
     actions:
       - action: script.svet_tualet_vkl
 
@@ -57,5 +61,9 @@ automation:
         to: "off"
         for:
           seconds: 15
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('light.hobeian_zg_301z') not in ['unavailable', 'unknown', 'none', ''] }}
     actions:
       - action: script.svet_tualet_vyk

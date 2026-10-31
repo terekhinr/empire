@@ -47,7 +47,9 @@ uci set dhcp.@host[-1].name='04_05_dd_c5_eb_a4'
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='70:89:76:35:8e:16'
 uci set dhcp.@host[-1].ip='192.168.1.143'
-uci set dhcp.@host[-1].name='wlan0'
+uci set dhcp.@host[-1].name='tuya-kuhnya-plug'
+# SRW-TH01 балкон: НЕ сажать на .143 (это кухонная розетка). Резерв .51 — после
+# короткого нажатия кнопки на датчике и появления MAC в ARP Flint.
 
 uci add dhcp host 2>/dev/null || true
 uci set dhcp.@host[-1].mac='88:46:04:51:4c:13'

@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from pathlib import Path
 
 import requests
+
+_STATUS_TTL = 20.0
+_status_cache: dict[str, tuple[float, str]] = {}
+# Не дергать сами себя: иначе воркер ждёт HTTP сам у себя и страница встаёт.
+_SKIP_HTTP = {"empire_webapp", "empire_dashboard"}
 
 SYSTEMCTL = Path("/usr/bin/systemctl")
 if not SYSTEMCTL.is_file():
@@ -35,7 +41,7 @@ HTTP_CHECKS: dict[str, str] = {
     "empire_webapp": "http://127.0.0.1:8000/api/health",
     "empire_gdepar": "http://127.0.0.1:8001/api/gdepar/health",
     "empire_sales": "http://127.0.0.1:8002/health",
-    "empire_dashboard": "http://127.0.0.1:8501/_stcore/health",
+    "empire_dashboard": "http://127.0.0.1:8000/hub/login",
 }
 
 
@@ -45,6 +51,10 @@ def _env_token(name: str) -> bool:
 
 def systemctl_status(unit: str) -> str:
     """Статус systemd-юнита. Полный путь к systemctl — PATH у dashboard только venv."""
+    now = time.monotonic()
+    hit = _status_cache.get(unit)
+    if hit and now - hit[0] < _STATUS_TTL:
+        return hit[1]
     if not SYSTEMCTL.is_file():
         return "systemctl недоступен"
     try:
@@ -52,15 +62,18 @@ def systemctl_status(unit: str) -> str:
             [str(SYSTEMCTL), "is-active", unit],
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=2,
         )
-        out = (r.stdout or r.stderr or "").strip()
-        return out or "unknown"
+        out = (r.stdout or r.stderr or "").strip() or "unknown"
     except Exception as exc:
-        return f"ошибка ({exc})"
+        out = f"ошибка ({exc})"
+    _status_cache[unit] = (now, out)
+    return out
 
 
-def http_health_ok(key: str, timeout: float = 2.0) -> bool | None:
+def http_health_ok(key: str, timeout: float = 0.4) -> bool | None:
+    if key in _SKIP_HTTP:
+        return True
     url = HTTP_CHECKS.get(key)
     if not url:
         return None

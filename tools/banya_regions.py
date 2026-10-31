@@ -1,7 +1,7 @@
 """Коды регионов бань для парсеров OSM / Яндекс / форс-отзывов.
 
 EUROPE_RU — европейская часть РФ до Урала (без Свердловской, Челябинской, Тюменской, Курган, ХМАО, ЯНАО).
-URAL / SIB / FAR_EAST / RU_ALL — расширение на восток; OSM пишет только draft, сайт не трогает.
+EUROPE_URAL — то же плюс Урал. URAL / SIB / FAR_EAST / RU_ALL — расширение на восток; OSM пишет только draft, сайт не трогает.
 """
 
 from __future__ import annotations
@@ -142,15 +142,20 @@ EUROPE_RU_REGION_CODES: tuple[str, ...] = (
     + CAUCASUS_REGION_CODES
 )
 
+# Европейская РФ до Урала включительно
+EUROPE_URAL_REGION_CODES: tuple[str, ...] = EUROPE_RU_REGION_CODES + URAL_REGION_CODES
+
 # Вся РФ в реестре (OSM draft → enrich → pubauto; на карту только published)
 RU_ALL_REGION_CODES: tuple[str, ...] = (
-    EUROPE_RU_REGION_CODES
-    + URAL_REGION_CODES
+    EUROPE_URAL_REGION_CODES
     + SIB_REGION_CODES
     + FAR_EAST_REGION_CODES
 )
 
 GDEPAR_REVIEW_REGIONS: tuple[str, ...] = CFO_REGION_CODES + ("SPB", "LO")
+
+# Приоритет монетизации (аудит R7): Москва, МО, Питер, Ленобласть
+FLAGSHIP_REGION_CODES: tuple[str, ...] = ("MSK", "MO", "SPB", "LO")
 
 # Альтернативные ISO3166-2 для area= в Overpass (первый успешный с объектами).
 # Крым/Севастополь в OSM чаще под UA-*; Курск иногда без area по RU-KUR.
@@ -252,7 +257,7 @@ REGION_FALLBACK_CITY: dict[str, str] = {
 
 
 def expand_region_tokens(tokens: list[str]) -> list[str]:
-    """CFO, NW, VOLGA, SOUTH, CAUCASUS, URAL, SIB, FAR_EAST, EUROPE_RU, RU_ALL, GDEPAR → коды."""
+    """CFO, NW, …, FLAGSHIP/CAPITALS (= MSK,MO,SPB,LO), GDEPAR → коды."""
     aliases = {
         "CFO": CFO_REGION_CODES,
         "NW": NW_REGION_CODES,
@@ -264,9 +269,13 @@ def expand_region_tokens(tokens: list[str]) -> list[str]:
         "FAR_EAST": FAR_EAST_REGION_CODES,
         "EAST": FAR_EAST_REGION_CODES,
         "EUROPE_RU": EUROPE_RU_REGION_CODES,
+        "EUROPE_URAL": EUROPE_URAL_REGION_CODES,
         "RU_ALL": RU_ALL_REGION_CODES,
         "FULL_RU": RU_ALL_REGION_CODES,
         "GDEPAR": GDEPAR_REVIEW_REGIONS,
+        "FLAGSHIP": FLAGSHIP_REGION_CODES,
+        "CAPITALS": FLAGSHIP_REGION_CODES,
+        "MSK_MO_SPB_LO": FLAGSHIP_REGION_CODES,
     }
     out: list[str] = []
     for t in tokens:

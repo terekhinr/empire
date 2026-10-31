@@ -48,7 +48,7 @@ def _healer_block() -> str:
 
 
 def _ha_home_block() -> str:
-    """Offline critical HA entities из empire_ha_watcher state (без отдельного спама)."""
+    """Offline critical HA entities + контракты комнат из empire_ha_watcher state."""
     path = Path(os.getenv("EMPIRE_HA_WATCH_STATE", "/var/log/empire/ha-watcher-state.json"))
     lines = ["── Дом / HA ──"]
     if not path.is_file():
@@ -66,6 +66,20 @@ def _ha_home_block() -> str:
         lines.append(f"❌ offline ({len(offline)}):")
         for row in offline[:8]:
             lines.append(f"· {row}")
+
+    lines.append("── Дом / контракты ──")
+    issues = st.get("room_contracts_issues") or []
+    rows = st.get("room_contracts_digest") or []
+    if issues:
+        lines.append(f"❌ нарушений: {len(issues)}")
+        for row in issues[:6]:
+            lines.append(f"· {row}")
+    elif rows:
+        lines.append("✅ контракты OK")
+        for row in rows[:4]:
+            lines.append(f"· {row}")
+    else:
+        lines.append("❓ контракты ещё не считали (watcher)")
     return "\n".join(lines)
 
 

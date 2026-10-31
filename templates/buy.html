@@ -13,7 +13,7 @@
 
     <div class="buy-card">
         <p><strong>Полная версия</strong> — все {{ book.chapters | length }} глав в PDF для чтения офлайн.</p>
-        <p class="buy-price">{{ book_price_rub }} ₽</p>
+        <p class="buy-price">Pre-sale {{ book_price_rub }} ₽</p>
         <p class="muted" style="font-size: 0.9rem;">Не является индивидуальной инвестиционной рекомендацией.</p>
 
         {% if payments_live %}
@@ -21,8 +21,13 @@
             Оплатить (скоро)
         </button>
         {% else %}
-        <p class="buy-soon">Оплата подключается. Пока — <a href="/book/introduction">читайте введение бесплатно</a> или оставьте email на главной.</p>
-        <a class="btn btn-primary" href="/" data-pension-goal="pension_payment_start">На главную →</a>
+        <p class="buy-soon">Оплата ЮKassa ещё не включена. Оставьте email — пришлём ссылку, когда PDF будет в продаже ({{ book_price_rub }} ₽).</p>
+        <form class="waitlist-form" id="buy-waitlist-form" novalidate>
+            <input type="email" name="email" placeholder="you@example.com" required autocomplete="email" aria-label="Email">
+            <button type="submit" class="btn btn-primary" data-pension-goal="pension_email_submit">Записать на pre-sale</button>
+        </form>
+        <p id="buy-waitlist-msg" class="waitlist-msg muted" hidden></p>
+        <p style="margin-top: 16px;"><a href="/gift">Или скачайте бесплатные 5 принципов →</a></p>
         {% endif %}
     </div>
 
@@ -38,6 +43,30 @@ document.addEventListener("DOMContentLoaded", function () {
     if (typeof window.pensionMetrikaReach === "function") {
         window.pensionMetrikaReach("pension_buy_page_open", {});
     }
+    var form = document.getElementById("buy-waitlist-form");
+    var msg = document.getElementById("buy-waitlist-msg");
+    if (!form) return;
+    form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var email = (form.querySelector('input[name="email"]') || {}).value || "";
+        fetch("/api/pension/waitlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim(), source: "buy_presale" })
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            msg.hidden = false;
+            if (res.ok) {
+                msg.textContent = "Записали. Когда PDF будет в продаже — напишем.";
+                form.reset();
+            } else {
+                msg.textContent = "Не удалось сохранить. Проверьте email.";
+            }
+          }).catch(function () {
+            msg.hidden = false;
+            msg.textContent = "Ошибка сети. Попробуйте позже.";
+          });
+    });
 });
 </script>
 {% endblock %}

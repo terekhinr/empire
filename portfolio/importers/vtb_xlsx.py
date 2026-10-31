@@ -187,16 +187,14 @@ def import_vtb_balances(conn: sqlite3.Connection, path: str | Path) -> dict[str,
             from datetime import date
 
             period_end = _report_period_end(blob) or date.today().isoformat()
-            today = date.today().isoformat()
-            for px_date in (period_end, today):
-                conn.execute(
-                    """
-                    INSERT INTO price_cache (ticker, price_date, price, source)
-                    VALUES (?, ?, ?, 'vtb_report')
-                    ON CONFLICT(ticker, price_date) DO UPDATE SET price=excluded.price, source=excluded.source
-                    """,
-                    (ticker, px_date, price),
-                )
+            conn.execute(
+                """
+                INSERT INTO price_cache (ticker, price_date, price, source)
+                VALUES (?, ?, ?, 'vtb_report')
+                ON CONFLICT(ticker, price_date) DO UPDATE SET price=excluded.price, source=excluded.source
+                """,
+                (ticker, period_end, price),
+            )
         updated += 1
 
     return {"broker": "vtb", "account": label, "positions_updated": updated, "report_total": report_total}

@@ -16,12 +16,24 @@
     "pension-hotyat-li-russkie-vojny-2026-06-03",
     "pension-kem-byt-2026-06-08",
     "pension-2026-06-10-slug",
-    "pension-2026-06-11-slug"
+    "pension-2026-06-11-slug",
+    "garden-2026-10-24-sev",
+    "garden-2026-10-26-malina",
+    "lenin-fact-001",
+    "garden-2026-10-28-oprysk",
+    "stern-2026-10-23-tri-sozvona",
+    "lenin-fact-002"
   ],
   "reminded_ids": [
-    "pension-2026-06-11-slug"
+    "pension-2026-06-11-slug",
+    "stern-2026-10-23-tri-sozvona",
+    "garden-2026-10-24-sev",
+    "garden-2026-10-26-malina",
+    "lenin-fact-001",
+    "garden-2026-10-28-oprysk",
+    "lenin-fact-002"
   ],
-  "last_import_at": "2026-08-27T20:15:00.070477+03:00",
+  "last_import_at": "2026-10-31T20:13:00.150174+03:00",
   "dispatched": {
     "2026-05-20-{{title_slug}}": "",
     "2026-05-22-{{title_slug}}": "",
@@ -39,9 +51,21 @@
     "pension-hotyat-li-russkie-vojny-2026-06-03": "2026-06-06 15:00",
     "pension-kem-byt-2026-06-08": "2026-06-08 15:00",
     "pension-2026-06-10-slug": "2026-06-10 12:00",
-    "pension-2026-06-11-slug": "2026-06-11 11:00"
+    "pension-2026-06-11-slug": "2026-06-11 11:00",
+    "garden-2026-10-24-sev": "2026-10-24 09:00",
+    "garden-2026-10-26-malina": "2026-10-26 09:00",
+    "lenin-fact-001": "2026-10-27 18:00",
+    "garden-2026-10-28-oprysk": "2026-10-28 09:00",
+    "stern-2026-10-23-tri-sozvona": "2026-10-28 19:00",
+    "lenin-fact-002": "2026-10-30 18:00"
   },
   "reminded": {
-    "pension-2026-06-11-slug": "2026-06-11 11:00"
+    "pension-2026-06-11-slug": "2026-06-11 11:00",
+    "stern-2026-10-23-tri-sozvona": "2026-10-23 19:00",
+    "garden-2026-10-24-sev": "2026-10-24 09:00",
+    "garden-2026-10-26-malina": "2026-10-26 09:00",
+    "lenin-fact-001": "2026-10-27 18:00",
+    "garden-2026-10-28-oprysk": "2026-10-28 09:00",
+    "lenin-fact-002": "2026-10-30 18:00"
   }
 }

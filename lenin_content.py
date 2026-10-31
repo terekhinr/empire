@@ -343,7 +343,7 @@ def build_bedtime_story_post() -> tuple[str, str]:
             "#ленин #сказка #лениниана #история"
         )
         return "[Сказка на ночь] fallback", body
-    entry = rubric_posts.pick_entry(_BEDTIME_PATH, _BEDTIME_HISTORY, rubric=None)
+    entry = rubric_posts.pick_entry(_BEDTIME_PATH, _BEDTIME_HISTORY, rubric=None, global_cooldown_days=30)
     quote = _repair_bedtime_spacing(rubric_posts.entry_quote(entry))
     src = rubric_posts.entry_source_line(entry)
     if entry.get("author") and entry.get("work"):
@@ -367,43 +367,43 @@ def rubric_expansion_rules() -> str:
     )
 
 
-_GENERIC_LENIN_FILES = {
-    "Vladimir Lenin, 1917.jpg",
-    "Vladimir Lenin after finishing his exile in Siberia, 1900-1.jpg",
-    "Vladimir Lenin after finishing his exile in Siberia, 1900.jpg",
-    "Lenin-poster.jpg",
-    "Vladimir_Lenin.jpg",
-    "Vladimir Lenin giving a speech.jpg",
-}
+_LENIN_FALLBACK_FILE = "Vladimir Lenin, 1917.jpg"
 
 
-def _visual_query_for_rubric(key: str, entry: dict) -> str | None:
-    """Запрос для картины/фильма/памятника — не «Ленин портрет»."""
-    custom = (entry.get("wiki_query") or entry.get("visual_query") or "").strip()
-    if custom:
-        return custom
-    src = (entry.get("source") or "").strip()
-    quote = (entry.get("quote") or entry.get("text") or "").strip()
-    head = src.split("—")[0].split("–")[0].strip() if src else ""
-    if key == "cinema":
-        base = head or src or quote[:80]
-        return f"{base} фильм" if base else None
-    if key == "art":
-        return head or src or None
-    return None
+def _owner_marked_image(entry: dict | None) -> bool:
+    """Кадр фильма можно ставить только после ручной отметки image_approved."""
+    if not entry:
+        return False
+    raw = entry.get("image_approved")
+    if raw is True:
+        return True
+    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _is_generic_lenin_image_path(path: str | None, entry: dict | None = None) -> bool:
-    if entry and (entry.get("image_file") or "") in _GENERIC_LENIN_FILES:
+def _is_film_asset(entry: dict | None, path: str | None = None) -> bool:
+    if not entry and not path:
+        return False
+    if entry and (entry.get("image_kind") or "") == "film_still":
         return True
-    if not path:
-        return True
-    name = Path(path).name.lower()
-    if name in {"_default_lenin.jpg", "vladimir_lenin.jpg"}:
-        return True
-    if "1917" in name and "lenin" in name:
-        return True
-    return False
+    names = []
+    if entry:
+        names.append(Path(str(entry.get("image_file") or "")).name.lower())
+    if path:
+        names.append(Path(path).name.lower())
+    return any(("movie" in n or "film" in n) for n in names if n)
+
+
+def resolved_lenin_image_file(entry: dict) -> str:
+    """Портрет или памятник Ленина. Кадр фильма — только с image_approved."""
+    name = Path(str(entry.get("image_file") or "")).name
+    if _is_film_asset(entry) and _owner_marked_image(entry):
+        return name or _LENIN_FALLBACK_FILE
+    low = name.lower()
+    subject = "lenin" in low or "ленин" in low
+    filmish = "movie" in low or "film" in low
+    if subject and not filmish and (entry.get("image_kind") or "") != "film_still":
+        return name
+    return _LENIN_FALLBACK_FILE
 
 
 async def build_rubric_slot(
@@ -417,7 +417,7 @@ async def build_rubric_slot(
         _RUBRICS_PATH,
         _RUBRICS_HISTORY,
         rubric=key,
-        global_cooldown_days=21,
+        global_cooldown_days=30,
     )
     tag = RUBRIC_TOPIC_TAGS.get(key, "[Ленин · рубрика]")
     if not entry:
@@ -426,27 +426,18 @@ async def build_rubric_slot(
     topic = f"{tag} {entry.get('source', '')} (id={entry.get('id', '')})"
     allow_default = key not in ("art", "cinema")
     default_name = "_default_lenin.jpg" if allow_default else "_no_default.jpg"
+    wanted = resolved_lenin_image_file(entry)
+    stale = _RUBRICS_MEDIA / f"{entry.get('id') or 'item'}.jpg"
+    if Path(wanted).name != Path(str(entry.get("image_file") or "")).name and stale.is_file():
+        stale.unlink()
+    if wanted != (entry.get("image_file") or ""):
+        entry = {**entry, "image_file": wanted, "image_kind": "portrait"}
     img = await rubric_posts.ensure_entry_image(entry, _RUBRICS_MEDIA, default_name)
-    visual_q = _visual_query_for_rubric(key, entry)
-    seed = {
-        "_kind": "lenin_rubric",
-        "rubric_key": key,
-        "entry_id": entry.get("id"),
-        "visual_query": visual_q,
-    }
-    # Искусство / кино: не оставляем типичный портрет 1917 — ищем картину/кадр.
-    if key in ("art", "cinema") and (
-        not img or _is_generic_lenin_image_path(img, entry)
-    ):
-        if visual_q:
-            dest = _RUBRICS_MEDIA / f"{entry.get('id') or 'item'}.jpg"
-            better = await rubric_posts.fetch_wiki_page_image(visual_q, dest)
-            if better:
-                img = better
-        if img and _is_generic_lenin_image_path(img, entry):
-            img = None
+    if _is_film_asset(entry, img) and not _owner_marked_image(entry):
+        img = None
     body = format_rubric_post(key, entry)
-    return topic, body, img, seed
+    # Готовый HTML. Seed не отдаём: иначе слот уходит в LLM и подменяет картинку.
+    return topic, body, img, None
 
 
 async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) -> tuple[str, str, str | None]:
@@ -459,7 +450,7 @@ async def build_rubric_post(rubric_key: str | None = None, *, weekday: int = 0) 
         _RUBRICS_PATH,
         _RUBRICS_HISTORY,
         rubric=key,
-        global_cooldown_days=21,
+        global_cooldown_days=30,
     )
     if not entry:
         return topic, f"{topic}\n\nСегодня без выпуска.", img
@@ -748,13 +739,35 @@ def _pick_pss_topic(*, recent_bodies: list[str] | None = None) -> dict | None:
         except json.JSONDecodeError:
             used = {}
     used_ids = set(used.get("ids") or [])
+    last_by_id: dict = dict(used.get("last_by_id") or {})
+    now = datetime.utcnow()
+    window = timedelta(days=30)
+    cooldown_blocked: set[str] = set()
+    for eid, ts in last_by_id.items():
+        if not eid or not ts:
+            continue
+        try:
+            when = datetime.fromisoformat(str(ts).replace("Z", ""))
+        except ValueError:
+            continue
+        if now - when < window:
+            cooldown_blocked.add(str(eid))
     pool = [
         t
         for t in topics
-        if t.get("id") not in used_ids and t.get("id") not in PSS_TOPIC_DISABLED_IDS
-    ] or [t for t in topics if t.get("id") not in PSS_TOPIC_DISABLED_IDS]
+        if t.get("id") not in used_ids
+        and t.get("id") not in PSS_TOPIC_DISABLED_IDS
+        and t.get("id") not in cooldown_blocked
+    ]
     if not pool:
-        pool = list(topics)
+        pool = [
+            t
+            for t in topics
+            if t.get("id") not in PSS_TOPIC_DISABLED_IDS
+            and t.get("id") not in cooldown_blocked
+        ]
+    if not pool:
+        return None
     if recent_bodies and _recent_bureaucracy_theme(recent_bodies):
         filtered = [t for t in pool if t.get("id") not in PSS_TOPIC_COOLDOWN_IDS]
         if filtered:
@@ -763,6 +776,9 @@ def _pick_pss_topic(*, recent_bodies: list[str] | None = None) -> dict | None:
     ids = list(used_ids)
     ids.append(pick["id"])
     used["ids"] = ids[-24:]
+    if pick.get("id"):
+        last_by_id[str(pick["id"])] = now.isoformat()
+        used["last_by_id"] = last_by_id
     _PSS_USED_PATH.parent.mkdir(parents=True, exist_ok=True)
     _PSS_USED_PATH.write_text(json.dumps(used, ensure_ascii=False, indent=2), encoding="utf-8")
     return pick

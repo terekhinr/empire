@@ -79,7 +79,7 @@
       "max_selfcrit_issues": 99
     },
     "stern_curated": {
-      "enabled": true,
+      "enabled": false,
       "personas": [
         "stern"
       ],
@@ -88,8 +88,7 @@
         "[Русские силачи]",
         "[Спортмед и реабилитация]",
         "[Экипировка и лайфхаки]",
-        "[Гиревой фитнес]",
-        "[Историческое наследие]"
+        "[Гиревой фитнес]"
       ],
       "min_body_chars": 550,
       "skip_body_floor": false,
@@ -131,7 +130,8 @@
       "require_image": false,
       "require_zero_regen": true,
       "require_zero_badimg": true,
-      "max_selfcrit_issues": 99
+      "max_selfcrit_issues": 99,
+      "_paused_for_studio": false
     },
     "stern_week_arc": {
       "enabled": false,
@@ -150,8 +150,23 @@
       "require_zero_badimg": true,
       "max_selfcrit_issues": 99
     },
-    "stern_technique_video": {
+    "stern_athletic_legacy": {
       "enabled": true,
+      "personas": [
+        "stern"
+      ],
+      "topic_markers": [
+        "[Историческое наследие]"
+      ],
+      "min_body_chars": 220,
+      "skip_body_floor": true,
+      "require_image": true,
+      "require_zero_regen": false,
+      "require_zero_badimg": true,
+      "max_selfcrit_issues": 99
+    },
+    "stern_technique_video": {
+      "enabled": false,
       "personas": [
         "stern"
       ],
@@ -319,7 +334,7 @@
       "max_selfcrit_issues": 99
     },
     "garden_curated": {
-      "enabled": true,
+      "enabled": false,
       "personas": [
         "garden"
       ],
@@ -332,7 +347,8 @@
       "require_image": true,
       "require_zero_regen": true,
       "require_zero_badimg": true,
-      "max_selfcrit_issues": 99
+      "max_selfcrit_issues": 99,
+      "_paused_for_studio": true
     }
   }
 }

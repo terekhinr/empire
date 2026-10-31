@@ -30,8 +30,8 @@ filter:
     - light.empire_prihozhaya_svet
     - script.svet_prihozhaya_vkl
     - script.svet_prihozhaya_vyk
-    # --- Домофон (SmartIntercom ESPHome) ---
-    - switch.smartintercom_accept_call
+    # --- Домофон (SmartIntercom BlueStreak MQTT) ---
+    - switch.smartintercom_otkryt_dver
     - script.empire_domofon_otkryt
     # --- Спальня (W602 LocalTuya, 2× свет) ---
     - switch.spalnya_svet
@@ -39,11 +39,14 @@ filter:
     # --- Гостевая + комната Семёна (Sonoff BASICR2) ---
     - switch.basicr2_ded_sonoff_10011f1029
     - switch.basicr2_max_sonoff_10011f28d9
-    # script.svet_* оставлены в HA для ручных вызовов; в Алису только switch «Свет»
+    # Хвосты УДЯ (иначе HA ругается unexposed). Голос света — switch «Свет».
+    - script.svet_gostevaya_vkl
+    - script.svet_maks_vkl
+    - script.svet_maks_vyk
   exclude_entities:
     - light.tz3000_mgusv51k_ts0052
     - light.zbeacon_ts0001
-    - light.zbeacon_ts0001_2
+    - light.tz3000_mgusv51k_ts0052_2
     - script.empire_test_telegram
     - switch.kuhnya_chainik
 
@@ -85,6 +88,10 @@ entity_config:
     name: Свет
     room: Ванная
     slow: true
+    turn_on:
+      action: script.svet_vannaya_vkl
+    turn_off:
+      action: script.svet_vannaya_vyk
   script.svet_vannaya_vkl:
     name: Свет ванная
     room: Ванная
@@ -121,7 +128,7 @@ entity_config:
     name: Выключить свет прихожая
     room: Прихожая
     slow: true
-  switch.smartintercom_accept_call:
+  switch.smartintercom_otkryt_dver:
     name: Домофон
     room: Прихожая
     type: devices.types.openable
@@ -145,6 +152,18 @@ entity_config:
   switch.basicr2_max_sonoff_10011f28d9:
     name: Свет
     room: Комната Семёна
+    slow: true
+  script.svet_gostevaya_vkl:
+    name: Сценарий гостевая
+    room: Общее
+    slow: true
+  script.svet_maks_vkl:
+    name: Сценарий свет Семён
+    room: Общее
+    slow: true
+  script.svet_maks_vyk:
+    name: Сценарий выключить свет Семён
+    room: Общее
     slow: true
   # Примеры (раскомментировать с реальными entity_id):
   # light.kuhnya_potolok:

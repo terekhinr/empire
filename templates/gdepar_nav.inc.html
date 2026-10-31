@@ -5,6 +5,7 @@
     </a>
     <nav class="nav-links">
         <a href="{% if nav_active == 'home' %}#karta{% else %}/map{% endif %}" class="{% if nav_active == 'map' %}nav-active{% endif %}" data-gdepar-nav="{% if nav_active == 'home' %}karta{% else %}map{% endif %}">Карта</a>
+        <a href="/journal" class="{% if nav_active == 'journal' %}nav-active{% endif %}" data-gdepar-nav="journal">Журнал</a>
         <a href="/#bayki" class="{% if nav_active == 'bayki' %}nav-active{% endif %}" data-gdepar-nav="bayki">Байки</a>
         <a href="/#manifesto" data-gdepar-nav="manifesto">Манифест</a>
         <a href="/#merch" data-gdepar-nav="merch">Мерч</a>

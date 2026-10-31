@@ -1,4 +1,41 @@
 
+## CP-20261022f — Прихожая invert + room contracts
+
+**Диммер прихожей:** TS0052 on/off инвертирован в `empire_prihozhaya.yaml` (как `HA_DIMMER_INVERT.md`): 100%=raw off, off=raw on, dim=raw on+bri; template state учитывает dim.
+**Контракты:** `docs/HA_ROOM_CONTRACTS.md` + `check_room_contracts` в `empire_ha_watcher.py` → state → блок в `empire_status_digest`.
+**Проверено:** off/on100/on40 логика HA OK; watcher `room_contracts` OK.
+
+
+## CP-20261022e — Ванная: свет не гаснет
+
+**Баг:** `empire_vannaya_sensor_init` ставил **High** + timeout 60с; off ждал **3 мин** off — occupancy не сбрасывался.
+**Фикс:** Medium + timeout 15с; off через **30 с** (как `HA_MOTION_DIMMER.md`). Применено live.
+**Проверено:** presence off → через 30с свет off.
+
+
+## CP-20261022d — Прихожая: новый TS0052 как диммер
+
+**Устройство:** ZHA `a4:c1:38:f5:dd:6b:c4:68` → `light.tz3000_mgusv51k_ts0052_2` («Прихожая диммер»).
+**Пакет:** `empire_prihozhaya.yaml` — template `light.empire_prihozhaya_svet` + motion SNZB-06P (как ванная).
+**Ночь:** `binary_sensor.empire_prihozhaya_dim_night` 01:00–05:51 MSK → **40%** (ванна 20%); день 100%.
+**Датчик:** тот же `binary_sensor.sonoff_snzb_06p_2`.
+**Проверено:** presence→100%; night+presence→bri≈102; presence off 20s→off.
+
+
+## CP-20261022c — S0 Armbian: soft-bugs + autoheal (без смены ОС)
+
+**Позиция:** TOX1/Armbian Supervised остаётся; «сыпется» = кривые YAML/healer, не «купи железо».
+**Софт-баги:**
+- `empire_prihozhaya` / `empire_tualet_hobeian` / кухня: abort если target unavailable; retries 3–4 (было 8–12).
+- Motion туалет/прихожая: condition «device available» перед вызовом скрипта.
+- Flint healer: entity домофона `switch.smartintercom_otkryt_dver` (был вымышленный `accept_call`); chronic offline прихожей/SRW не триггерят reload ZHA/LocalTuya; MQTT reload если модуль пингуется, entity нет.
+- HA watchdog: Mosquitto restart после старта HA / если домофон MQTT unavailable ≥3 мин (cooldown 30 мин); addon watchdog Mosquitto+Tailscale = True.
+**Проверено:** config valid; healer `--check` END ok; Mosquitto restart → intercom entities сразу OK; offline script без spam в лог.
+**Железо (ожидаемо offline):** zbeacon прихожая, SRW балкон.
+**Backup:** `c0997d9f` → `/root/backups/ha/pre-stability-20261023-c0997d9f.tar`
+**Не трогали:** Flint VPN/podkop/awg; HAOS на TOX1.
+
+
 ## CP-20261022b — HA full audit + cleanup
 
 **Аудит:** HA API OK; ванная/туалет/кухня/домофон OK; Алиса Yaha loaded.
@@ -343,3 +380,27 @@ curl -sS -X POST http://127.0.0.1:8001/api/banya/lead \
 - Скрипт: `./scripts/run_osm_ru_all.sh [RU_ALL|URAL|SIB|…]`.
 
 **Не делать сразу:** массовый pubauto по новым регионам без Yandex enrich.
+
+## CP-20261022 — Unkillable VPN 20: 3 Reality + CDN
+
+**Профили:** `/root/empire-secrets/profiles/user01..20` = CF-WS + VDSina Reality + Aeza Reality + JustHost STO1 Reality (urltest JSON + base64 sub).
+**Подписка:** tokenized `/sub/<token>/userNN` на `vpn.kalitkuprikroy.ru` (TOKEN в `cdn-kalitka/sub-meta.json`); legacy `/vpn-profile-k7m2p9/`.
+**STO1:** 20 UUID (как VDSina) на Reality dest=www.vk.com.
+**Healthcheck:** 4 ноги (vds/aeza/sto1/cdn), xray 26.7.28 в `/usr/local/lib/empire-xray/`, TG через `empire_notify.py`.
+**Приёмка:** user01+user20 все 4 входа YT204/TG200. Flint AI/awg не трогали. Раздачу юзерам не делали.
+**Доки:** `docs/VPN_20USERS_HIDDIFY_RU.md`, `profiles/IMPORT_HIDDIFY.txt`.
+
+## 2026-10-22 JustHost STO1
+- Reality dest=www.vk.com works; added to Flint urltest (4 nodes); smoke YT/TG OK; panel pass rotated in empire-secrets.
+
+## CP-20261031 — Primary VPN → VDSina `89.124.64.70`
+
+**Сделано:** новый VDSina (3x-ui) стал основным:
+- Amnezia AWG `39182/udp` перенесён с Aeza (`amnezia-awg-flint` там stopped); Flint `awg0` Endpoint → `89.124.64.70:39182`, handshake OK
+- VLESS Reality `www.vk.com` + Vision; nginx SNI `:443` → sites `:8443` / xray `:4443`; 20 users + `flint-router`
+- podkop `main` urltest: VDSina-Flint = новый IP; YT204 / TG200 с Flint
+- Сайты через `--resolve` на новый IP = 200 (self-signed до смены CF A / issue-certs)
+
+**Ждёт владельца:** Cloudflare A (DNS only) origin → `89.124.64.70`, затем `bash /root/justhost-site-front/issue-certs.sh` на VPS. Старый `109.107.174.17` не использовать.
+
+**Секреты:** `/root/empire-secrets/vdsina-89/`, профили user01–20 обновлены (нога VDSina).

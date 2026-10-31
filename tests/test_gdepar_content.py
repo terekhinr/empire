@@ -139,6 +139,17 @@ def test_author_search_queries_surname():
     assert any("portrait" in q for q in qs)
 
 
+def test_classic_owner_mark_is_explicit():
+    assert not gdepar_content._owner_marked_image({"image_file": "Sergei Dovlatov.jpg"})
+    assert gdepar_content._owner_marked_image({"image_approved": True})
+
+
+def test_wiki_page_must_be_the_author():
+    assert gdepar_content._wiki_page_is_author("Довлатов, Сергей Донатович", "С.Д. Довлатов")
+    assert not gdepar_content._wiki_page_is_author("Берберова, Нина Николаевна", "С.Д. Довлатов")
+    assert not gdepar_content._wiki_page_is_author("Россия", "С.Д. Довлатов")
+
+
 def test_portrait_url_rejects_banya():
     assert not gdepar_content._portrait_url_ok(
         "https://commons.wikimedia.org/wiki/Special:FilePath/Russian_banya.jpg"

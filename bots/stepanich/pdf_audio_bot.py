@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Telegram bot helpers: PDF -> cleaned Russian speech -> MP3 parts.
 
-TTS providers:
-  PDF_AUDIO_TTS_PROVIDER=edge   (default, Microsoft Edge TTS; ударения свои)
-  PDF_AUDIO_TTS_PROVIDER=yandex (Yandex SpeechKit; нативные ударения `+`)
-  PDF_AUDIO_TTS_PROVIDER=silero (Silero TTS + silero-stress `+`; верные ударения RU)
-  PDF_AUDIO_TTS_PROVIDER=gemini (Gemini TTS; сейчас часто 500)
-  PDF_AUDIO_TTS_PROVIDER=auto   (сначала Gemini, при сбое → edge)
+TTS providers (автовыбор, если PDF_AUDIO_TTS_PROVIDER не задан / auto):
+  yandex — Yandex SpeechKit + ударения `+` (пока есть ключ)
+  silero — локальный Silero + ударения `+` (fallback, когда Yandex кончился)
+  gemini — Gemini TTS (только явно)
+  edge   — Microsoft Edge (только явно)
 """
 from __future__ import annotations
 
@@ -40,13 +39,15 @@ load_dotenv(ROOT / ".env")
 TELEGRAM_TOKEN = os.getenv("PDF_AUDIO_BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0") or "0")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+YANDEX_API_KEY = (
+    os.getenv("YANDEX_API_KEY") or os.getenv("SPEECHKIT_API_KEY") or ""
+).strip()
 GEMINI_TTS_MODEL = os.getenv("PDF_AUDIO_TTS_MODEL", "gemini-2.5-flash-preview-tts")
 GEMINI_TTS_VOICE = os.getenv("PDF_AUDIO_TTS_VOICE", "charon")
-TTS_PROVIDER = (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "edge").strip().lower()
 EDGE_VOICE = os.getenv("PDF_AUDIO_EDGE_VOICE", "ru-RU-DmitryNeural")
 # Чуть медленнее нормы; сильный минус удлиняет и «хорошие» паузы.
 EDGE_RATE = os.getenv("PDF_AUDIO_EDGE_RATE", "-8%")
-SILERO_SPEAKER = os.getenv("PDF_AUDIO_SILERO_SPEAKER", "eugene")
+SILERO_SPEAKER = os.getenv("PDF_AUDIO_SILERO_SPEAKER", "aidar")
 YANDEX_VOICE = os.getenv("PDF_AUDIO_YANDEX_VOICE", "filipp")
 YANDEX_SPEED = os.getenv("PDF_AUDIO_YANDEX_SPEED", "0.95")
 MAX_PDF_MB = int(os.getenv("PDF_AUDIO_MAX_PDF_MB", "20"))
@@ -59,10 +60,24 @@ RETRY_COUNT = int(os.getenv("PDF_AUDIO_RETRIES", "3"))
 PART_MAX_MP3_BYTES = int(os.getenv("PDF_AUDIO_PART_MAX_MP3_BYTES", str(45 * 1024 * 1024)))
 SUPPORTED_SUFFIXES = {".pdf", ".txt", ".md", ".markdown", ".docx"}
 
+_SHORT_MONTHS = (
+    "янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек"
+)
+_FULL_MONTHS = (
+    "января|февраля|марта|апреля|мая|июня|июля|августа|"
+    "сентября|октября|ноября|декабря"
+)
+
 META_LINE = re.compile(
-    r"^\s*(?:\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|"
-    r"сентября|октября|ноября|декабря).*"
-    r"|\d+\s*минут[аы]?\s*)$",
+    rf"^\s*(?:"
+    rf"\d{{1,2}}\s+(?:{_FULL_MONTHS}|{_SHORT_MONTHS})\b.*"
+    rf"|\d{{1,2}}:\d{{2}}(?:\s|$)"
+    rf"|\d+\s*минут[аы]?\s*"
+    rf")$",
+    re.I,
+)
+_TELEGRAM_EXPORT = re.compile(
+    rf"^\d{{1,2}}\s+(?:{_SHORT_MONTHS})\s+\d{{1,2}}:\d{{2}}$",
     re.I,
 )
 
@@ -76,7 +91,12 @@ PROMPT_PREFIX = (
 sys_path = str(ROOT / "scripts")
 if sys_path not in os.sys.path:
     os.sys.path.insert(0, sys_path)
-from prepare_md_for_tts import prepare_for_tts  # noqa: E402
+from prepare_md_for_tts import (  # noqa: E402
+    expand_speech_abbreviations,
+    prepare_for_tts,
+    prepare_md_for_tts,
+)
+from tts_nsw import expand_nsw, hard_slices_preserving_sil, strip_speechkit_markup  # noqa: E402
 
 
 @dataclass
@@ -96,6 +116,54 @@ CHAPTER_SPLIT = re.compile(
     r")$"
 )
 
+_PAGE_NUM_ONLY = re.compile(r"^\d{1,4}$")
+_ROMAN_NUM_ONLY = re.compile(r"^[IVXLC]{1,6}$", re.I)
+
+
+def yandex_available() -> bool:
+    load_dotenv(ROOT / ".env")
+    return bool(
+        (os.getenv("YANDEX_API_KEY") or os.getenv("SPEECHKIT_API_KEY") or "").strip()
+    )
+
+
+def resolve_tts_provider() -> str:
+    """Выбор движка: явный env → yandex (если ключ) → silero."""
+    load_dotenv(ROOT / ".env")
+    explicit = (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "").strip().lower()
+    if explicit and explicit not in ("auto", ""):
+        return explicit
+    if yandex_available():
+        return "yandex"
+    return "silero"
+
+
+def resolve_pipeline_version() -> str:
+    """v1 = legacy prepare_for_tts; v2 = ru_tts (SSML + Whisper QA)."""
+    load_dotenv(ROOT / ".env")
+    ver = (os.getenv("PDF_AUDIO_PIPELINE") or "v1").strip().lower()
+    return "v2" if ver in ("v2", "2", "ru_tts", "new") else "v1"
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in ("0", "false", "no", "off", "")
+
+
+def tts_profile_label(provider: str | None = None) -> str:
+    p = provider or resolve_tts_provider()
+    pipe = resolve_pipeline_version()
+    suffix = " [pipeline=v2]" if pipe == "v2" else ""
+    if p == "yandex":
+        return f"Yandex SpeechKit / {YANDEX_VOICE}{suffix}"
+    if p == "silero":
+        return f"Silero / {SILERO_SPEAKER}{suffix}"
+    if p == "gemini":
+        return f"Gemini / {GEMINI_TTS_VOICE}{suffix}"
+    return f"Edge / {EDGE_VOICE}{suffix}"
+
 
 def ensure_env_loaded() -> None:
     MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
@@ -109,6 +177,7 @@ def slugify(name: str) -> str:
 
 
 def split_text(text: str, max_len: int) -> list[str]:
+    """Нарезка частей/чанков. Не рвём sil<[N]> — иначе SpeechKit читает «<>» как «больше чем…»."""
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     chunks: list[str] = []
     current = ""
@@ -137,14 +206,20 @@ def split_text(text: str, max_len: int) -> list[str]:
             if len(sent) <= max_len:
                 buf = sent
                 continue
-            for i in range(0, len(sent), max_len):
-                chunks.append(sent[i : i + max_len])
+            chunks.extend(hard_slices_preserving_sil(sent, max_len))
             buf = ""
         if buf:
             current = buf
     if current:
         chunks.append(current)
     return chunks
+
+
+def _text_for_provider(text: str, provider: str) -> str:
+    """Yandex понимает sil<>; Silero/Edge/Gemini — нет (читают скобки вслух)."""
+    if provider in ("yandex", "speechkit"):
+        return text
+    return strip_speechkit_markup(text)
 
 
 def _is_chapter_heading(line: str) -> bool:
@@ -191,14 +266,88 @@ def _reflow_book_lines(lines: list[str]) -> list[str]:
     return paras
 
 
+def _is_meta_or_export_line(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return True
+    if META_LINE.match(s):
+        return True
+    if _TELEGRAM_EXPORT.match(s):
+        return True
+    if re.fullmatch(r"\d{1,2}:\d{2}", s):
+        return True
+    return False
+
+
+def _filename_title(path: Path) -> str:
+    stem = path.stem.replace("_", " ").replace("-", " ").strip()
+    if re.fullmatch(r"[\d\s]+", stem or ""):
+        return path.stem
+    return stem or path.stem
+
+
+def _infer_title_from_lines(lines: list[str], source_path: Path) -> tuple[str, list[str]]:
+    """Пропустить дату/экспорт Telegram и взять первый содержательный заголовок."""
+    fallback = _filename_title(source_path)
+    body_start = 0
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if not s or _is_pdf_noise_line(s) or _is_meta_or_export_line(s):
+            continue
+        if len(s) < 12 or re.fullmatch(r"[\d\s:.,-]+", s):
+            continue
+        body_start = i + 1
+        title = s[:120]
+        if _is_meta_or_export_line(title):
+            continue
+        return title, lines[body_start:]
+    return fallback, lines
+
+
+def _is_pdf_noise_line(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return True
+    if _PAGE_NUM_ONLY.match(s):
+        return True
+    if len(s) <= 4 and _ROMAN_NUM_ONLY.match(s):
+        return True
+    if _is_meta_or_export_line(s):
+        return True
+    # одиночные номера глав в колонтитулах: «— 12 —»
+    if re.fullmatch(r"[-–—\s]*\d{1,4}[-–—\s]*", s):
+        return True
+    return False
+
+
+def _drop_repeated_pdf_lines(lines: list[str]) -> list[str]:
+    """Убрать колонтитулы: короткая строка повторяется много раз."""
+    if len(lines) < 12:
+        return lines
+    from collections import Counter
+
+    counts = Counter(lines)
+    threshold = max(6, len(lines) // 10)
+    noise = {
+        ln
+        for ln, cnt in counts.items()
+        if cnt >= threshold and len(ln) < 90 and not _is_chapter_heading(ln)
+    }
+    if not noise:
+        return lines
+    return [ln for ln in lines if ln not in noise]
+
+
 def pdf_to_raw_text(pdf_path: Path) -> tuple[str, str]:
     doc = fitz.open(pdf_path)
     lines: list[str] = []
     for page in doc:
         for line in page.get_text("text").splitlines():
             line = line.replace("\u00ad", "").rstrip()
-            if line.strip():
-                lines.append(line.strip())
+            s = line.strip()
+            if not s or _is_pdf_noise_line(s) or _is_meta_or_export_line(s):
+                continue
+            lines.append(s)
 
     merged: list[str] = []
     i = 0
@@ -209,7 +358,7 @@ def pdf_to_raw_text(pdf_path: Path) -> tuple[str, str]:
             i += 1
         while (
             i + 1 < len(lines)
-            and not cur.endswith((".", "!", "?", ":", ";", '"'))
+            and not cur.endswith((".", "!", "?", ":", ";", '"', "…"))
             and lines[i + 1][:1].islower()
         ):
             cur = cur + " " + lines[i + 1]
@@ -217,14 +366,12 @@ def pdf_to_raw_text(pdf_path: Path) -> tuple[str, str]:
         merged.append(cur)
         i += 1
 
-    while merged and META_LINE.match(merged[0]):
+    merged = _drop_repeated_pdf_lines(merged)
+
+    while merged and (_is_pdf_noise_line(merged[0]) or _is_meta_or_export_line(merged[0])):
         merged.pop(0)
 
-    title = merged[0] if merged else pdf_path.stem
-    # PDF часто начинается с номера страницы / мусора — берём имя файла.
-    if len(title) < 4 or re.fullmatch(r"\d{1,4}", title.strip()):
-        title = pdf_path.stem.replace("_", " ").replace("-", " ").strip() or pdf_path.stem
-    body_lines = merged[1:] if len(merged) > 1 else list(merged)
+    title, body_lines = _infer_title_from_lines(merged, pdf_path)
     body = "\n\n".join(_reflow_book_lines(body_lines))
     raw = f"# {title}\n\n{body}".strip() + "\n"
     raw = unicodedata.normalize("NFC", raw)
@@ -277,20 +424,96 @@ def load_source_text(path: Path) -> tuple[str, str]:
     raise RuntimeError(f"Неподдерживаемый формат: {suffix}. Нужны: {', '.join(sorted(SUPPORTED_SUFFIXES))}")
 
 
-def clean_for_tts(raw: str) -> str:
+def clean_for_tts(raw: str, *, provider: str | None = None) -> str:
+    prov = provider or resolve_tts_provider()
+    os.environ["PDF_AUDIO_TTS_PROVIDER"] = prov
     # Silero / Yandex: `п+окер`. Gemini: U+0301. Edge ударения по сути игнорирует.
-    if TTS_PROVIDER in ("silero", "yandex"):
+    # [[фонемы]] — только Yandex SpeechKit.
+    if prov in ("silero", "yandex"):
         os.environ["PDF_AUDIO_STRESS_FORMAT"] = "plus"
-        os.environ.setdefault("PDF_AUDIO_STRESS", "1")
-    elif TTS_PROVIDER == "gemini":
+        os.environ["PDF_AUDIO_STRESS"] = "1"
+        os.environ["PDF_AUDIO_PHONEMES"] = "1" if prov == "yandex" else "0"
+    elif prov == "gemini":
         os.environ["PDF_AUDIO_STRESS_FORMAT"] = "acute"
-        os.environ.setdefault("PDF_AUDIO_STRESS", "1")
+        os.environ["PDF_AUDIO_STRESS"] = "1"
+        os.environ["PDF_AUDIO_PHONEMES"] = "0"
+    else:
+        os.environ.setdefault("PDF_AUDIO_STRESS", "0")
+        os.environ["PDF_AUDIO_PHONEMES"] = "0"
     text = prepare_for_tts(raw)
     paragraphs = [re.sub(r"\s*\n\s*", " ", p).strip() for p in re.split(r"\n\s*\n", text)]
     text = "\n\n".join(p for p in paragraphs if p)
     text = unicodedata.normalize("NFC", text)
     text = re.sub(r" {2,}", " ", text)
     return text.strip() + "\n"
+
+
+def clean_for_tts_v2(raw: str) -> str:
+    """Лёгкая очистка под ru_tts: md/abbr/NSW без legacy sil<> / + / [[ipa]]."""
+    text = prepare_md_for_tts(raw)
+    # prepare_md добавляет sil<[800]> к заголовкам — для v2 убираем (SSML break сам).
+    text = re.sub(r"\s*sil<\[\d+\]>", "", text)
+    text = expand_speech_abbreviations(text)
+    text = expand_nsw(text)
+    paragraphs = [re.sub(r"\s*\n\s*", " ", p).strip() for p in re.split(r"\n\s*\n", text)]
+    text = "\n\n".join(p for p in paragraphs if p)
+    text = unicodedata.normalize("NFC", text)
+    text = re.sub(r" {2,}", " ", text)
+    return text.strip() + "\n"
+
+
+def _ru_tts_lexicon_path() -> Path:
+    return ROOT / "data" / "ru_tts_exception_lexicon.json"
+
+
+def render_part_v2(part: BookPart, workdir: Path, stem: str) -> Path:
+    """Озвучка части через scripts/ru_tts (SSML + optional Whisper QA)."""
+    import asyncio
+
+    from ru_tts.pipeline import RuTtsPipeline
+    from ru_tts.seed import seed_lexicon
+    from ru_tts.tts_client import YandexSpeechKitV3Client
+    from ru_tts.whisper_validator import WhisperConfig
+
+    output = workdir / f"{stem}_part_{part.index:02d}.mp3"
+    if output.is_file() and output.stat().st_size >= 1000:
+        logging.info("resume skip existing %s", output.name)
+        return output
+
+    part_dir = workdir / f"part_{part.index:02d}_v2"
+    part_dir.mkdir(parents=True, exist_ok=True)
+    (part_dir / f"{stem}_part_{part.index:02d}.txt").write_text(part.text, encoding="utf-8")
+
+    lexicon = seed_lexicon(_ru_tts_lexicon_path())
+    qa = _env_flag("PDF_AUDIO_QA", False)
+    whisper_model = (os.getenv("PDF_AUDIO_WHISPER_MODEL") or "small").strip()
+    speed = float(YANDEX_SPEED or "0.95")
+    client = YandexSpeechKitV3Client(voice=YANDEX_VOICE, speed=speed)
+    pipe = RuTtsPipeline(
+        workdir=part_dir / "chunks",
+        client=client,
+        lexicon_path=lexicon.path,
+        enable_qa=qa,
+        max_chunk_chars=int(os.getenv("PDF_AUDIO_CHUNK_MAX_CHARS", str(CHUNK_MAX_CHARS))),
+        whisper=WhisperConfig(
+            model_size=whisper_model,
+            device=(os.getenv("PDF_AUDIO_WHISPER_DEVICE") or "cpu").strip(),
+            compute_type=(os.getenv("PDF_AUDIO_WHISPER_COMPUTE") or "int8").strip(),
+            max_cer=float(os.getenv("PDF_AUDIO_MAX_CER", "0.15")),
+            max_retries=int(os.getenv("PDF_AUDIO_QA_RETRIES", "2")),
+        ),
+    )
+    logging.info(
+        "ru_tts v2 part=%s chars=%s qa=%s whisper=%s",
+        part.index,
+        len(part.text),
+        qa,
+        whisper_model if qa else "-",
+    )
+    asyncio.run(pipe.run(part.text, output))
+    if not output.is_file() or output.stat().st_size < 1000:
+        raise RuntimeError(f"ru_tts v2 не создал MP3: {output}")
+    return output
 
 
 def render_part_yandex(part: BookPart, workdir: Path, stem: str) -> Path:
@@ -340,7 +563,7 @@ def render_part_silero(part: BookPart, workdir: Path, stem: str) -> Path:
     subdir = workdir / f"part_{part.index:02d}"
     subdir.mkdir(parents=True, exist_ok=True)
     text_path = subdir / f"{stem}_part_{part.index:02d}.txt"
-    text_path.write_text(part.text, encoding="utf-8")
+    text_path.write_text(_text_for_provider(part.text, "silero"), encoding="utf-8")
     output = workdir / f"{stem}_part_{part.index:02d}.mp3"
     cmd = [
         str(py),
@@ -506,10 +729,11 @@ def concat_audio(parts: list[Path], output_mp3: Path) -> None:
 def render_part_gemini(client, part: BookPart, workdir: Path, stem: str) -> Path:
     subdir = workdir / f"part_{part.index:02d}"
     subdir.mkdir(parents=True, exist_ok=True)
+    body = _text_for_provider(part.text, "gemini")
     text_path = subdir / f"{stem}_part_{part.index:02d}.txt"
-    text_path.write_text(part.text, encoding="utf-8")
+    text_path.write_text(body, encoding="utf-8")
 
-    chunks = split_text(part.text, CHUNK_MAX_CHARS)
+    chunks = split_text(body, CHUNK_MAX_CHARS)
     audio_parts: list[Path] = []
     for idx, chunk in enumerate(chunks, start=1):
         wav_path = subdir / f"chunk_{idx:04d}.wav"
@@ -545,7 +769,7 @@ def render_part_edge(part: BookPart, workdir: Path, stem: str) -> Path:
     subdir = workdir / f"part_{part.index:02d}"
     subdir.mkdir(parents=True, exist_ok=True)
     text_path = subdir / f"{stem}_part_{part.index:02d}.txt"
-    text_path.write_text(part.text, encoding="utf-8")
+    text_path.write_text(_text_for_provider(part.text, "edge"), encoding="utf-8")
     output = workdir / f"{stem}_part_{part.index:02d}.mp3"
     cmd = [
         str(py),
@@ -609,11 +833,23 @@ def _gemini_client():
     return genai.Client(api_key=GEMINI_API_KEY)
 
 
-def _render_one_part(part: BookPart, workdir: Path, stem: str, provider: str) -> Path:
+def _render_one_part(
+    part: BookPart,
+    workdir: Path,
+    stem: str,
+    provider: str,
+    *,
+    pipeline: str = "v1",
+) -> Path:
     output = workdir / f"{stem}_part_{part.index:02d}.mp3"
     if output.is_file() and output.stat().st_size >= 1000:
         logging.info("resume skip existing %s", output.name)
         return output
+    if pipeline == "v2":
+        # v2 сейчас завязан на Yandex-клиент ru_tts; silero/edge — через legacy.
+        if provider in ("yandex", "speechkit", "auto") or yandex_available():
+            return render_part_v2(part, workdir, stem)
+        logging.warning("pipeline=v2 без Yandex → fallback legacy provider=%s", provider)
     if provider == "gemini":
         return render_part_gemini(_gemini_client(), part, workdir, stem)
     if provider == "silero":
@@ -621,6 +857,98 @@ def _render_one_part(part: BookPart, workdir: Path, stem: str, provider: str) ->
     if provider == "yandex":
         return render_part_yandex(part, workdir, stem)
     return render_part_edge(part, workdir, stem)
+
+
+def concat_mp3_parts(parts: list[Path], output: Path) -> Path:
+    """Склеить части в один MP3 (ffmpeg concat copy)."""
+    if not parts:
+        raise RuntimeError("Нет частей для склейки")
+    if len(parts) == 1:
+        shutil.copy2(parts[0], output)
+        return output
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as f:
+        list_path = Path(f.name)
+        for p in parts:
+            f.write(f"file '{p.resolve()}'\n")
+    tmp = output.with_suffix(".tmp.mp3")
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(list_path),
+                "-c",
+                "copy",
+                str(tmp),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        tmp.replace(output)
+    finally:
+        list_path.unlink(missing_ok=True)
+        if tmp.is_file():
+            tmp.unlink(missing_ok=True)
+    return output
+
+
+def split_mp3_for_telegram(full: Path, *, max_bytes: int | None = None) -> list[Path]:
+    """Разбить FULL на тома ≤ max_bytes (лимит Bot API ~50 МБ)."""
+    max_bytes = max_bytes or PART_MAX_MP3_BYTES
+    size = full.stat().st_size
+    if size <= max_bytes:
+        return [full]
+    probe = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nk=1:nw=1",
+            str(full),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    dur = float((probe.stdout or "0").strip() or "0")
+    if dur <= 0:
+        raise RuntimeError(f"Не удалось определить длительность {full}")
+    volumes = max(2, int(size / max_bytes) + 1)
+    seg = max(120.0, dur / volumes)
+    pattern = full.parent / f"{full.stem}_vol_%02d.mp3"
+    for old in full.parent.glob(f"{full.stem}_vol_*.mp3"):
+        old.unlink(missing_ok=True)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(full),
+            "-f",
+            "segment",
+            "-segment_time",
+            str(int(seg)),
+            "-c",
+            "copy",
+            "-reset_timestamps",
+            "1",
+            str(pattern),
+        ],
+        check=True,
+        capture_output=True,
+    )
+    vols = sorted(full.parent.glob(f"{full.stem}_vol_*.mp3"))
+    if not vols:
+        raise RuntimeError("segment produced no volumes")
+    return vols
 
 
 def convert_book_to_mp3s(
@@ -641,9 +969,18 @@ def convert_book_to_mp3s(
         raise RuntimeError(f"Нет файла: {source_path}")
 
     title, raw = load_source_text(source_path)
+    provider = resolve_tts_provider()
+    pipeline = resolve_pipeline_version()
+    if provider == "yandex" and not yandex_available():
+        raise RuntimeError("Нет YANDEX_API_KEY в .env — Yandex SpeechKit недоступен")
+    if provider == "gemini" and not GEMINI_API_KEY:
+        raise RuntimeError("Не задан GEMINI_API_KEY")
+    if pipeline == "v2" and not yandex_available():
+        raise RuntimeError("pipeline=v2 требует YANDEX_API_KEY")
+
     if progress_cb:
-        progress_cb(0, 0, title, None, "prepare")
-    cleaned = clean_for_tts(raw)
+        progress_cb(0, 0, f"{title} [{tts_profile_label(provider)}]", None, "prepare")
+    cleaned = clean_for_tts_v2(raw) if pipeline == "v2" else clean_for_tts(raw, provider=provider)
     if len(cleaned.strip()) < 40:
         raise RuntimeError(
             "Почти нет текста после очистки. Для PDF нужен текстовый слой (не скан)."
@@ -654,44 +991,105 @@ def convert_book_to_mp3s(
     (workdir / f"{stem}.tts.txt").write_text(cleaned, encoding="utf-8")
     (workdir / f"{stem}.parts.json").write_text(
         __import__("json").dumps(
-            [{"index": p.index, "title": p.title, "chars": len(p.text)} for p in parts],
+            [
+                {
+                    "index": p.index,
+                    "title": p.title,
+                    "chars": len(p.text),
+                    "pipeline": pipeline,
+                }
+                for p in parts
+            ],
             ensure_ascii=False,
             indent=2,
         ),
         encoding="utf-8",
     )
-
-    provider = TTS_PROVIDER
-    if provider == "auto":
-        provider = "edge"  # для длинных книг edge надёжнее
-    if provider == "gemini" and not GEMINI_API_KEY:
-        raise RuntimeError("Не задан GEMINI_API_KEY")
+    (workdir / f"{stem}.pipeline.txt").write_text(pipeline + "\n", encoding="utf-8")
 
     outputs: list[Path] = []
     total = len(parts)
+    active_provider = provider
+    active_pipeline = pipeline
     for part in parts:
         if progress_cb:
             progress_cb(part.index - 1, total, part.title, None, "part_start")
         try:
-            mp3 = _render_one_part(part, workdir, stem, provider if provider != "auto" else "edge")
+            mp3 = _render_one_part(
+                part, workdir, stem, active_provider, pipeline=active_pipeline
+            )
         except Exception as exc:
-            if provider == "gemini":
-                logging.warning("gemini part failed, edge fallback: %s", exc)
-                mp3 = _render_one_part(part, workdir, stem, "edge")
+            if active_pipeline == "v2":
+                logging.warning(
+                    "ru_tts v2 part %s failed → legacy yandex/silero: %s",
+                    part.index,
+                    exc,
+                )
+                active_pipeline = "v1"
+                stale = workdir / f"{stem}_part_{part.index:02d}.mp3"
+                stale.unlink(missing_ok=True)
+                try:
+                    mp3 = _render_one_part(
+                        part, workdir, stem, "yandex", pipeline="v1"
+                    )
+                except Exception as exc2:
+                    logging.warning("legacy yandex also failed → silero: %s", exc2)
+                    active_provider = "silero"
+                    stale.unlink(missing_ok=True)
+                    mp3 = _render_one_part(
+                        part, workdir, stem, "silero", pipeline="v1"
+                    )
+            elif active_provider == "yandex":
+                logging.warning(
+                    "yandex part %s failed → silero for rest of book: %s",
+                    part.index,
+                    exc,
+                )
+                active_provider = "silero"
+                stale = workdir / f"{stem}_part_{part.index:02d}.mp3"
+                stale.unlink(missing_ok=True)
+                mp3 = _render_one_part(
+                    part, workdir, stem, "silero", pipeline="v1"
+                )
+            elif active_provider == "gemini":
+                logging.warning("gemini part failed, silero fallback: %s", exc)
+                active_provider = "silero"
+                stale = workdir / f"{stem}_part_{part.index:02d}.mp3"
+                stale.unlink(missing_ok=True)
+                mp3 = _render_one_part(
+                    part, workdir, stem, "silero", pipeline="v1"
+                )
             else:
                 raise
-        # Если часть слишком тяжёлая для Telegram — предупреждаем в лог (редко при 32k chars)
+        # Файл слишком большой для Telegram — режем на тома
         if mp3.stat().st_size > PART_MAX_MP3_BYTES:
-            logging.warning(
-                "part %s is large: %.1f MB", part.index, mp3.stat().st_size / 1024 / 1024
+            logging.info(
+                "part %s too large (%.1f MB) — split for Telegram",
+                part.index,
+                mp3.stat().st_size / 1024 / 1024,
             )
-        outputs.append(mp3)
-        if progress_cb:
-            progress_cb(part.index, total, part.title, mp3, "part_done")
+            vols = split_mp3_for_telegram(mp3)
+            for vi, vol in enumerate(vols, 1):
+                outputs.append(vol)
+                if progress_cb:
+                    cap = f"{part.title} (том {vi}/{len(vols)})"
+                    progress_cb(part.index, total, cap, vol, "part_done")
+        else:
+            outputs.append(mp3)
+            if progress_cb:
+                progress_cb(part.index, total, part.title, mp3, "part_done")
 
     if progress_cb:
         progress_cb(total, total, title, None, "done")
-    logging.info("book TTS ok parts=%s chars=%s provider=%s", len(outputs), len(cleaned), provider)
+    logging.info(
+        "book TTS ok parts=%s chars=%s start=%s final=%s pipeline=%s→%s",
+        len(outputs),
+        len(cleaned),
+        provider,
+        active_provider,
+        pipeline,
+        active_pipeline,
+    )
     return title, outputs, len(cleaned)
 
 

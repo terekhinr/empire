@@ -19,6 +19,16 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///empire.db")
 
 
 @pytest.fixture()
+def tmp_db(tmp_path, monkeypatch):
+    from portfolio import db as pdb
+
+    path = tmp_path / "portfolio.db"
+    monkeypatch.setattr(pdb, "PORTFOLIO_DB", path)
+    monkeypatch.setattr(pdb, "_initialized_paths", set())
+    return path
+
+
+@pytest.fixture()
 def temp_health_db(tmp_path, monkeypatch):
     import health_db as hd
 

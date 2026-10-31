@@ -1,0 +1,44 @@
+#!/bin/sh /etc/rc.common
+# Empire HA device healer on Flint — cron every 5 min.
+START=99
+STOP=10
+
+CRON_LINE='*/5 * * * * /usr/sbin/empire-ha-healer >/dev/null 2>&1'
+CRON_FILE=/etc/crontabs/root
+
+boot() { start; }
+
+start() {
+  [ -x /usr/sbin/empire-ha-healer ] || {
+    echo "empire-ha-healer not installed"
+    return 1
+  }
+  if [ -f "$CRON_FILE" ]; then
+    grep -v 'empire-ha-healer' "$CRON_FILE" >"${CRON_FILE}.tmp" || true
+    mv "${CRON_FILE}.tmp" "$CRON_FILE"
+  else
+    mkdir -p /etc/crontabs
+    : >"$CRON_FILE"
+  fi
+  echo "$CRON_LINE" >>"$CRON_FILE"
+  /etc/init.d/cron enable 2>/dev/null || true
+  /etc/init.d/cron restart 2>/dev/null || true
+  ( sleep 30; /usr/sbin/empire-ha-healer ) >/dev/null 2>&1 &
+  echo "empire-ha-healer: cron every 5 min"
+}
+
+stop() {
+  if [ -f "$CRON_FILE" ]; then
+    grep -v 'empire-ha-healer' "$CRON_FILE" >"${CRON_FILE}.tmp" || true
+    mv "${CRON_FILE}.tmp" "$CRON_FILE"
+    /etc/init.d/cron restart 2>/dev/null || true
+  fi
+}
+
+restart() { stop; start; }
+
+status() {
+  echo "cron:"; grep empire-ha-healer "$CRON_FILE" 2>/dev/null || echo "(not in crontab)"
+  echo "state:"; cat /tmp/empire-ha-healer.state 2>/dev/null || echo "(none)"
+  echo "log:"; tail -20 /tmp/empire-ha-healer.log 2>/dev/null || echo "(none)"
+}

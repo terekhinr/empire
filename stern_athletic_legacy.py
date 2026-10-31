@@ -42,6 +42,20 @@ def _facts_html(entry: dict) -> str:
     return "\n".join(f"• {str(f).strip()}" for f in facts if str(f).strip())
 
 
+def _limit_trailing_hashtags(text: str, max_n: int = 3) -> str:
+    """В конце поста оставляем не больше max_n хэштегов (лимит TG-аудита)."""
+    lines = (text or "").rstrip().split("\n")
+    if not lines:
+        return text or ""
+    last = lines[-1].strip()
+    tags = [t for t in last.split() if t.startswith("#")]
+    if not tags:
+        return text or ""
+    rest = [t for t in last.split() if not t.startswith("#")]
+    lines[-1] = (" ".join(rest + tags[:max_n])).strip()
+    return "\n".join(lines).rstrip()
+
+
 def format_athletic_legacy_post(entry: dict) -> str:
     """HTML для готового выпуска (verbatim / status=ready)."""
     if entry.get("body_html"):
@@ -49,8 +63,8 @@ def format_athletic_legacy_post(entry: dict) -> str:
         if not body.startswith(EMOJI):
             tag = entry.get("tag", "наследие")
             if "#" not in body:
-                body += f"\n\n#снегири #{tag} #история #атлеты #сила"
-        return body
+                body += f"\n\n#снегири #{tag} #история"
+        return _limit_trailing_hashtags(body, 3)
 
     headline = (entry.get("headline") or entry.get("name") or "Атлет").strip()
     tag = entry.get("tag", "наследие")
@@ -86,7 +100,8 @@ def format_athletic_legacy_post(entry: dict) -> str:
     if src:
         lines.extend([f"<i>Источник: {src}</i>", ""])
 
-    lines.append(f"#снегири #{tag} #история #атлеты #сила")
+    # ≤3 хэштега (аудит stern)
+    lines.append(f"#снегири #{tag} #история")
     return "\n".join(lines)
 
 
@@ -177,7 +192,9 @@ async def build_athletic_legacy_slot(
     *, weekday: int = 0
 ) -> tuple[str, str | None, str | None, dict | None]:
     data = load_data()
-    entry = rubric_posts.pick_entry(_DATA_PATH, _HISTORY_PATH, rubric=RUBRIC_KEY)
+    entry = rubric_posts.pick_entry(
+        _DATA_PATH, _HISTORY_PATH, rubric=RUBRIC_KEY, global_cooldown_days=30
+    )
     if not entry:
         body = f"{TOPIC_TAG}\n\nСегодня без выпуска — завтра снова разбор наследия."
         return f"{TOPIC_TAG} fallback", body, None, None

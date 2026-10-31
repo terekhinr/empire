@@ -1,0 +1,461 @@
+{
+  "schema": "empire-workout-program/v1",
+  "id": "outside_hall",
+  "title": "Работа вне зала",
+  "short": "Вне зала",
+  "author": "",
+  "note_prefix": "внезала подход",
+  "weekdays": [
+    0,
+    2,
+    4
+  ],
+  "start": null,
+  "rolling_sessions": 9,
+  "phases": [
+    {
+      "id": 1,
+      "title": "Без зала + Беговые нормативы + Тройка Макгилла + TRX",
+      "days": [
+        {
+          "id": "A",
+          "title": "Жимовая выносливость (Резина) + Тяга (резина / TRX) + Челнок",
+          "exercises": [
+            {
+              "key": "модифицированное_скручивание_макгилла",
+              "name": "Скручивание Макгилла (модиф.)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек вверху, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "боковая_планка_макгилла",
+              "name": "Боковая планка Макгилла",
+              "sets": 3,
+              "reps": 17,
+              "reps_min": 15,
+              "reps_max": 20,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 20,
+              "is_time_hold": true,
+              "notes": "без веса | разминка, сек на каждую сторону, отдых 45 сек",
+              "prescription": "3×15-20"
+            },
+            {
+              "key": "упражнение_собака_птица",
+              "name": "Собака–птица (bird-dog)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек в точке пика, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "отжимания_от_пола_с_резиновой_петлей_на_спине",
+              "name": "Отжимания с резиной на спине",
+              "sets": 1,
+              "reps": null,
+              "reps_min": null,
+              "reps_max": null,
+              "is_max": true,
+              "weight_kg": 32.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: тяжелая петля (25-40 кг) | тест на выносливость (цель: имитация 70 кг на 30 раз), отдых 3-4 мин",
+              "prescription": "1×МАКС"
+            },
+            {
+              "key": "отжимания_от_пола_с_резиновой_петлей_на_спине",
+              "name": "Отжимания с резиной на спине",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 20.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: средняя петля (15-25 кг) | вспомогательный объем на грудные, отдых 2-3 мин",
+              "prescription": "2×15"
+            },
+            {
+              "key": "тяга_резиновой_петли_к_поясу_стоя",
+              "name": "Тяга резины к поясу стоя",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 32.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: тяжелая петля (25-40 кг) | вариант А: резина; локти к тазу, отдых 2 мин",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "тяга_в_петлях_trx_к_поясу",
+              "name": "Тяга в петлях TRX к поясу",
+              "sets": 3,
+              "reps": 13,
+              "reps_min": 12,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: угол наклона средний | вариант Б: TRX; тело как ровная доска, локти к тазу, отдых 2 мин",
+              "prescription": "3×12–15"
+            },
+            {
+              "key": "челночный_бег_отработка_техники",
+              "name": "Челночный бег (отработка техники)",
+              "sets": 4,
+              "reps": 40,
+              "reps_min": 40,
+              "reps_max": 40,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: свой вес | развороты в полуприседе (гасим инерцию бедрами), отдых 3 мин",
+              "prescription": "4×40 м"
+            },
+            {
+              "key": "классическая_планка_на_предплечьях",
+              "name": "Планка на предплечьях",
+              "sets": 2,
+              "reps": 60,
+              "reps_min": 60,
+              "reps_max": 60,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 60,
+              "is_time_hold": true,
+              "notes": "вес: свой вес | жесткая статика кора, спина ровная, отдых 1.5 мин",
+              "prescription": "2×60 сек"
+            }
+          ]
+        },
+        {
+          "id": "B",
+          "title": "Беговые интервалы 400м + Ноги + Осанка (резина / TRX)",
+          "exercises": [
+            {
+              "key": "модифицированное_скручивание_макгилла",
+              "name": "Скручивание Макгилла (модиф.)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек вверху, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "боковая_планка_макгилла",
+              "name": "Боковая планка Макгилла",
+              "sets": 3,
+              "reps": 17,
+              "reps_min": 15,
+              "reps_max": 20,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 20,
+              "is_time_hold": true,
+              "notes": "без веса | разминка, сек на каждую сторону, отдых 45 сек",
+              "prescription": "3×15-20"
+            },
+            {
+              "key": "упражнение_собака_птица",
+              "name": "Собака–птица (bird-dog)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек в точке пика, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "бег_по_резиновому_стадиону_400м",
+              "name": "Бег 400 м (резиновый стадион)",
+              "sets": 3,
+              "reps": 1,
+              "reps_min": 1,
+              "reps_max": 1,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "время: строго за 1:42 | темп 4:15/км. Отдых между забегами — 3-4 мин полного шага",
+              "prescription": "3×1"
+            },
+            {
+              "key": "болгарские_сплит_приседания_без_веса",
+              "name": "Болгарские сплит-приседания",
+              "sets": 3,
+              "reps": 10,
+              "reps_min": 10,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: свой вес | задняя нога на скамье или стуле, отдых 2 мин",
+              "prescription": "3×10 на ногу"
+            },
+            {
+              "key": "ягодичный_мостик_с_резиновой_петлей_на_бедрах",
+              "name": "Ягодичный мостик с резиной",
+              "sets": 3,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 20.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: средняя петля (15-25 кг) | петля чуть выше колен, мощное сжатие ягодиц, отдых 1.5 мин",
+              "prescription": "3×15"
+            },
+            {
+              "key": "классические_отжимания_от_пола_без_веса",
+              "name": "Отжимания от пола",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: свой вес | пампинг груди и трицепса, отдых 1.5 мин",
+              "prescription": "2×15"
+            },
+            {
+              "key": "тяга_резиновой_петли_к_поясу_стоя",
+              "name": "Тяга резины к поясу стоя",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": 20.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: средняя петля (15-25 кг) | вариант А: резина на заднюю дельту/верх спины, отдых 1.5 мин",
+              "prescription": "2×15"
+            },
+            {
+              "key": "т_разведения_рук_в_петлях_trx",
+              "name": "T-разведения рук в TRX",
+              "sets": 2,
+              "reps": 15,
+              "reps_min": 15,
+              "reps_max": 15,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: угол наклона легкий | вариант Б: TRX T-разведения, задняя дельта и верх спины, отдых 1.5 мин",
+              "prescription": "2×15"
+            }
+          ]
+        },
+        {
+          "id": "C",
+          "title": "Силовой жим (Резина) + Скорость + Тяга (резина / TRX)",
+          "exercises": [
+            {
+              "key": "модифицированное_скручивание_макгилла",
+              "name": "Скручивание Макгилла (модиф.)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек вверху, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "боковая_планка_макгилла",
+              "name": "Боковая планка Макгилла",
+              "sets": 3,
+              "reps": 17,
+              "reps_min": 15,
+              "reps_max": 20,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 20,
+              "is_time_hold": true,
+              "notes": "без веса | разминка, сек на каждую сторону, отдых 45 сек",
+              "prescription": "3×15-20"
+            },
+            {
+              "key": "упражнение_собака_птица",
+              "name": "Собака–птица (bird-dog)",
+              "sets": 3,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 10,
+              "is_time_hold": false,
+              "notes": "без веса | разминка, удержание 10 сек в точке пика, отдых 45 сек",
+              "prescription": "3×8-10"
+            },
+            {
+              "key": "отжимания_от_пола_с_резиновой_петлей_на_спине",
+              "name": "Отжимания с резиной на спине",
+              "sets": 4,
+              "reps": 7,
+              "reps_min": 6,
+              "reps_max": 8,
+              "is_max": false,
+              "weight_kg": 50.0,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: максимальная петля (40-60 кг) | силовой режим, медленный спуск, взрыв вверх, отдых 3 мин",
+              "prescription": "4×6–8"
+            },
+            {
+              "key": "бег_по_резиновому_стадиону_200м",
+              "name": "Бег 200 м (резиновый стадион)",
+              "sets": 4,
+              "reps": 1,
+              "reps_min": 1,
+              "reps_max": 1,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": 50,
+              "is_time_hold": false,
+              "notes": "время: 48-50 сек | развитие взрывного ускорения (темп 4:00/км), отдых 2 мин шагом",
+              "prescription": "4×1"
+            },
+            {
+              "key": "тяга_резиновой_петли_к_поясу_стоя",
+              "name": "Тяга резины к поясу стоя",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": 32.5,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: тяжелая петля (25-40 кг) | вариант А: резина; акцент на сведение лопаток, отдых 2 мин",
+              "prescription": "4×8-10"
+            },
+            {
+              "key": "тяга_в_петлях_trx_к_поясу",
+              "name": "Тяга в петлях TRX к поясу",
+              "sets": 4,
+              "reps": 9,
+              "reps_min": 8,
+              "reps_max": 10,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: угол наклона глубокий (тяжело) | вариант Б: TRX; силовой вариант тяги на спину, отдых 2 мин",
+              "prescription": "4×8-10"
+            },
+            {
+              "key": "упражнение_мертвый_жук",
+              "name": "Мёртвый жук",
+              "sets": 3,
+              "reps": 20,
+              "reps_min": 20,
+              "reps_max": 20,
+              "is_max": false,
+              "weight_kg": null,
+              "hold_sec": null,
+              "is_time_hold": false,
+              "notes": "вес: свой вес | пресс при намертво прижатой к полу пояснице, отдых 1 мин",
+              "prescription": "3×20"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "calendar": [
+    {
+      "on": "2026-08-05",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-07",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-08-10",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-12",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-14",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-08-17",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    },
+    {
+      "on": "2026-08-19",
+      "phase": 1,
+      "day": "A",
+      "note": ""
+    },
+    {
+      "on": "2026-08-21",
+      "phase": 1,
+      "day": "B",
+      "note": ""
+    },
+    {
+      "on": "2026-08-24",
+      "phase": 1,
+      "day": "C",
+      "note": ""
+    }
+  ]
+}
