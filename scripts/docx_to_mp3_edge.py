@@ -13,7 +13,7 @@ from pathlib import Path
 
 import edge_tts
 from docx import Document
-from prepare_md_for_tts import prepare_for_tts
+from prepare_md_for_tts import prepare_for_tts, strip_speechkit_markup
 
 DEFAULT_VOICE = "ru-RU-DmitryNeural"
 MAX_CHUNK = 1200
@@ -50,7 +50,7 @@ def load_text(path: Path, *, already_prepared: bool = False) -> str:
         "on",
     ):
         return raw
-    return prepare_for_tts(raw)
+    return strip_speechkit_markup(prepare_for_tts(raw))
 
 
 def split_text(text: str, max_len: int = MAX_CHUNK) -> list[str]:

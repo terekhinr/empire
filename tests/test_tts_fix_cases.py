@@ -60,6 +60,8 @@ def test_abbreviations_and_uw():
 def test_years():
     assert "тысяча девятьсот" in plain(prepare_for_tts("1964 г."))
     assert "с тысяча девятьсот" in plain(prepare_for_tts("1964-1967 г.г."))
+    assert "в тысяча девятьсот шестьдесят четвёртом году" in plain(prepare_for_tts("в 1964 г."))
+    assert "в тысяча девятьсот шестьдесят четвёртом — тысяча девятьсот шестьдесят седьмом годах" in plain(prepare_for_tts("в 1964-1967 г.г."))
 
 
 # Pre-baseline manual verification: all #5 stress indices were checked against
@@ -97,6 +99,7 @@ def test_yo_and_homograph_contrasts():
     assert "шахматная королева" in plain(prepare_for_tts("шахматная королева"))
     assert "все пришли" in plain(prepare_for_tts("все пришли"))
     assert "всё хорошо" in plain(prepare_for_tts("всё хорошо"))
+    assert "шахматная королева" in plain(prepare_for_tts("шахматная королева ходит"))
 
 
 @pytest.mark.defect

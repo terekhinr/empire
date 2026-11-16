@@ -172,9 +172,11 @@ def _year_ordinal(year: str, case: str = "nomn") -> str:
         words = phrase.split()
         if case != "nomn":
             import pymorphy3
-            inflected = pymorphy3.MorphAnalyzer().parse(words[-1])[0].inflect({case})
-            if inflected:
-                words[-1] = inflected.word
+            for parsed in pymorphy3.MorphAnalyzer().parse(words[-1]):
+                inflected = parsed.inflect({case})
+                if inflected and inflected.word != words[-1]:
+                    words[-1] = inflected.word
+                    break
         return " ".join(words)
     except Exception:
         return year
@@ -182,6 +184,16 @@ def _year_ordinal(year: str, case: str = "nomn") -> str:
 
 def expand_years(text: str) -> str:
     """Expand Russian year notation before general normalization."""
+    text = re.sub(
+        r"\bв\s+(\d{4})\s*[-–]\s*(\d{4})\s*г\.г\.",
+        lambda m: f"в {_year_ordinal(m.group(1), 'loct')}–{_year_ordinal(m.group(2), 'loct')} годах",
+        text, flags=re.I,
+    )
+    text = re.sub(
+        r"\bв\s+(\d{4})\s*г\.",
+        lambda m: f"в {_year_ordinal(m.group(1), 'loct')} году",
+        text, flags=re.I,
+    )
     text = re.sub(
         r"\b(\d{4})\s*[-–]\s*(\d{4})\s*г\.г\.",
         lambda m: f"с {_year_ordinal(m.group(1), 'gent')} по {_year_ordinal(m.group(2))} год",
@@ -393,7 +405,7 @@ def drop_spoken_sil(text: str) -> str:
     """
     text = re.sub(r"(?i)\bs\+?il\s*<\s*>", " ", text)
     text = re.sub(
-        r"(?i)(?<![A-Za-zА-Яа-яЁё])s\+?il(?!\s*<\[)",
+        r"(?i)(?<![A-Za-zА-Яа-яЁё])s\+?il(?![A-Za-zА-Яа-яЁё])(?!\s*<\[)",
         " ",
         text,
     )
