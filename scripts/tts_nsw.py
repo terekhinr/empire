@@ -165,8 +165,51 @@ def expand_scale_abbrevs(text: str) -> str:
     return text
 
 
+def _year_ordinal(year: str, case: str = "nomn") -> str:
+    try:
+        from num2words import num2words
+        phrase = num2words(int(year), to="ordinal", lang="ru")
+        words = phrase.split()
+        if case != "nomn":
+            import pymorphy3
+            for parsed in pymorphy3.MorphAnalyzer().parse(words[-1]):
+                inflected = parsed.inflect({case})
+                if inflected and inflected.word != words[-1]:
+                    words[-1] = inflected.word
+                    break
+        return " ".join(words)
+    except Exception:
+        return year
+
+
+def expand_years(text: str) -> str:
+    """Expand Russian year notation before general normalization."""
+    text = re.sub(
+        r"\bв\s+(\d{4})\s*[-–]\s*(\d{4})\s*г\.г\.",
+        lambda m: f"в {_year_ordinal(m.group(1), 'loct')}–{_year_ordinal(m.group(2), 'loct')} годах",
+        text, flags=re.I,
+    )
+    text = re.sub(
+        r"\bв\s+(\d{4})\s*г\.",
+        lambda m: f"в {_year_ordinal(m.group(1), 'loct')} году",
+        text, flags=re.I,
+    )
+    text = re.sub(
+        r"\b(\d{4})\s*[-–]\s*(\d{4})\s*г\.г\.",
+        lambda m: f"с {_year_ordinal(m.group(1), 'gent')} по {_year_ordinal(m.group(2))} год",
+        text, flags=re.I,
+    )
+    return re.sub(
+        r"\b(\d{4})\s*г\.",
+        lambda m: f"{_year_ordinal(m.group(1))} год",
+        text, flags=re.I,
+    )
+
+
 def expand_nsw(text: str) -> str:
     """Расширение NSW до STRESS: %, валюты, млн, диапазоны, римские, etc."""
+    text = expand_years(text)
+    text = re.sub(r"(?<![А-Яа-яЁё])([А-ЯЁ][а-яё-]+)\s+I\b", r"\1 Первый", text)
     text = expand_latin_etc(text)
     # млн/млрд до голого «€», иначе «15 евро млн» → «мэлэнэ»
     text = expand_scale_abbrevs(text)
@@ -249,10 +292,124 @@ def expand_nsw(text: str) -> str:
 _SIL_MARK_RE = re.compile(r"sil<\[\d+\]>|<\[[a-z]+\]>", re.IGNORECASE)
 
 # Перед «то» не ставим разрыв: предлоги/союзы («про то, как…»).
-_TO_PREV_BLOCK = (
-    r"про|а|не|ни|и|или|но|да|вот|вон|как|так|если|тем|потому|оттого|"
-    r"зато|либо|чем|все|всё|то|это|само|всего|только|именно|хотя|ведь"
+_TO_PREV_BLOCK = frozenset(
+    {
+        "про",
+        "а",
+        "не",
+        "ни",
+        "и",
+        "или",
+        "но",
+        "да",
+        "вот",
+        "вон",
+        "как",
+        "так",
+        "если",
+        "тем",
+        "потому",
+        "оттого",
+        "зато",
+        "либо",
+        "чем",
+        "все",
+        "всё",
+        "то",
+        "это",
+        "само",
+        "всего",
+        "только",
+        "именно",
+        "хотя",
+        "ведь",
+    }
 )
+# После частицы «то, …». «как» здесь есть («то, как»), но не в общей запятой:
+# иначе «про то, как» получает паузу, хотя этот оборот трогать нельзя.
+_TO_AFTER = (
+    "чтобы",
+    "который",
+    "которая",
+    "которое",
+    "которые",
+    "откуда",
+    "когда",
+    "будто",
+    "чего",
+    "что",
+    "как",
+    "где",
+)
+_REL_AFTER = (
+    "чтобы",
+    "который",
+    "которая",
+    "которое",
+    "которые",
+    "которых",
+    "откуда",
+    "когда",
+    "будто",
+    "словно",
+    "чего",
+    "куда",
+    "что",
+    "где",
+)
+_VOWELS_FLEX = set("аеёиоуыэюяАЕЁИОУЫЭЮЯ")
+
+
+def _flex_token(word: str) -> str:
+    """Слово с необязательным ``+`` и акутом. Совпадает и с ``т+о``, и с ``то``."""
+    parts: list[str] = []
+    for ch in word:
+        if ch in _VOWELS_FLEX:
+            parts.append(r"\+?" + re.escape(ch) + r"\u0301?")
+        else:
+            parts.append(r"\+?" + re.escape(ch))
+    return "".join(parts)
+
+
+def _strip_stress_token(word: str) -> str:
+    return word.replace("+", "").replace("\u0301", "").casefold()
+
+
+def map_outside_speech_marks(text: str, fn) -> str:
+    """Пропустить ``sil<[N]>`` и ``<[tiny]>`` мимо функции, которая их портит.
+
+    ru-normalizr превращает ``sil<[800]>`` в ``sil<>``. Дальше скобки
+    вычищаются, и SpeechKit читает оставшееся «sil» как «сил».
+    """
+    # Пробелы вокруг метки оставляем на ней: нормализатор съедает край сегмента,
+    # и без этого получается «Введение.sil<[800]>».
+    parked = re.compile(
+        r"[ \t]*sil<\[\d+\]>[ \t]*|[ \t]*<\[[a-z]+\]>[ \t]*",
+        re.IGNORECASE,
+    )
+    bits = parked.split(text)
+    marks = parked.findall(text)
+    out: list[str] = []
+    for i, bit in enumerate(bits):
+        out.append(fn(bit) if bit else "")
+        if i < len(marks):
+            out.append(marks[i])
+    return "".join(out)
+
+
+def drop_spoken_sil(text: str) -> str:
+    """Убрать слово ``sil`` / ``Sil``, которое SpeechKit читает как «сил».
+
+    Настоящая пауза ``sil<[500]>`` остаётся. Съеденная (``Sil``, ``Sil < >``,
+    ``s+il``) — нет: она встаёт сразу после заголовка, то есть в начале ролика.
+    """
+    text = re.sub(r"(?i)\bs\+?il\s*<\s*>", " ", text)
+    text = re.sub(
+        r"(?i)(?<![A-Za-zА-Яа-яЁё])s\+?il(?![A-Za-zА-Яа-яЁё])(?!\s*<\[)",
+        " ",
+        text,
+    )
+    return re.sub(r" {2,}", " ", text)
 
 
 def sanitize_angle_brackets(text: str) -> str:
@@ -282,6 +439,83 @@ def strip_speechkit_markup(text: str) -> str:
     return sanitize_angle_brackets(text)
 
 
+_LEADING_SIL_RE = re.compile(
+    r"^(?:\s*(?:sil<\[\d+\]>|<\[[a-z]+\]>))+",
+    re.IGNORECASE,
+)
+
+
+def reattach_leading_sil_marks(chunks: list[str]) -> list[str]:
+    """Пауза в начале куска принадлежит концу предыдущего.
+
+    Иначе SpeechKit открывает реплику с ``sil<[250]>, что…``: пауза
+    отрывается от слова перед запятой, а при битой разметке снова
+    вылезает произносимое «сил».
+    """
+    if not chunks:
+        return chunks
+    out: list[str] = []
+    for chunk in chunks:
+        piece = chunk.strip()
+        if not piece:
+            continue
+        mark = _LEADING_SIL_RE.match(piece)
+        if mark and out:
+            out[-1] = f"{out[-1].rstrip()} {mark.group(0).strip()}".strip()
+            piece = piece[mark.end() :].lstrip()
+            if not piece:
+                continue
+        out.append(piece)
+    return out
+
+
+def split_speech_text(text: str, max_len: int) -> list[str]:
+    """Нарезка озвучки: абзацы → предложения → hard-slice, без leading sil."""
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    chunks: list[str] = []
+    buf = ""
+    for para in paragraphs:
+        cand = f"{buf}\n\n{para}".strip() if buf else para
+        if len(cand) <= max_len:
+            buf = cand
+            continue
+        if buf:
+            if len(buf) < 300:
+                chunks.extend(hard_slices_preserving_sil(cand, max_len))
+                buf = ""
+                continue
+            chunks.append(buf)
+            buf = ""
+        if len(para) <= max_len:
+            buf = para
+            continue
+        sentences = re.split(r"(?<=[.!?…])\s+", para)
+        for sent in sentences:
+            if not sent:
+                continue
+            cand = f"{buf} {sent}".strip() if buf else sent
+            if len(cand) <= max_len:
+                buf = cand
+                continue
+            if buf:
+                if len(buf) < 300:
+                    chunks.extend(hard_slices_preserving_sil(cand, max_len))
+                    buf = ""
+                    continue
+                chunks.append(buf)
+            if len(sent) <= max_len:
+                buf = sent
+            else:
+                chunks.extend(hard_slices_preserving_sil(sent, max_len))
+                buf = ""
+        if buf:
+            chunks.append(buf)
+            buf = ""
+    if buf:
+        chunks.append(buf)
+    return reattach_leading_sil_marks(chunks)
+
+
 def hard_slices_preserving_sil(text: str, max_len: int) -> list[str]:
     """Жёсткая нарезка без разрыва sil<[N]> / <[tiny]>."""
     if len(text) <= max_len:
@@ -299,16 +533,27 @@ def hard_slices_preserving_sil(text: str, max_len: int) -> list[str]:
                     break
             if end <= i:
                 end = min(i + max_len, n)
+            token_start = text.rfind(" ", i, end) + 1
+            token_end = text.find(" ", end)
+            if token_end < 0:
+                token_end = n
+            if token_start < end < token_end:
+                end = token_end
             sp = text.rfind(" ", i + max_len // 2, end)
             if sp > i:
                 end = sp
+            # Если следующий кусок начнётся с sil — забираем метку в текущий.
+            rest = text[end:n].lstrip()
+            lead = _LEADING_SIL_RE.match(rest)
+            if lead and end + (len(text[end:n]) - len(rest)) + lead.end() - i <= max_len + 40:
+                end = end + (len(text[end:n]) - len(rest)) + lead.end()
         piece = text[i:end].strip()
         if piece:
             out.append(piece)
         i = end if end > i else i + max_len
         while i < n and text[i].isspace():
             i += 1
-    return out
+    return reattach_leading_sil_marks(out)
 
 
 def apply_prosody_pauses(text: str) -> str:
@@ -330,26 +575,46 @@ def apply_prosody_pauses(text: str) -> str:
     # 0b) прямая речь (тире), НЕ маркированный список «- Глава…» из оглавления
     text = re.sub(r"(?m)^(?:—|–)\s+", "sil<[300]> ", text)
 
-    # 1) частица «то» после глагола/слова — не трогаем «про то / а то / не то».
-    _prev = rf"(?:[{_WORD}]+(?:\+[{_WORD}]+)*)"
+    # 1) частица «то» после слова. «т+о» / «чег+о» — тот же случай, что и без «+»:
+    # silero ставит ударение раньше этой функции, голый «то» в бою уже не встречается.
+    # «про то, как» не трогаем.
+    prev = rf"(?:[{_WORD}][{_WORD}+\u0301]*)"
+    particle = _flex_token("то")
+    after = "(?:" + "|".join(_flex_token(w) for w in _TO_AFTER) + ")"
+
+    def _pause_to(m: re.Match[str]) -> str:
+        left, tok = m.group(1), m.group(2)
+        if _strip_stress_token(left) in _TO_PREV_BLOCK:
+            return m.group(0)
+        return f"{left} — sil<[600]> {tok} sil<[500]>, "
+
     text = re.sub(
-        rf"(?<![{_WORD}])(?!(?:{_TO_PREV_BLOCK})\b)({_prev})\s+то"
-        rf"(?=\s*,\s*(?:чего|что|чтобы|как|где|когда|откуда|будто))",
-        r"\1 — sil<[600]> то",
+        rf"(?<![{_WORD}])({prev})\s+({particle})\s*,\s*(?={after})",
+        _pause_to,
         text,
         flags=re.IGNORECASE,
     )
     text = re.sub(
-        rf"(?<![{_WORD}])то\s*,\s*(?=чего|что|чтобы|как|где|когда|который|которая|которое|которые)",
-        "то sil<[500]>, ",
+        rf"(?:^|(?<=[.!?…]\s))({particle})\s*,\s*(?={after})",
+        lambda m: f"{m.group(1)} sil<[500]>, ",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Запятая перед частицей тоже не всегда создаёт акустическую границу:
+    # «это легко, то ...» SpeechKit может слить в «легкото».
+    # Не вмешиваемся в устойчивое «то есть».
+    text = re.sub(
+        r",\s+то\b(?!\s+есть)",
+        ", sil<[400]> то",
         text,
         flags=re.IGNORECASE,
     )
 
     # 2) запятая перед относительными — пауза (не трогаем уже размеченные sil<> / <[…]> )
+    relative = "(?:" + "|".join(_flex_token(w) for w in _REL_AFTER) + ")"
     text = re.sub(
-        r"(?<!]>),\s+(?=чего|что|чтобы|который|которая|которое|которые|которых|"
-        r"где|куда|когда|откуда|будто|словно)",
+        rf"(?<!]>),\s+(?={relative})",
         " sil<[250]>, ",
         text,
         flags=re.IGNORECASE,

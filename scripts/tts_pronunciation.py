@@ -164,6 +164,14 @@ def apply_pronunciation_lexicon(
     if not rules:
         return text
 
+    def _surname(match: re.Match[str]) -> str:
+        word = match.group(1)
+        if (os.getenv("PDF_AUDIO_STRESS_FORMAT") or "acute").strip().lower() in ("plus", "+", "silero"):
+            return "Ив+анова" if word.casefold().replace("\u0301", "").endswith("ова") else "Ив+анов"
+        return "Ива́нова" if word.casefold().replace("\u0301", "").endswith("ова") else "Ива́нов"
+
+    text = re.sub(r"(?i)\b(иван[оа]\u0301?в[а]?)(?=\s+(?:серг|мари))", _surname, text)
+
     ctx = sorted(
         (r for r in rules if r.after),
         key=lambda r: (len(r.word), max((len(a) for a in r.after), default=0)),

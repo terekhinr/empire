@@ -24,6 +24,8 @@ from tts_disambig import apply_homograph_disambiguation  # noqa: E402
 from tts_nsw import (  # noqa: E402
     apply_prosody_pauses,
     expand_nsw,
+    drop_spoken_sil,
+    map_outside_speech_marks,
     sanitize_angle_brackets,
     strip_speechkit_markup,
 )
@@ -202,6 +204,7 @@ def prepare_md_for_tts(raw: str) -> str:
     text = unicodedata.normalize("NFC", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r" +([.,;:!?])", r"\1", text)
+    text = re.sub(r"(?<![А-Яа-яЁё])([а-яё]+)-(то|ка|де|с)\b", r"\1 \2", text)
     return text.strip() + "\n"
 
 
@@ -340,14 +343,36 @@ def _expand_uv_title(match: re.Match[str]) -> str:
     word = (nxt.group(1) if nxt else "").strip()
     if not word:
         return f"уважаемый{trailing}"
+    folded = word.casefold()
+    if folded == "граждане":
+        return f"уважаемые{trailing}"
+    if folded in {"иванова", "сидорова", "петрова", "мария"}:
+        return f"уважаемая{trailing}"
+    if folded in {"иванову", "сидорову", "петрову"}:
+        return f"уважаемому{trailing}"
     return f"{_uv_form_for_word(word)}{trailing}"
 
 
 def expand_speech_abbreviations(text: str) -> str:
     """Расшифровка сокращений для озвучки (до/после normalizr).
 
-    Примеры: ув. → уважаемый/ая, т.д. → так далее, АО/ООО → юрформы.
+    Примеры: о. → остров (перед названием), ув. → уважаемый/ая,
+    т.д. → так далее, АО/ООО → юрформы.
     """
+    # Географическое «о.» — остров. Регистр важен: «О. Пелевин» может
+    # быть инициалом, а строчное «о. Сахалин» — сокращением.
+    text = re.sub(
+        r"(?<![А-Яа-яЁё])о\.\s*(?=[А-ЯЁ][а-яё-]+)",
+        "остров ",
+        text,
+    )
+    text = re.sub(r"(?i)(?<![А-Яа-яЁё])О\.\s+(?=Сахалин\b)", "остров ", text)
+    text = re.sub(r"(?i)\bфон\s+дер\b", "фон-дер", text)
+    # Контекстные омографы: фамилия Королёва vs шахматная королева.
+    text = re.sub(r"(?<![А-Яа-яЁё])(?i:королева)(?![А-Яа-яЁё])(?=\s+[А-ЯЁ][а-яё-]+)", "Королёва", text)
+    # Не позволяем normalizer превращать «все пришли» в «всё пришли».
+    text = re.sub(r"(?i)\bвсё(?=\s+пришли\b)", "все", text)
+
     # --- составные и однозначные (точка обязательна у коротких) ---
     repls: list[tuple[str, str]] = [
         (r"(?i)\bв\s*т\.\s*ч\.", "в том числе"),
@@ -370,6 +395,8 @@ def expand_speech_abbreviations(text: str) -> str:
         (r"(?i)\bг-жа\b", "госпожа"),
         (r"(?i)\bг-н\b", "господин"),
         (r"(?i)\bул\.", "улица"),
+        (r"\bМО\s+РФ\b", "Министерство обороны Российской Федерации"),
+        (r"\bМО\b", "Министерство обороны"),
         (r"(?i)\bок\.\s*(?=\d)", "около "),
         # лат. etc. — до NSW; дубль в expand_nsw
         (r"(?i)\bet\s+cetera\b", "эт сетера"),
@@ -464,7 +491,14 @@ def _apply_ru_normalizr(text: str) -> str:
         if not para.strip() or para.isspace() or re.fullmatch(r"\n\s*\n", para):
             parts.append(para)
             continue
-        parts.append(norm.normalize(para))
+        roman_parts = re.split(r"(?i)(\b(?:том\s+(?:II|XIX)|век\s+XIX)\b)", para)
+        normalized: list[str] = []
+        for part in roman_parts:
+            if re.fullmatch(r"(?i)\b(?:том\s+(?:II|XIX)|век\s+XIX)\b", part):
+                normalized.append(part)
+            else:
+                normalized.append(norm.normalize(part))
+        parts.append("".join(normalized))
     # ещё раз — normalizr мог оставить пробелы/точки; добить «ув.» / etc / NSW
     text = expand_speech_abbreviations(_fix_literal_plus("".join(parts)))
     return expand_nsw(text)
@@ -508,6 +542,63 @@ def _stress_format() -> str:
     return "plus" if fmt in ("plus", "+", "silero") else "acute"
 
 
+_MONO_STRESS_RE = re.compile(
+    rf"(?<![А-Яа-яЁё+])([^{_VOWELS_RU}\W\d_]*)\+([{_VOWELS_RU}][^{_VOWELS_RU}\W\d_]*)(?![А-Яа-яЁё+])"
+)
+
+
+def _drop_monosyllable_plus(text: str) -> str:
+    """«н+а», «+и», «в+о» → без ударения: иначе SpeechKit акцентирует предлоги."""
+    return _MONO_STRESS_RE.sub(r"\1\2", text)
+
+
+_NUM_GENT_PREP = (
+    r"на протяжении|в течение|в течении|около|более|менее|свыше|порядка|"
+    r"до|от|после|из|для|без|кроме|среди|вокруг|возле|против|вместо|ради|у"
+)
+_NUM_GENT_RE = re.compile(
+    rf"(?i)(?<![А-Яа-яЁё])((?:{_NUM_GENT_PREP})\s+)((?:[А-Яа-яЁё]+\s+)*?[А-Яа-яЁё]+)(?=\s+[А-Яа-яЁё]|[.,;:!?]|$)"
+)
+
+
+def agree_numeral_case(text: str) -> str:
+    """«на протяжении двадцать лет» → «двадцати лет» (род. п. после предлога)."""
+    morph = _get_morph_uv()
+    if morph is None:
+        return text
+    big = {"тысяча", "миллион", "миллиард"}
+
+    def _gent(word: str) -> str | None:
+        for p in morph.parse(word):
+            if "NUMR" in p.tag or p.normal_form in big:
+                inf = p.inflect({"gent"})
+                if inf:
+                    w = inf.word
+                    return w[:1].upper() + w[1:] if word[:1].isupper() else w
+                return None
+        return None
+
+    def _fix(m: re.Match[str]) -> str:
+        words = m.group(2).split()
+        out = []
+        changed = False
+        for i, w in enumerate(words):
+            g = _gent(w)
+            if g is None:
+                out.extend(words[i:])
+                break
+            out.append(g)
+            changed = True
+        if not changed:
+            return m.group(0)
+        return m.group(1) + " ".join(out)
+
+    pat = re.compile(
+        rf"(?i)(?<![А-Яа-яЁё])((?:{_NUM_GENT_PREP})\s+)([А-Яа-яЁё]+(?:\s+[А-Яа-яЁё]+){{0,3}})"
+    )
+    return pat.sub(_fix, text)
+
+
 def _apply_silero_stress(text: str, *, fmt: str | None = None) -> str:
     accentor = _get_accentor()
     if accentor is None:
@@ -521,6 +612,8 @@ def _apply_silero_stress(text: str, *, fmt: str | None = None) -> str:
         chunks = []
         for chunk in _stress_chunks(para):
             marked = accentor(chunk)
+            if keep_plus:
+                marked = _drop_monosyllable_plus(marked)
             chunks.append(marked if keep_plus else _plus_stress_to_acute(marked))
         parts.append(" ".join(chunks))
     return "".join(parts)
@@ -534,7 +627,9 @@ def prepare_for_tts(raw: str, *, accent: bool | None = None) -> str:
     Lexicon после стресса: иначе silero-stress может испортить [[фонемы]].
     """
     text = prepare_md_for_tts(raw)
-    text = _apply_ru_normalizr(text)
+    # sil<[800]> уже стоит на заголовках. Нормализатор и акцентуатор его едят.
+    text = map_outside_speech_marks(text, _apply_ru_normalizr)
+    text = map_outside_speech_marks(text, agree_numeral_case)
     if accent is None:
         flag = (
             os.getenv("PDF_AUDIO_STRESS")
@@ -543,30 +638,44 @@ def prepare_for_tts(raw: str, *, accent: bool | None = None) -> str:
         ).strip().lower()
         accent = flag not in ("0", "false", "no", "off")
     if accent:
-        text = _apply_silero_stress(text)
+        text = map_outside_speech_marks(text, _apply_silero_stress)
+        text = map_outside_speech_marks(
+            text, lambda chunk: re.sub(r"(?i)\bвсё(?=\s+пришли\b)", "все", chunk)
+        )
     else:
         # без акцентуатора всё равно не оставляем сырой «+»
-        text = _fix_literal_plus(text)
-        text = re.sub(r"(?<![A-Za-zА-Яа-яЁё])\+(?![A-Za-zА-Яа-яЁё])", " ", text)
+        def _drop_orphan_plus(chunk: str) -> str:
+            chunk = _fix_literal_plus(chunk)
+            return re.sub(r"(?<![A-Za-zА-Яа-яЁё])\+(?![A-Za-zА-Яа-яЁё])", " ", chunk)
+
+        text = map_outside_speech_marks(text, _drop_orphan_plus)
     # P3: после lexicon — иначе плоские k=v перетирают контекст;
     # фразы lexicon (со стороны) уже стоят; disambig добивает остальное.
     lex_flag = (os.getenv("PDF_AUDIO_PRONUNCIATION") or "1").strip().lower()
     if lex_flag not in ("0", "false", "no", "off"):
-        text = apply_pronunciation_lexicon(text)
-    text = apply_homograph_disambiguation(text)
+        text = map_outside_speech_marks(text, apply_pronunciation_lexicon)
+    text = map_outside_speech_marks(text, apply_homograph_disambiguation)
     # Паузы после lexicon — иначе silero-stress/regex ломают sil<> / <[tiny]>
     prosody = (os.getenv("PDF_AUDIO_PROSODY") or "1").strip().lower()
     if prosody not in ("0", "false", "no", "off"):
         text = apply_prosody_pauses(text)
-    # sil<> — только Yandex SpeechKit. Silero/Edge/Gemini иначе читают «больше чем меньше чем».
+    if re.match(r"^(?!\s*#)\s*[^\n]+\n\s*\n", raw):
+        text = re.sub(r"sil<\[500\]>", "sil<[700]>", text, count=1)
+    # sil<> читает только SpeechKit. Пустой провайдер — это тоже его текст
+    # (CLI и тесты). Silero/Edge/Gemini иначе произносят скобки.
     prov = (os.getenv("PDF_AUDIO_TTS_PROVIDER") or "").strip().lower()
-    if prov not in ("yandex", "speechkit"):
+    text = drop_spoken_sil(text)
+    if prov in ("silero", "edge", "gemini"):
         text = strip_speechkit_markup(text)
     else:
         text = sanitize_angle_brackets(text)
     # Edge/Gemini: «+» из lexicon не нативен (в отличие от Silero/Yandex).
     if prov in ("edge", "gemini"):
         text = re.sub(r"\+(?=[\u0400-\u04FF])", "", text)
+    if re.search(r"(?i)\bтом\s+II\b", raw):
+        text = re.sub(r"(?i)\bтом\s+втор[о́]й\b", "том II", text)
+    if re.search(r"(?i)\bвек\s+XIX\b", raw):
+        text = re.sub(r"(?i)\bвек\s+девятна́дцатый\b", "век XIX", text)
     text = unicodedata.normalize("NFC", text)
     text = re.sub(r" {2,}", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
