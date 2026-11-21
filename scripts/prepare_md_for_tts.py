@@ -21,6 +21,7 @@ import unicodedata
 from pathlib import Path
 
 from tts_disambig import apply_homograph_disambiguation  # noqa: E402
+from tts_fixes import post_normalize, post_stress, pre_normalize  # noqa: E402
 from tts_nsw import (  # noqa: E402
     apply_prosody_pauses,
     expand_nsw,
@@ -91,7 +92,12 @@ def _strip_markdown_inline(text: str) -> str:
 
 def _strip_urls(text: str) -> str:
     text = re.sub(r"https?://\S+", "", text)
-    text = re.sub(r"\b(?:www\.)?[a-z0-9][-a-z0-9]*\.(?:ru|com|org)/\S*", "", text, flags=re.I)
+    text = re.sub(
+        r"\b(?:www\.)?(?:[a-z0-9][-a-z0-9]*\.)+(?:ru|com|org|net|io|me|co|uk|eu|info|news|tv|su)/\S*",
+        "",
+        text,
+        flags=re.I,
+    )
     text = re.sub(r"\bt\.me/\S+", "", text, flags=re.I)
     text = re.sub(r"\bsponsr\.ru/\S+", "", text, flags=re.I)
     text = re.sub(r"\bkremlin\.ru/\S+", "", text, flags=re.I)
@@ -105,6 +111,9 @@ def _light_cleanup(text: str) -> str:
     text = text.replace("\ufe0f", "")
     text = text.replace("«", '"').replace("»", '"')
     text = text.replace("„", '"').replace("“", '"').replace("”", '"')
+    # Перенос из PDF: «Премьер- министр», «юго- восток», «graham- .html» → склеить дефис.
+    # Настоящее тире пишут с пробелом с обеих сторон — его не трогаем.
+    text = re.sub(r"(?<=[A-Za-zА-Яа-яЁё])-[ \t]+(?=[A-Za-zА-Яа-яЁё])", "-", text)
     text = re.sub(r"\[Новостной деск\]\s*", "Новостной деск. ", text, flags=re.I)
     text = re.sub(
         r"\[MOEX:\s*([A-Z0-9_]+)\]",
@@ -330,6 +339,13 @@ def _uv_form_for_word(word: str) -> str:
             )
             if x
         }
+        if "plur" in tags:
+            # Мн.ч. — только если это основной разбор слова («друзья», «современники»),
+            # иначе «Иванов» (есть редкий разбор мн.ч.) стал бы «уважаемых».
+            if base_parses and "plur" not in base_parses[0].tag:
+                continue
+            # во мн.ч. у прилагательного рода нет: «уважаемые друзья»
+            tags -= {"masc", "femn", "neut", "ms-f"}
         form = _inflect(tags)
         if form:
             return form
@@ -477,6 +493,10 @@ def _plus_stress_to_acute(text: str) -> str:
 
 
 def _apply_ru_normalizr(text: str) -> str:
+    return post_normalize(_apply_ru_normalizr_core(pre_normalize(text)), source=text)
+
+
+def _apply_ru_normalizr_core(text: str) -> str:
     text = _fix_literal_plus(text)
     text = expand_speech_abbreviations(text)
     text = expand_nsw(text)
@@ -578,6 +598,9 @@ def agree_numeral_case(text: str) -> str:
                 return None
         return None
 
+    def _is_ordinal(word: str) -> bool:
+        return any("Anum" in p.tag for p in morph.parse(word))
+
     def _fix(m: re.Match[str]) -> str:
         words = m.group(2).split()
         out = []
@@ -585,6 +608,10 @@ def agree_numeral_case(text: str) -> str:
         for i, w in enumerate(words):
             g = _gent(w)
             if g is None:
+                # «из две тысячи двадцать четвёртого года» — составное порядковое:
+                # склоняется только последнее слово, количественную часть не трогаем.
+                if changed and _is_ordinal(w):
+                    return m.group(0)
                 out.extend(words[i:])
                 break
             out.append(g)
@@ -594,7 +621,7 @@ def agree_numeral_case(text: str) -> str:
         return m.group(1) + " ".join(out)
 
     pat = re.compile(
-        rf"(?i)(?<![А-Яа-яЁё])((?:{_NUM_GENT_PREP})\s+)([А-Яа-яЁё]+(?:\s+[А-Яа-яЁё]+){{0,3}})"
+        rf"(?i)(?<![А-Яа-яЁё])((?:{_NUM_GENT_PREP})\s+)([А-Яа-яЁё]+(?:\s+[А-Яа-яЁё]+){{0,5}})"
     )
     return pat.sub(_fix, text)
 
@@ -642,6 +669,7 @@ def prepare_for_tts(raw: str, *, accent: bool | None = None) -> str:
         text = map_outside_speech_marks(
             text, lambda chunk: re.sub(r"(?i)\bвсё(?=\s+пришли\b)", "все", chunk)
         )
+        text = map_outside_speech_marks(text, post_stress)
     else:
         # без акцентуатора всё равно не оставляем сырой «+»
         def _drop_orphan_plus(chunk: str) -> str:
