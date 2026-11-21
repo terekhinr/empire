@@ -669,7 +669,7 @@ def prepare_for_tts(raw: str, *, accent: bool | None = None) -> str:
         text = map_outside_speech_marks(
             text, lambda chunk: re.sub(r"(?i)\bвсё(?=\s+пришли\b)", "все", chunk)
         )
-        text = map_outside_speech_marks(text, post_stress)
+        text = map_outside_speech_marks(text, lambda chunk: post_stress(chunk, source=raw))
     else:
         # без акцентуатора всё равно не оставляем сырой «+»
         def _drop_orphan_plus(chunk: str) -> str:

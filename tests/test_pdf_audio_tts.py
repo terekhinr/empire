@@ -20,6 +20,29 @@ def _load_bot():
     return mod
 
 
+def test_reflow_keeps_post_title_separate():
+    """«…в золотой век» + «Сегодня…» — заголовок не сливается с первым предложением."""
+    mod = _load_bot()
+    out = mod._reflow_book_lines([
+        "Эпоха упадка прыгает через акулу и приземляется в золотой век",
+        "Сегодня для нас нет ничего актуальней символизма.",
+        "Вчера мы встретились с",
+        "Донни и пошли гулять.",
+    ])
+    assert out[0] == "Эпоха упадка прыгает через акулу и приземляется в золотой век"
+    assert out[1].startswith("Сегодня") and "встретились с Донни" in out[1]
+
+
+def test_reflow_does_not_split_midtext_proper_noun_wrap():
+    mod = _load_bot()
+    out = mod._reflow_book_lines([
+        "Первая строка текста.", "Вторая строка.", "Третья строка.",
+        "Многое ли нам говорят имена Ямвлиха",
+        "Нанополитанского или Афинея?",
+    ])
+    assert len(out) == 1
+
+
 def test_resolve_tts_provider_prefers_yandex(monkeypatch):
     mod = _load_bot()
     monkeypatch.setenv("PDF_AUDIO_TTS_PROVIDER", "auto")
