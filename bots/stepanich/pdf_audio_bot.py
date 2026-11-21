@@ -252,18 +252,43 @@ def _reflow_book_lines(lines: list[str]) -> list[str]:
             paras.append(" ".join(buf))
             buf.clear()
 
-    for line in lines:
-        s = re.sub(r"\s+", " ", line).strip()
+    norm = [re.sub(r"\s+", " ", line).strip() for line in lines]
+    for i, s in enumerate(norm):
         if not s:
             flush()
             continue
-        if _is_chapter_heading(s):
+        nxt = norm[i + 1] if i + 1 < len(norm) else ""
+        if _is_chapter_heading(s) or (i < 3 and _is_inline_heading(s, buf[-1] if buf else "", nxt)):
             flush()
             paras.append(s)
             continue
         buf.append(s)
     flush()
     return paras
+
+
+_HEADING_TAIL_STOP = {
+    "и", "а", "но", "или", "в", "во", "на", "с", "со", "к", "ко", "о", "об", "от", "до", "по", "за",
+    "из", "у", "для", "при", "про", "без", "под", "над", "через", "что", "как", "не", "же", "ли",
+}
+
+
+def _is_inline_heading(line: str, prev: str, nxt: str) -> bool:
+    """Заголовок поста без точки: «Эпоха упадка… в золотой век» / «Сегодня…».
+
+    Без отдельного абзаца он сливается с первым предложением и читается без паузы.
+    Проверяется только в начале текста: в середине перенос строки перед именем
+    собственным («…имена Ямвлиха, Нонна» / «Нанополитанского…») выглядит так же.
+    """
+    if len(line) > 120 or len(line.split()) < 2 or not line[:1].isupper():
+        return False
+    if re.search(r"[.!?…:;,\"»)\-—–]$", line) or re.search(r"[.!?…]\s|,", line):
+        return False
+    if prev and not re.search(r"[.!?…\"»)]$", prev):
+        return False
+    if not nxt or not nxt[:1].isupper():
+        return False
+    return line.split()[-1].lower() not in _HEADING_TAIL_STOP
 
 
 def _is_meta_or_export_line(line: str) -> bool:

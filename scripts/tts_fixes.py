@@ -175,7 +175,10 @@ def _num_gent(n: int) -> str:
 
 def _year_ord(year: int, case: str) -> str:
     w = _n2w(year, ordinal=True) or str(year)
-    return _inflect_last(w, {case}) if case != "nomn" else w
+    if case == "nomn":
+        return w
+    # год — м.р. ед.ч.; без рода pymorphy берёт «шестой» как ж.р. род.п. и не склоняет
+    return _inflect_last(w, {case, "masc", "sing"} | ({"inan"} if case == "accs" else set()))
 
 
 def _years_range(m: re.Match[str]) -> str:
@@ -221,6 +224,157 @@ def _dates(text: str) -> str:
     )
 
 
+_GENT_PREPS = {
+    "около", "более", "менее", "свыше", "порядка", "до", "от", "из", "для", "без", "кроме",
+    "среди", "у", "после", "против", "вместо", "ради", "возле", "вокруг", "течение", "течении",
+    "протяжении", "старше", "младше", "больше", "меньше",
+}
+_ACC_PREPS = {"в", "во", "на", "за", "через", "про", "под", "по"}
+_MONTHS_GENT = r"(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)"
+
+
+def _prev_word(text: str, pos: int) -> str:
+    m = re.search(r"([А-Яа-яЁё]+)[ \t ]*$", text[max(0, pos - 40):pos])
+    return m.group(1).lower() if m else ""
+
+
+def _num_words(n: int, case: str = "nomn", gender: str = "masc") -> str:
+    """Количественное в падеже/роде: (2, 'nomn', 'femn') → «две»; (49, 'gent') → «сорока девяти»."""
+    words = (_n2w(n) or str(n)).split()
+    if gender in ("femn", "neut") and words[-1] in ("один", "два"):
+        words[-1] = {"один": "одна" if gender == "femn" else "одно", "два": "две" if gender == "femn" else "два"}[
+            words[-1]
+        ]
+    if case == "nomn":
+        return " ".join(words)
+    mo = _morph()
+    if mo is None:
+        return " ".join(words)
+    out = []
+    for w in words:
+        inf = None
+        for p in mo.parse(w):
+            if "NUMR" in p.tag or p.normal_form in ("тысяча", "миллион", "миллиард", "один"):
+                inf = p.inflect({case})
+                break
+        out.append(inf.word if inf else w)
+    return " ".join(out)
+
+
+def _noun_parse(word: str):
+    mo = _morph()
+    if mo is None:
+        return None
+    for p in mo.parse(word):
+        if "NOUN" in p.tag:
+            return p
+    return None
+
+
+def _noun_gent_pl(noun: str) -> str:
+    low = noun.lower()
+    if low in ("года", "год", "лет"):
+        return "лет"
+    if low in ("человек", "человека"):
+        return "человек"
+    p = _noun_parse(low)
+    if p is None:
+        return noun
+    inf = p.inflect({"gent", "plur"})
+    return inf.word if inf else noun
+
+
+def _percent_word(n: int) -> str:
+    if n % 10 == 1 and n % 100 != 11:
+        return "процент"
+    if n % 10 in (2, 3, 4) and not 12 <= n % 100 <= 14:
+        return "процента"
+    return "процентов"
+
+
+_NUM_RANGE_RE = re.compile(
+    r"(?<![\d.,:/A-Za-zА-Яа-яЁё-])(\d{1,3})(?:\s?[-–]\s?|—)(\d{1,3})(?![\d.,:/-])(\s*%|\s+[А-Яа-яЁё]+)"
+)
+
+
+def _num_range(m: re.Match[str]) -> str:
+    a, b, tail = int(m.group(1)), int(m.group(2)), m.group(3)
+    noun = tail.strip()
+    if a >= b or re.fullmatch(_MONTHS_GENT, noun.lower()) or noun.lower() in ("г", "гг"):
+        return m.group(0)
+    prev = _prev_word(m.string, m.start())
+    if prev in ("с", "со"):
+        return m.group(0)
+    is_pct = noun == "%"
+    if prev in _ACC_PREPS:
+        p = None if is_pct else _noun_parse(noun.lower())
+        gender = p.tag.gender if p is not None and p.tag.gender else "masc"
+        word = _percent_word(b) if is_pct else noun
+        return f"{_num_words(a, 'nomn', gender)}-{_num_words(b, 'nomn', gender)} {word}"
+    word = "процентов" if is_pct else _noun_gent_pl(noun)
+    if prev in _GENT_PREPS:
+        return f"{_num_words(a, 'gent')}-{_num_words(b, 'gent')} {word}"
+    return f"от {_num_words(a, 'gent')} до {_num_words(b, 'gent')} {word}"
+
+
+# «1,6 триллиона», «1,5 миллиона» normalizr читает верно (и «полтора») — их не трогаем
+_DECIMAL_RE = re.compile(
+    r"(?<![\d.,])(\d{1,6}),(\d{1,2})(?![\d,]|\.\d)(?!\s*(?:тыс|млн|млрд|трлн|миллион|миллиард|триллион))",
+    re.IGNORECASE,
+)
+
+
+def _decimal(m: re.Match[str]) -> str:
+    whole, frac = int(m.group(1)), m.group(2)
+    if _prev_word(m.string, m.start()) in _GENT_PREPS:
+        return m.group(0)
+    w = _num_words(whole, "nomn", "femn") if whole else "ноль"
+    w += " целая" if w.endswith("одна") else " целых"
+    f = int(frac)
+    unit = "десят" if len(frac) == 1 else "сот"
+    fw = _num_words(f, "nomn", "femn")
+    fw += f" {unit}ая" if fw.endswith("одна") else f" {unit}ых"
+    return f"{w} {fw}"
+
+
+_TIME_RE = re.compile(r"(?<![\d:.,])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])")
+
+
+def _time(m: re.Match[str]) -> str:
+    h, mm = int(m.group(1)), int(m.group(2))
+    case = "gent" if _prev_word(m.string, m.start()) in ({"с", "со", "от"} | _GENT_PREPS) else "nomn"
+    hw = _num_words(h, case) if h else ("нуля" if case == "gent" else "ноль")
+    if mm == 0:
+        return f"{hw} ноль-ноль"
+    if mm < 10:
+        return f"{hw} ноль {_num_words(mm, 'nomn')}"
+    return f"{hw} {_num_words(mm, case)}"
+
+
+_FROM_YEAR_RE = re.compile(
+    r"(?i)(\bиз\s+)(1[89]\d\d|20\d\d)"
+    r"(?=\s*(?:[,.;:!?)»\"]|$)|\s+(?:на|в|во|о|об|про|что|и|а|но|по)(?![А-Яа-яЁё])|\s+[A-Za-z])"
+)
+
+_YEAR_NOUN_RANGE_RE = re.compile(
+    r"(?i)(?<![\d.,])(1[89]\d\d|20\d\d)\s*[-–—/]\s*(\d{2}|\d{4})(?![\d.,])(\s+)(год(?:ы|ов|ах|ам|ами))\b"
+)
+
+
+def _year_noun_range(m: re.Match[str]) -> str:
+    a = int(m.group(1))
+    b_raw = m.group(2)
+    b = int(b_raw) if len(b_raw) == 4 else a // 100 * 100 + int(b_raw)
+    if b <= a:
+        return m.group(0)
+    noun = m.group(4)
+    prev = _prev_word(m.string, m.start())
+    if prev in ("с", "со"):
+        return m.group(0)  # «с 2001-2007 годы» — оставить _years_range
+    case = {"годы": "nomn", "годов": "gent", "годах": "loct", "годам": "datv", "годами": "ablt"}[noun.lower()]
+    return f"{_year_ord(a, case)} — {_year_ord(b, case)}{m.group(3)}{noun}"
+
+
 def pre_normalize(text: str) -> str:
     text = _dates(text)
     # «45+», «300+» — иначе висящий «+» уходит в разметку SpeechKit
@@ -241,6 +395,25 @@ def pre_normalize(text: str) -> str:
         lambda m: f"{m.group(1)}{_year_ord(int(m.group(2)), 'loct')}",
         text,
     )
+    # «12:00» → «двенадцать ноль-ноль» (normalizr: «двенадцать, ноль ноль» с паузой)
+    text = _TIME_RE.sub(_time, text)
+    # «из 2026 на то…» — год, а не количество
+    text = _FROM_YEAR_RE.sub(lambda m: f"{m.group(1)}{_year_ord(int(m.group(2)), 'gent')}", text)
+    # «сезоне 2022-23 годов», «за 2023-2024 годы» — падеж по слову «год»
+    text = _YEAR_NOUN_RANGE_RE.sub(_year_noun_range, text)
+    # «8/9 из 10» → «восемь-девять из десяти»
+    text = re.sub(
+        r"(?<![\d/.,])(\d)/(\d)(?=\s+из\s+\d)",
+        lambda m: f"{_n2w(int(m.group(1)))}-{_n2w(int(m.group(2)))}"
+        if int(m.group(2)) == int(m.group(1)) + 1 else m.group(0),
+        text,
+    )
+    # «7,0» → «7»; «2,6 фильма» → «две целых шесть десятых фильма» (normalizr: «двух…» и теряет точку)
+    text = re.sub(r"(?<![\d.,])1[.,]5\s*(раза|часа|года|литра|метра|километра)\b", r"полтора \1", text)
+    text = re.sub(r"(?<![\d.,])(\d{1,6}),0(?![\d,])", r"\1", text)
+    text = _DECIMAL_RE.sub(_decimal, text)
+    # «18-49 лет», «в 2-3 раза», «около 10-15 человек», «на 20-30%»
+    text = _NUM_RANGE_RE.sub(_num_range, text)
     # диапазоны лет «с 2023–2025» / «в 2023–2025»
     text = re.sub(
         r"(?i)(\b[св]\s+)?(?<![\d.,])(\d{4})\s*[-–—]\s*(\d{4})(?![\d.,]|\s*г\.)",
@@ -253,8 +426,6 @@ def pre_normalize(text: str) -> str:
         lambda m: f"от {_num_gent(int(m.group(1)))} до {_num_gent(int(m.group(2)))} процентов",
         text,
     )
-    # полтора
-    text = re.sub(r"(?<![\d.,])1[.,]5\s*(раза|часа|года|литра|метра|километра)\b", r"полтора \1", text)
     # «б/с» (баррелей в сутки)
     text = re.sub(r"(?i)(?<![А-Яа-яЁё])б/с(?![А-Яа-яЁё])", "баррелей в сутки", text)
     for pat, rep in _ABBR_SPOKEN:
@@ -284,6 +455,14 @@ def post_normalize(text: str, source: str = "") -> str:
             r"\1 человек",
             text,
         )
+        mo = _morph()
+        if mo is not None:
+            def _people(m: re.Match[str]) -> str:
+                if any("NUMR" in p.tag and "gent" in p.tag for p in mo.parse(m.group(1))):
+                    return f"{m.group(1)} человек"
+                return m.group(0)
+
+            text = re.sub(r"(?i)\b([а-яё]+)\s+людей\b", _people, text)
     return text
 
 
@@ -343,7 +522,7 @@ def _decide_vse(prev2: str, prev: str, nxt: str, nxt2: str) -> str | None:
     return None
 
 
-def fix_vse(text: str) -> str:
+def fix_vse(text: str, source: str = "") -> str:
     toks = _TOKEN.findall(text)
     if not any(_plain(t) in ("все", "всё") for t in toks):
         return text
@@ -358,6 +537,14 @@ def fix_vse(text: str) -> str:
         nxt = _plain(after[0]) if after else ""
         nxt2 = _plain(after[1]) if len(after) > 1 else ""
         choice = _decide_vse(prev2, prev, nxt, nxt2)
+        # автор сам написал «всё новые» — ё из исходника не трогаем
+        if (
+            choice == "все"
+            and m.group(0)[1:] == "сё"
+            and nxt
+            and re.search(rf"(?i)(?<![А-Яа-яЁё])всё\s+{re.escape(nxt)}(?![А-Яа-яЁё])", source)
+        ):
+            choice = None
         out.append(text[pos:start])
         if choice is None:
             out.append(m.group(0))
@@ -368,8 +555,20 @@ def fix_vse(text: str) -> str:
     return "".join(out)
 
 
-def post_stress(text: str) -> str:
-    text = fix_vse(text)
+def _fix_zolotom(m: re.Match[str]) -> str:
+    """«з+олотом фонде» → «золот+ом» (прилагательное, если дальше сущ. в предложном ед.ч.)."""
+    p = _noun_parse(_plain(m.group(3)))
+    if p is not None and "loct" in p.tag and "sing" in p.tag and p.tag.gender in ("masc", "neut"):
+        word = "олот+ом" if "+" in m.group(0)[:3] else "олото́м"
+        return f"{m.group(1)}{word}{m.group(2)}{m.group(3)}"
+    return m.group(0)
+
+
+def post_stress(text: str, source: str = "") -> str:
+    text = fix_vse(text, source)
+    text = re.sub(
+        r"(?<![А-Яа-яЁё+])([Зз])(?:\+о|о́)лотом(\s*[\"«]?\s*)([А-Яа-яЁё+́]+)", _fix_zolotom, text
+    )
     # «в две тысячи восемнадцатом г+оду» → «год+у» (предложный после порядкового)
     text = re.sub(r"(?i)(\w*\+?\w*(?:ом|ем))\s+г\+оду\b", r"\1 год+у", text)
     return text
