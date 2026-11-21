@@ -190,7 +190,39 @@ def _years_range(m: re.Match[str]) -> str:
     return f"{prep}{_year_ord(a, 'nomn')} — {_year_ord(b, 'nomn')}"
 
 
+_MONTH_ABBR = {
+    "янв": "января", "фев": "февраля", "февр": "февраля", "мар": "марта", "апр": "апреля",
+    "мая": "мая", "июн": "июня", "июл": "июля", "авг": "августа", "сен": "сентября",
+    "сент": "сентября", "окт": "октября", "ноя": "ноября", "нояб": "ноября", "дек": "декабря",
+}
+_MONTH_ABBR_RE = "|".join(sorted(_MONTH_ABBR, key=len, reverse=True))
+
+
+def _dates(text: str) -> str:
+    """«09 нояб» в начале строки (дата-заголовок) → «девятое ноября»; внутри фразы — только месяц."""
+
+    def _head(m: re.Match[str]) -> str:
+        day = int(m.group(2))
+        if not 1 <= day <= 31:
+            return m.group(0)
+        word = _n2w(day, ordinal=True) or m.group(2)
+        word = _inflect_last(word, {"neut", "nomn", "sing"})
+        return f"{m.group(1)}{word} {_MONTH_ABBR[m.group(3).lower()]}"
+
+    text = re.sub(
+        rf"(?im)^(\s*#*\s*)(\d{{1,2}})\s+({_MONTH_ABBR_RE})\.?(?![А-Яа-яЁё])",
+        _head,
+        text,
+    )
+    return re.sub(
+        rf"(?i)(?<=\d\s)({_MONTH_ABBR_RE})\.?(?![А-Яа-яЁё])",
+        lambda m: _MONTH_ABBR[m.group(1).lower()],
+        text,
+    )
+
+
 def pre_normalize(text: str) -> str:
+    text = _dates(text)
     # «45+», «300+» — иначе висящий «+» уходит в разметку SpeechKit
     text = re.sub(r"(\d)\+(?=[\s.,;:!?)\]»\"]|$)", r"\1 плюс", text)
     # списки «1)», «2)» → во-первых, во-вторых

@@ -86,6 +86,21 @@ CASES = [
 ]
 
 
+def test_date_heading_reads_nominative():
+    """«# 09 нояб 16:00» → «девятое ноября» (указание владельца, 2026-11-21)."""
+    from prepare_md_for_tts import prepare_for_tts
+
+    out = prepare_for_tts("# 09 нояб 16:00\n\nНесколько настоящих причин.").casefold()
+    plain = out.replace("+", "").replace("́", "")
+    assert "девятое ноября" in plain, out
+    assert "нояб " not in plain and "нояб." not in plain, out
+
+
+def test_date_abbrev_inside_sentence():
+    out = RuTtsPipeline.__new__(RuTtsPipeline).speech_text("Встреча прошла 9 нояб. в Москве.")
+    assert "ноябр" in out.casefold() and "нояб." not in out.casefold(), out
+
+
 def test_lexicon_keeps_sentence_capital():
     """«Один» в начале предложения не становится строчным «од+ин»."""
     out = RuTtsPipeline.__new__(RuTtsPipeline).speech_text("Один был должен.")
