@@ -83,8 +83,30 @@ _SCALE_FORMS = {
 }
 
 
+def _plural_form(num_raw: str, forms: tuple[str, str, str]) -> str:
+    """1 / 2-4 / 5+ ; дробное число → род.п. ед.ч. («1,5 миллиона», «0,3 процента»)."""
+    raw = num_raw.replace(",", ".")
+    if "." in raw and raw.rstrip("0").rstrip(".") != raw.split(".")[0]:
+        return forms[1]
+    try:
+        n = int(float(raw))
+    except Exception:
+        return forms[2]
+    n100, n10 = abs(n) % 100, abs(n) % 10
+    if 11 <= n100 <= 14:
+        return forms[2]
+    if n10 == 1:
+        return forms[0]
+    if 2 <= n10 <= 4:
+        return forms[1]
+    return forms[2]
+
+
 def _scale_word(abbr: str, num_raw: str) -> str:
     forms = _SCALE_FORMS[abbr.lower()]
+    raw = num_raw.replace(",", ".")
+    if "." in raw:
+        return _plural_form(num_raw, forms)
     try:
         n = int(float(num_raw.replace(",", ".")))
     except Exception:
@@ -109,8 +131,10 @@ def _cur_word(token: str) -> str:
     return token
 
 
-def _fmt_num(n: str) -> str:
+def _fmt_num(n: str, *, fem: bool = False) -> str:
     raw = n.replace(",", ".")
+    if raw in ("1.5", "1.50"):
+        return "полторы" if fem else "полтора"
     try:
         if "." in raw:
             w = _num2words_ru(float(raw))  # type: ignore[arg-type]
@@ -151,7 +175,7 @@ def expand_scale_abbrevs(text: str) -> str:
     # 15 млн / 15 млн.
     text = re.sub(
         r"(\d+(?:[.,]\d+)?)\s*(тыс|млн|млрд|трлн)\.?\b",
-        lambda m: f"{_fmt_num(m.group(1))} {_scale_word(m.group(2), m.group(1))}",
+        lambda m: f"{_fmt_num(m.group(1), fem=m.group(2).lower() == 'тыс')} {_scale_word(m.group(2), m.group(1))}",
         text,
         flags=re.I,
     )
@@ -216,7 +240,8 @@ def expand_nsw(text: str) -> str:
 
     # 15% / 15 % → пятнадцать процентов (или «15 процентов» если нет num2words)
     def _pct(m: re.Match[str]) -> str:
-        return f"{_fmt_num(m.group(1))} процентов"
+        unit = _plural_form(m.group(1), ("процент", "процента", "процентов"))
+        return f"{_fmt_num(m.group(1))} {unit}"
 
     text = re.sub(r"(?<![\d.,])(\d+(?:[.,]\d+)?)\s*%", _pct, text)
 
@@ -323,6 +348,40 @@ _TO_PREV_BLOCK = frozenset(
         "именно",
         "хотя",
         "ведь",
+        # предлоги: «обратить внимание на то, что», «верить в то, что»
+        "на",
+        "в",
+        "во",
+        "за",
+        "о",
+        "об",
+        "обо",
+        "к",
+        "ко",
+        "с",
+        "со",
+        "по",
+        "от",
+        "до",
+        "из",
+        "под",
+        "над",
+        "при",
+        "для",
+        "без",
+        "через",
+        "перед",
+        "несмотря",
+        "благодаря",
+        "вопреки",
+        "насчёт",
+        "насчет",
+        # модальные: «делать нужно то, что хочется»
+        "нужно",
+        "надо",
+        "можно",
+        "нельзя",
+        "важно",
     }
 )
 # После частицы «то, …». «как» здесь есть («то, как»), но не в общей запятой:

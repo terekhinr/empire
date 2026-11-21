@@ -77,10 +77,24 @@ def _flexible_body(word: str) -> str:
 
 def _token_pattern(word: str) -> re.Pattern[str]:
     body = _flexible_body(word)
+    # «+» и акут — часть слова: иначе «один» матчится внутри «од+ин+аковые».
     return re.compile(
-        rf"(?<![{_WORD_CHARS}]){body}(?![{_WORD_CHARS}])",
+        rf"(?<![{_WORD_CHARS}+́]){body}(?![{_WORD_CHARS}́])(?!\+[{_WORD_CHARS}])",
         re.IGNORECASE,
     )
+
+
+def _keep_case(replacement: str):
+    """«Один» в начале предложения → «Од+ин», а не «од+ин»."""
+
+    def _sub(m: re.Match[str]) -> str:
+        src = m.group(0).lstrip("+")
+        if src[:1].isupper() and not replacement.startswith("[["):
+            i = 1 if replacement.startswith("+") else 0
+            return replacement[:i] + replacement[i : i + 1].upper() + replacement[i + 1 :]
+        return replacement
+
+    return _sub
 
 
 def load_pronunciation_rules(path: Path | None = None) -> list[LexRule]:
@@ -186,7 +200,7 @@ def apply_pronunciation_lexicon(
     for rule in flat:
         if rule.is_phoneme and not allow_phonemes:
             continue
-        text = _token_pattern(rule.word).sub(rule.replacement, text)
+        text = _token_pattern(rule.word).sub(_keep_case(rule.replacement), text)
     return text
 
 

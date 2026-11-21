@@ -90,7 +90,7 @@ def test_so_storony_stress_phrase(monkeypatch):
         "Это было со стороны банка. Две стороны спора. С одной стороны верно."
     )
     assert "со сторон+ы" in out
-    assert "с одной сторон+ы" in out
+    assert "с одной сторон+ы" in out.lower()
     # им.п. мн. «две стороны» не трогаем жёстким сторон+ы без предлога
     assert "Две стороны" in out or "две стороны" in out
     assert "ст+ороны" not in out  # не навязываем неверное ударение на о
